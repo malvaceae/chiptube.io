@@ -11,7 +11,7 @@ export default defineConfig({
   plugins: [
     splitVendorChunkPlugin(),
     createHtmlPlugin({
-      entry: '/src/main.js',
+      entry: '/src/main.ts',
       inject: {
         data: {
           title: 'ChipTube',
