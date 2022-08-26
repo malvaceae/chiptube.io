@@ -5,6 +5,7 @@
   },
   "devDependencies": {
     "@tonejs/midi": "^2.0.28",
+    "@types/p5": "^1.4.2",
     "@vitejs/plugin-vue": "^3.0.3",
     "p5": "^1.4.2",
     "tone": "^14.7.77",
