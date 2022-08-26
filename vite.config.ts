@@ -7,6 +7,9 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 // Vue.js
 import vue from '@vitejs/plugin-vue';
 
+// Quasar
+import { quasar, transformAssetUrls } from '@quasar/vite-plugin';
+
 export default defineConfig({
   plugins: [
     splitVendorChunkPlugin(),
@@ -18,7 +21,14 @@ export default defineConfig({
         },
       },
     }),
-    vue(),
+    vue({
+      template: {
+        transformAssetUrls,
+      },
+    }),
+    quasar({
+      sassVariables: '@/styles/variables.sass',
+    }),
   ],
   resolve: {
     alias: {
