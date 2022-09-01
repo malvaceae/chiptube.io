@@ -68,7 +68,7 @@ const search = ref('');
       </q-toolbar>
     </q-drawer>
     <q-page-container>
-      <!-- -->
+      <router-view />
     </q-page-container>
   </q-layout>
 </template>

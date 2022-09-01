@@ -1,6 +1,9 @@
 // Vue.js
 import { createApp } from 'vue';
 
+// Vue Router
+import router from '@/router';
+
 // Quasar
 import { useQuasar } from '@/plugins/quasar';
 
@@ -9,6 +12,9 @@ import App from '@/App.vue';
 
 // create the root component
 const app = createApp(App);
+
+// use the router
+app.use(router);
 
 // use the quasar
 useQuasar(app);
