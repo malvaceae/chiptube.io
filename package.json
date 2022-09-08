@@ -6,6 +6,7 @@
   "devDependencies": {
     "@quasar/vite-plugin": "^1.1.1",
     "@tonejs/midi": "^2.0.28",
+    "@types/aws-lambda": "^8.10.103",
     "@types/node": "^18.7.14",
     "@types/p5": "^1.4.2",
     "@vitejs/plugin-vue": "^3.0.3",

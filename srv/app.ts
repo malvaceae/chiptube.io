@@ -4,15 +4,20 @@ import { join } from 'path';
 // AWS CDK
 import {
   App,
+  CfnOutput,
+  Duration,
   IgnoreMode,
   RemovalPolicy,
   Stack,
   StackProps,
+  aws_apigateway as apigateway,
   aws_cloudformation as cloudformation,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
   aws_codebuild as codebuild,
   aws_iam as iam,
+  aws_lambda as lambda,
+  aws_lambda_nodejs as nodejs,
   aws_s3 as s3,
   aws_s3_assets as assets,
   aws_s3_deployment as s3deploy,
@@ -37,6 +42,50 @@ class ChipTubeStack extends Stack {
    */
   constructor(scope?: Construct, id?: string, props?: StackProps) {
     super(scope, id, props);
+
+    // Api Handler
+    const apiHandler = new nodejs.NodejsFunction(this, 'ApiHandler', {
+      architecture: lambda.Architecture.ARM_64,
+      runtime: lambda.Runtime.NODEJS_16_X,
+      timeout: Duration.seconds(30),
+      memorySize: 1769, // 1 vCPU
+      bundling: {
+        minify: true,
+      },
+    });
+
+    // Api
+    const api = new apigateway.LambdaRestApi(this, 'Api', {
+      handler: apiHandler,
+      deployOptions: {
+        stageName: 'v1',
+      },
+      restApiName: 'ChipTube API',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+      },
+    });
+
+    // Add the Gateway Response when the status code is 4XX.
+    api.addGatewayResponse('ApiGatewayResponseDefault4XX', {
+      type: apigateway.ResponseType.DEFAULT_4XX,
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+      },
+    });
+
+    // Add the Gateway Response when the status code is 5XX.
+    api.addGatewayResponse('ApiGatewayResponseDefault5XX', {
+      type: apigateway.ResponseType.DEFAULT_5XX,
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+      },
+    });
+
+    // Api Endpoint
+    new CfnOutput(this, 'ApiEndpoint', {
+      value: api.url,
+    });
 
     // App Bucket
     const appBucket = new s3.Bucket(this, 'AppBucket', {
@@ -110,6 +159,11 @@ class ChipTubeStack extends Stack {
       }),
       environment: {
         buildImage: codebuild.LinuxBuildImage.STANDARD_6_0,
+        environmentVariables: {
+          VITE_API_ENDPOINT: {
+            value: api.url,
+          },
+        },
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
