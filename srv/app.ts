@@ -1,18 +1,22 @@
 // Node.js Core Modules
-import { spawnSync } from 'child_process';
+import { join } from 'path';
 
 // AWS CDK
 import {
   App,
-  DockerImage,
+  IgnoreMode,
   RemovalPolicy,
   Stack,
   StackProps,
+  aws_cloudformation as cloudformation,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
+  aws_codebuild as codebuild,
   aws_iam as iam,
   aws_s3 as s3,
+  aws_s3_assets as assets,
   aws_s3_deployment as s3deploy,
+  custom_resources as cr,
 } from 'aws-cdk-lib';
 
 // Constructs
@@ -82,25 +86,112 @@ class ChipTubeStack extends Stack {
       ],
     });
 
-    // App Bucket Deployment
-    new s3deploy.BucketDeployment(this, 'AppBucketDeployment', {
-      sources: [
-        s3deploy.Source.asset('.', {
-          bundling: {
-            image: DockerImage.fromRegistry('node:alpine'),
-            local: {
-              tryBundle(outputDir: string) {
-                return !spawnSync('yarn && yarn', [
-                  'build', '--outDir', outputDir,
-                ], { shell: true }).error;
-              },
+    // App Asset
+    const appAsset = new assets.Asset(this, 'AppAsset', {
+      path: join(__dirname, '..'),
+      exclude: [
+        '/*',
+        '!index.html',
+        '!package.json',
+        '!postcss.config.js',
+        '!src',
+        '!tsconfig.json',
+        '!vite.config.ts',
+        '!yarn.lock',
+      ],
+      ignoreMode: IgnoreMode.GIT,
+    });
+
+    // App Project
+    const appProject = new codebuild.Project(this, 'AppProject', {
+      source: codebuild.Source.s3({
+        bucket: appAsset.bucket,
+        path: appAsset.s3ObjectKey,
+      }),
+      environment: {
+        buildImage: codebuild.LinuxBuildImage.STANDARD_6_0,
+      },
+      buildSpec: codebuild.BuildSpec.fromObject({
+        version: '0.2',
+        phases: {
+          install: {
+            'on-failure': 'CONTINUE',
+            'runtime-versions': {
+              nodejs: 'latest',
             },
           },
-        }),
+          pre_build: {
+            'on-failure': 'CONTINUE',
+            commands: [
+              'yarn',
+            ],
+          },
+          build: {
+            commands: [
+              'yarn build',
+            ],
+          },
+          post_build: {
+            commands: [
+              'curl -X PUT -H "Content-Type:" --data-binary "{\\"Status\\":\\"$([ ${CODEBUILD_BUILD_SUCCEEDING} = 1 ] && echo SUCCESS || echo FAILURE)\\",\\"UniqueId\\":\\"${CODEBUILD_BUILD_ID}\\"}" "${SIGNAL_URL}"',
+            ],
+          },
+        },
+        artifacts: {
+          files: [
+            '**/*',
+          ],
+          'base-directory': 'dist',
+        },
+      }),
+      artifacts: codebuild.Artifacts.s3({
+        bucket: appAsset.bucket,
+        path: appAsset.assetHash,
+        name: 'artifacts.zip',
+        includeBuildId: false,
+      }),
+    });
+
+    // App Build Wait Condition
+    const appBuildWaitCondition = new cloudformation.CfnWaitCondition(this, `AppBuildWaitCondition-${appAsset.assetHash}`, {
+      handle: new cloudformation.CfnWaitConditionHandle(this, `AppBuildWaitConditionHandle-${appAsset.assetHash}`).ref,
+      timeout: '3600',
+    });
+
+    // App Build
+    new cr.AwsCustomResource(this, 'AppBuild', {
+      onUpdate: {
+        service: 'CodeBuild',
+        action: 'startBuild',
+        parameters: {
+          environmentVariablesOverride: [
+            {
+              name: 'SIGNAL_URL',
+              value: appBuildWaitCondition.handle,
+            },
+          ],
+          projectName: appProject.projectName,
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(appProject.projectArn),
+      },
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: [
+          appProject.projectArn,
+        ],
+      }),
+    });
+
+    // App Bucket Deployment
+    const appBucketDeployment = new s3deploy.BucketDeployment(this, 'AppBucketDeployment', {
+      sources: [
+        s3deploy.Source.bucket(appAsset.bucket, `${appAsset.assetHash}/artifacts.zip`),
       ],
       destinationBucket: appBucket,
       distribution: appDistribution,
     });
+
+    // Wait for the build to complete.
+    appBucketDeployment.node.addDependency(appBuildWaitCondition);
   }
 }
 
