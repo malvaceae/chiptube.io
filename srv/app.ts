@@ -140,6 +140,7 @@ class ChipTubeStack extends Stack {
       path: join(__dirname, '..'),
       exclude: [
         '/*',
+        '!.browserslistrc',
         '!index.html',
         '!package.json',
         '!postcss.config.js',
