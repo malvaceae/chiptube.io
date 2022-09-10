@@ -115,6 +115,27 @@ class ChipTubeStack extends Stack {
       },
     });
 
+    // App Storage
+    const appStorage = new s3.Bucket(this, 'AppStorage', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      cors: [
+        {
+          allowedHeaders: [
+            '*',
+          ],
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.PUT,
+          ],
+          allowedOrigins: [
+            '*',
+          ],
+        },
+      ],
+      removalPolicy: RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
     // Api Handler
     const apiHandler = new nodejs.NodejsFunction(this, 'ApiHandler', {
       architecture: lambda.Architecture.ARM_64,
@@ -123,6 +144,7 @@ class ChipTubeStack extends Stack {
       memorySize: 1769, // 1 vCPU
       environment: {
         APP_TABLE_NAME: appTable.tableName,
+        APP_STORAGE: appStorage.bucketName,
       },
       bundling: {
         minify: true,
@@ -131,6 +153,9 @@ class ChipTubeStack extends Stack {
 
     // Add permissions to access App Table.
     appTable.grantReadWriteData(apiHandler);
+
+    // Add permissions to access App Storage.
+    appStorage.grantReadWrite(apiHandler);
 
     // Api
     const api = new apigateway.LambdaRestApi(this, 'Api', {
