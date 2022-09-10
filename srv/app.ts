@@ -15,6 +15,7 @@ import {
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
   aws_codebuild as codebuild,
+  aws_dynamodb as dynamodb,
   aws_iam as iam,
   aws_lambda as lambda,
   aws_lambda_nodejs as nodejs,
@@ -43,16 +44,93 @@ class ChipTubeStack extends Stack {
   constructor(scope?: Construct, id?: string, props?: StackProps) {
     super(scope, id, props);
 
+    // App Table
+    const appTable = new dynamodb.Table(this, 'AppTable', {
+      partitionKey: {
+        name: 'pk',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'sk',
+        type: dynamodb.AttributeType.STRING,
+      },
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    // Add the GSI for adjacency list.
+    appTable.addGlobalSecondaryIndex({
+      indexName: 'GSI-AdjacencyList',
+      partitionKey: {
+        name: 'sk',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'pk',
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
+
+    // Add the LSI for published at.
+    appTable.addLocalSecondaryIndex({
+      indexName: 'LSI-PublishedAt',
+      sortKey: {
+        name: 'publishedAt',
+        type: dynamodb.AttributeType.NUMBER,
+      },
+    });
+
+    // Add the LSI for views.
+    appTable.addLocalSecondaryIndex({
+      indexName: 'LSI-Views',
+      sortKey: {
+        name: 'views',
+        type: dynamodb.AttributeType.NUMBER,
+      },
+    });
+
+    // Add the LSI for likes.
+    appTable.addLocalSecondaryIndex({
+      indexName: 'LSI-Likes',
+      sortKey: {
+        name: 'likes',
+        type: dynamodb.AttributeType.NUMBER,
+      },
+    });
+
+    // Add the LSI for favorites.
+    appTable.addLocalSecondaryIndex({
+      indexName: 'LSI-Favorites',
+      sortKey: {
+        name: 'favorites',
+        type: dynamodb.AttributeType.NUMBER,
+      },
+    });
+
+    // Add the LSI for comments.
+    appTable.addLocalSecondaryIndex({
+      indexName: 'LSI-Comments',
+      sortKey: {
+        name: 'comments',
+        type: dynamodb.AttributeType.NUMBER,
+      },
+    });
+
     // Api Handler
     const apiHandler = new nodejs.NodejsFunction(this, 'ApiHandler', {
       architecture: lambda.Architecture.ARM_64,
       runtime: lambda.Runtime.NODEJS_16_X,
       timeout: Duration.seconds(30),
       memorySize: 1769, // 1 vCPU
+      environment: {
+        APP_TABLE_NAME: appTable.tableName,
+      },
       bundling: {
         minify: true,
       },
     });
+
+    // Add permissions to access App Table.
+    appTable.grantReadWriteData(apiHandler);
 
     // Api
     const api = new apigateway.LambdaRestApi(this, 'Api', {
