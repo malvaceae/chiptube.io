@@ -13,6 +13,7 @@
     "autoprefixer": "^10.4.8",
     "aws-cdk": "^2.41.0",
     "aws-cdk-lib": "^2.41.0",
+    "aws-sdk": "^2.1213.0",
     "constructs": "^10.1.97",
     "p5": "^1.4.2",
     "postcss": "^8.1.0",
