@@ -33,12 +33,12 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     }
 
     return response({
-      message: 'Not Found',
+      message: 'Not found',
     }, 404);
   } catch (e) {
     console.error(e);
     return response({
-      message: 'Internal Server Error',
+      message: 'Internal server error',
     }, 500);
   }
 };
@@ -82,7 +82,7 @@ const routes = new Map([
 
       if (tune === undefined) {
         return response({
-          message: 'Not Found',
+          message: 'Not found',
         }, 404);
       }
 
