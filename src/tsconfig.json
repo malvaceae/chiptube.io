@@ -16,9 +16,6 @@
         "*"
       ]
     },
-    "types": [
-      "vite/client"
-    ],
     "sourceMap": true,
     "isolatedModules": true,
     "esModuleInterop": true,
