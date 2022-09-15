@@ -5,6 +5,14 @@ import { ref } from 'vue';
 // Quasar
 import { useQuasar } from 'quasar';
 
+// Axios
+import axios from 'axios';
+
+// set the default base url to api endpoint
+axios.defaults = Object.assign(axios.defaults, {
+  baseURL: import.meta.env.VITE_API_ENDPOINT,
+});
+
 // get the $q object
 const $q = useQuasar();
 
