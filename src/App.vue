@@ -32,7 +32,9 @@ const search = ref('');
           <q-icon name="mdi-menu" />
         </q-btn>
         <q-toolbar-title shrink>
-          ChipTube
+          <router-link :to="{ name: 'index' }">
+            ChipTube
+          </router-link>
         </q-toolbar-title>
         <q-space />
         <q-input v-model="search" class="col-grow gt-xs" dense outlined placeholder="Search" square>
@@ -110,5 +112,10 @@ const search = ref('');
   color: transparent;
   background-image: conic-gradient(from 55deg at 40%, #4285f4 70deg, #0f9d58 70deg 175deg, #f4b400 175deg 255deg, #db4437 255deg 360deg);
   background-clip: text;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
 </style>
