@@ -2,7 +2,7 @@
 import { App } from 'vue';
 
 // Quasar
-import { Quasar } from 'quasar';
+import { AppFullscreen, Quasar } from 'quasar';
 
 // Quasar - Icon Set
 import iconSet from 'quasar/icon-set/mdi-v6';
@@ -14,5 +14,8 @@ import 'quasar/src/css/index.sass';
 export const useQuasar = (app: App) => {
   app.use(Quasar, {
     iconSet,
+    plugins: {
+      AppFullscreen,
+    },
   });
 };

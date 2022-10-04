@@ -1,12 +1,15 @@
 <script lang="ts" setup>
 // Vue.js
-import { ref, onActivated, onDeactivated } from 'vue';
+import { onActivated, onDeactivated, ref } from 'vue';
 
 // Vue Router
 import { useRoute } from 'vue-router';
 
 // Axios
 import axios from 'axios';
+
+// MIDI Player
+import MidiPlayer from '@/components/MidiPlayer.vue';
 
 // get the $route object
 const $route = useRoute();
@@ -30,7 +33,7 @@ onDeactivated(() => (tune.value = null));
     <div class="row q-col-gutter-md">
       <div class="col-12 col-md-8">
         <q-responsive :ratio="16 / 9">
-          <q-skeleton square />
+          <midi-player v-if="tune" :url="tune.url" />
         </q-responsive>
         <div v-if="tune" class="q-mt-md q-gutter-xs">
           <div class="text-h6">
