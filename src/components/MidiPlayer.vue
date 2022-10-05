@@ -167,7 +167,7 @@ const mute = ref(false);
 
 // watch volume
 watchEffect(() => {
-  Tone.Destination.volume.value = Math.log10(volume.value) * 40 - 80;
+  Tone.Destination.volume.value = Math.log10(volume.value) * 20 - 40 - 15;
 
   if (volume.value > 0) {
     mute.value = false;
@@ -230,7 +230,80 @@ const play = async () => {
   midi.value = await Midi.fromUrl(url.value);
 
   // instruments
-  instruments.value = midi.value.tracks.map(() => new Tone.PolySynth().toDestination());
+  instruments.value = midi.value.tracks.map(({ instrument: { number } }) => {
+    // square synths (guitars)
+    if (number >= 24 && number <= 31) {
+      return new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'square',
+        },
+        envelope: {
+          attack: .001,
+          decay: .3,
+          sustain: .3,
+          release: .7,
+        },
+      }).toDestination();
+    }
+
+    // triangle synths (bass instruments)
+    if (number >= 32 && number <= 39) {
+      return new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'triangle',
+        },
+        envelope: {
+          attack: .01,
+          decay: .5,
+          sustain: .5,
+          release: .7,
+        },
+      }).toDestination();
+    }
+
+    // sawtooth synths (stringed instruments)
+    if (number >= 40 && number <= 55 || number === 81) {
+      return new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'sawtooth',
+        },
+        envelope: {
+          attack: .05,
+          decay: .5,
+          sustain: .5,
+          release: .7,
+        },
+      }).toDestination();
+    }
+
+    // square synths (wind instruments)
+    if (number >= 56 && number <= 80) {
+      return new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'square',
+        },
+        envelope: {
+          attack: .001,
+          decay: .3,
+          sustain: .3,
+          release: .7,
+        },
+      }).toDestination();
+    }
+
+    // pulse synths for all else
+    return new Tone.PolySynth(Tone.Synth, {
+      oscillator: {
+        type: 'pulse',
+      },
+      envelope: {
+        attack: .001,
+        decay: .1,
+        sustain: .3,
+        release: .7,
+      },
+    }).toDestination();
+  });
 
   // parts
   midi.value.tracks.forEach(({ notes }, i) => {
