@@ -68,14 +68,53 @@ const search = ref('');
       </q-toolbar>
     </q-header>
     <q-drawer v-model="drawer" behavior="mobile" :width="240">
-      <q-toolbar>
-        <q-btn flat round @click="drawer = !drawer">
-          <q-icon name="mdi-menu" />
-        </q-btn>
-        <q-toolbar-title shrink>
-          ChipTube
-        </q-toolbar-title>
-      </q-toolbar>
+      <div class="column full-height">
+        <q-toolbar>
+          <q-btn flat round @click="drawer = !drawer">
+            <q-icon name="mdi-menu" />
+          </q-btn>
+          <q-toolbar-title shrink>
+            <router-link :to="{ name: 'index' }">
+              ChipTube
+            </router-link>
+          </q-toolbar-title>
+        </q-toolbar>
+        <q-scroll-area class="col-grow">
+          <q-list dense padding>
+            <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" :to="{ name: 'index' }" v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-home-variant" />
+              </q-item-section>
+              <q-item-section>
+                Home
+              </q-item-section>
+            </q-item>
+            <q-separator spaced />
+            <q-item>
+              <q-item-section class="q-gutter-sm">
+                <div class="q-px-sm">
+                  Sign in to like tunes, comment, and subscribe.
+                </div>
+                <div class="q-px-sm">
+                  <q-btn no-wrap outline padding="6px 18px" square>
+                    <q-icon class="q-mr-sm" name="mdi-google" />
+                    <span class="block">Sign in</span>
+                  </q-btn>
+                </div>
+              </q-item-section>
+            </q-item>
+            <q-separator spaced />
+            <q-item href="https://github.com/malvaceae/chiptube.io" target="_blank" v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-github" />
+              </q-item-section>
+              <q-item-section>
+                GitHub
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-scroll-area>
+      </div>
     </q-drawer>
     <q-page-container>
       <router-view v-slot="{ Component }">
@@ -105,6 +144,14 @@ const search = ref('');
 .body--dark {
   .q-header {
     background-color: $dark;
+  }
+}
+
+.q-drawer .q-list .q-item {
+  padding: 8px 25px;
+
+  .q-item__section--side {
+    padding-right: 25px;
   }
 }
 
