@@ -63,8 +63,8 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
         </div>
       </div>
       <template #loading>
-        <div class="row items-center justify-center q-my-md">
-          <q-spinner-dots color="primary" size="lg" />
+        <div class="row justify-center q-my-md">
+          <q-spinner-dots size="lg" />
         </div>
       </template>
     </q-infinite-scroll>
