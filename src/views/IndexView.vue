@@ -36,10 +36,15 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
       <div class="row q-col-gutter-md">
         <div v-for="tune in tunes" class="col-12 col-sm-6 col-md-4 col-lg-3">
           <router-link :to="{ name: 'watch', params: { id: tune.id } }">
-            <q-card flat square>
-              <q-responsive :ratio="16 / 9">
-                <q-skeleton square />
-              </q-responsive>
+            <q-card bordered flat square>
+              <q-img src="@/assets/thumbnail.png">
+                <template v-if="$q.dark.isActive">
+                  <div class="absolute-full" />
+                </template>
+                <div class="absolute-center full-width text-h6 text-center ellipsis">
+                  {{ tune.title }}
+                </div>
+              </q-img>
               <q-item>
                 <q-item-section avatar>
                   <q-skeleton type="QAvatar" />
