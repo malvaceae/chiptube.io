@@ -6,7 +6,6 @@
       "dom.iterable",
       "esnext"
     ],
-    "jsx": "preserve",
     "useDefineForClassFields": true,
     "module": "esnext",
     "moduleResolution": "node",
