@@ -5,6 +5,7 @@ import { join } from 'path';
 import {
   App,
   CfnOutput,
+  CfnParameter,
   Duration,
   IgnoreMode,
   RemovalPolicy,
@@ -15,6 +16,7 @@ import {
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
   aws_codebuild as codebuild,
+  aws_cognito as cognito,
   aws_dynamodb as dynamodb,
   aws_iam as iam,
   aws_lambda as lambda,
@@ -236,6 +238,184 @@ class ChipTubeStack extends Stack {
           responsePagePath: '/',
         },
       ],
+    });
+
+    // User Pool
+    const userPool = new cognito.UserPool(this, 'UserPool', {
+      standardAttributes: {
+        email: {
+          required: true,
+        },
+        fullname: {
+          required: true,
+        },
+        profilePicture: {
+          required: true,
+        },
+      },
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    // User Pool Id
+    new CfnOutput(this, 'UserPoolId', {
+      value: userPool.userPoolId,
+    });
+
+    // User Pool Web Client
+    const userPoolWebClient = userPool.addClient('WebClient', {
+      oAuth: {
+        flows: {
+          authorizationCodeGrant: true,
+        },
+        callbackUrls: [
+          'http://localhost:5173',
+          `https://${appDistribution.domainName}`,
+        ],
+        logoutUrls: [
+          'http://localhost:5173',
+          `https://${appDistribution.domainName}`,
+        ],
+        scopes: [
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.PROFILE,
+          cognito.OAuthScope.COGNITO_ADMIN,
+        ],
+      },
+      preventUserExistenceErrors: true,
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.GOOGLE,
+      ],
+    });
+
+    // User Pool Web Client Id
+    new CfnOutput(this, 'UserPoolWebClientId', {
+      value: userPoolWebClient.userPoolClientId,
+    });
+
+    // User Pool Domain
+    const userPoolDomain = userPool.addDomain('Domain', {
+      cognitoDomain: {
+        domainPrefix: api.restApiId,
+      },
+    });
+
+    // User Pool Domain Name
+    new CfnOutput(this, 'UserPoolDomainName', {
+      value: userPoolDomain.baseUrl().slice(8),
+    });
+
+    // Google Client Id
+    const googleClientId = new CfnParameter(this, 'GoogleClientId', {
+      description: 'Google Client Id',
+    });
+
+    // Google Client Secret
+    const googleClientSecret = new CfnParameter(this, 'GoogleClientSecret', {
+      description: 'Google Client Secret',
+    });
+
+    // User Pool Identity Provider Google
+    new cognito.UserPoolIdentityProviderGoogle(this, 'UserPoolIdentityProviderGoogle', {
+      userPool,
+      clientId: googleClientId.valueAsString,
+      clientSecret: googleClientSecret.valueAsString,
+      scopes: ['profile', 'email', 'openid'],
+      attributeMapping: {
+        email: {
+          attributeName: 'email',
+        },
+        fullname: {
+          attributeName: 'name',
+        },
+        profilePicture: {
+          attributeName: 'picture',
+        },
+        custom: {
+          email_verified: {
+            attributeName: 'email_verified',
+          },
+        },
+      },
+    });
+
+    // Identity Pool
+    const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
+      allowUnauthenticatedIdentities: true,
+      cognitoIdentityProviders: [
+        {
+          clientId: userPoolWebClient.userPoolClientId,
+          providerName: userPool.userPoolProviderName,
+        },
+      ],
+    });
+
+    // Identity Pool Id
+    new CfnOutput(this, 'IdentityPoolId', {
+      value: identityPool.ref,
+    });
+
+    // Identity Pool Authenticated Role
+    const identityPoolAuthenticatedRole = new iam.Role(this, 'IdentityPoolAuthenticatedRole', {
+      assumedBy: new iam.WebIdentityPrincipal('cognito-identity.amazonaws.com', {
+        'StringEquals': {
+          'cognito-identity.amazonaws.com:aud': identityPool.ref,
+        },
+        'ForAnyValue:StringLike': {
+          'cognito-identity.amazonaws.com:amr': 'authenticated',
+        },
+      }),
+      inlinePolicies: {
+        IdentityPoolAuthenticatedRolePolicy: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              actions: [
+                'mobileanalytics:PutEvents',
+                'cognito-sync:*',
+                'cognito-identity:*',
+              ],
+              resources: [
+                '*',
+              ],
+            }),
+          ],
+        }),
+      },
+    });
+
+    // Identity Pool Unauthenticated Role
+    const identityPoolUnauthenticatedRole = new iam.Role(this, 'IdentityPoolUnauthenticatedRole', {
+      assumedBy: new iam.WebIdentityPrincipal('cognito-identity.amazonaws.com', {
+        'StringEquals': {
+          'cognito-identity.amazonaws.com:aud': identityPool.ref,
+        },
+        'ForAnyValue:StringLike': {
+          'cognito-identity.amazonaws.com:amr': 'unauthenticated',
+        },
+      }),
+      inlinePolicies: {
+        IdentityPoolUnauthenticatedRolePolicy: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              actions: [
+                'mobileanalytics:PutEvents',
+                'cognito-sync:*',
+              ],
+              resources: [
+                '*',
+              ],
+            }),
+          ],
+        }),
+      },
+    });
+
+    // Identity Pool Role Attachment
+    new cognito.CfnIdentityPoolRoleAttachment(this, 'IdentityPoolRoleAttachment', {
+      identityPoolId: identityPool.ref,
+      roles: Object.fromEntries([identityPoolAuthenticatedRole, identityPoolUnauthenticatedRole].map((role) => {
+        return [role.node.id.replace(/^.*?((un)?authenticated).*?$/i, (_, s) => s.toLowerCase()), role.roleArn];
+      })),
     });
 
     // App Asset
