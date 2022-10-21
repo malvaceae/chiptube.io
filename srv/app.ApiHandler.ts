@@ -6,19 +6,11 @@ import {
 } from 'aws-lambda';
 
 // AWS SDK
-import {
-  DynamoDB,
-  S3,
-} from 'aws-sdk';
+import { DynamoDB } from 'aws-sdk';
 
 // AWS SDK - DynamoDB
 const dynamodb = new DynamoDB.DocumentClient({
   apiVersion: '2012-08-10',
-});
-
-// AWS SDK - S3
-const s3 = new S3({
-  apiVersion: '2006-03-01',
 });
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -113,11 +105,6 @@ const routes = new Map([
           message: 'Not found',
         }, 404);
       }
-
-      tune.url = await s3.getSignedUrlPromise('getObject', {
-        Bucket: process.env.APP_STORAGE,
-        Key: `tunes/${id}.mid`,
-      });
 
       return response(tune);
     },

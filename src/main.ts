@@ -4,6 +4,9 @@ import { createApp } from 'vue';
 // Vue Router
 import router from '@/router';
 
+// Amplify
+import '@/plugins/amplify';
+
 // Quasar
 import { useQuasar } from '@/plugins/quasar';
 

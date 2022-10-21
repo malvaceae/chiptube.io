@@ -122,12 +122,16 @@ class ChipTubeStack extends Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       cors: [
         {
+          maxAge: 3000,
           allowedHeaders: [
             '*',
           ],
           allowedMethods: [
             s3.HttpMethods.GET,
             s3.HttpMethods.PUT,
+            s3.HttpMethods.HEAD,
+            s3.HttpMethods.POST,
+            s3.HttpMethods.DELETE,
           ],
           allowedOrigins: [
             '*',
@@ -138,6 +142,11 @@ class ChipTubeStack extends Stack {
       autoDeleteObjects: true,
     });
 
+    // App Storage Bucket Name
+    new CfnOutput(this, 'AppStorageBucketName', {
+      value: appStorage.bucketName,
+    });
+
     // Api Handler
     const apiHandler = new nodejs.NodejsFunction(this, 'ApiHandler', {
       architecture: lambda.Architecture.ARM_64,
@@ -146,7 +155,6 @@ class ChipTubeStack extends Stack {
       memorySize: 1769, // 1 vCPU
       environment: {
         APP_TABLE_NAME: appTable.tableName,
-        APP_STORAGE: appStorage.bucketName,
       },
       bundling: {
         minify: true,
@@ -155,9 +163,6 @@ class ChipTubeStack extends Stack {
 
     // Add permissions to access App Table.
     appTable.grantReadWriteData(apiHandler);
-
-    // Add permissions to access App Storage.
-    appStorage.grantReadWrite(apiHandler);
 
     // Api
     const api = new apigateway.LambdaRestApi(this, 'Api', {
@@ -169,6 +174,19 @@ class ChipTubeStack extends Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
       },
+    });
+
+    // Set the authorization type to AWS_IAM.
+    api.methods.filter(({ httpMethod }) => httpMethod === 'ANY').forEach(({ node: { defaultChild } }) => {
+      (defaultChild as apigateway.CfnMethod).authorizationType = apigateway.AuthorizationType.IAM;
+    });
+
+    // Remove the default endpoint output.
+    api.node.tryRemoveChild('Endpoint');
+
+    // Api Endpoint
+    new CfnOutput(this, 'ApiEndpoint', {
+      value: api.url.replace(/\/$/, ''),
     });
 
     // Add the Gateway Response when the status code is 4XX.
@@ -185,11 +203,6 @@ class ChipTubeStack extends Stack {
       responseHeaders: {
         'Access-Control-Allow-Origin': "'*'",
       },
-    });
-
-    // Api Endpoint
-    new CfnOutput(this, 'ApiEndpoint', {
-      value: api.url,
     });
 
     // App Bucket
@@ -378,6 +391,62 @@ class ChipTubeStack extends Stack {
                 '*',
               ],
             }),
+            new iam.PolicyStatement({
+              actions: [
+                'execute-api:Invoke',
+              ],
+              resources: [
+                api.arnForExecuteApi(),
+              ],
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                's3:GetObject',
+                's3:PutObject',
+                's3:DeleteObject',
+              ],
+              resources: [
+                appStorage.arnForObjects('public/*'),
+                appStorage.arnForObjects('protected/${cognito-identity.amazonaws.com:sub}/*'),
+                appStorage.arnForObjects('private/${cognito-identity.amazonaws.com:sub}/*'),
+              ],
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                's3:PutObject',
+              ],
+              resources: [
+                appStorage.arnForObjects('uploads/*'),
+              ],
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                's3:GetObject',
+              ],
+              resources: [
+                appStorage.arnForObjects('protected/*'),
+              ],
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                's3:ListBucket',
+              ],
+              resources: [
+                appStorage.bucketArn,
+              ],
+              conditions: {
+                'StringLike': {
+                  's3:prefix': [
+                    'public/',
+                    'public/*',
+                    'protected/',
+                    'protected/*',
+                    'private/${cognito-identity.amazonaws.com:sub}/',
+                    'private/${cognito-identity.amazonaws.com:sub}/*',
+                  ],
+                },
+              },
+            }),
           ],
         }),
       },
@@ -404,6 +473,58 @@ class ChipTubeStack extends Stack {
               resources: [
                 '*',
               ],
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                'execute-api:Invoke',
+              ],
+              resources: [
+                api.arnForExecuteApi(),
+              ],
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                's3:GetObject',
+                's3:PutObject',
+                's3:DeleteObject',
+              ],
+              resources: [
+                appStorage.arnForObjects('public/*'),
+              ],
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                's3:PutObject',
+              ],
+              resources: [
+                appStorage.arnForObjects('uploads/*'),
+              ],
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                's3:GetObject',
+              ],
+              resources: [
+                appStorage.arnForObjects('protected/*'),
+              ],
+            }),
+            new iam.PolicyStatement({
+              actions: [
+                's3:ListBucket',
+              ],
+              resources: [
+                appStorage.bucketArn,
+              ],
+              conditions: {
+                'StringLike': {
+                  's3:prefix': [
+                    'public/',
+                    'public/*',
+                    'protected/',
+                    'protected/*',
+                  ],
+                },
+              },
             }),
           ],
         }),
@@ -445,7 +566,22 @@ class ChipTubeStack extends Stack {
         buildImage: codebuild.LinuxBuildImage.STANDARD_6_0,
         environmentVariables: {
           VITE_API_ENDPOINT: {
-            value: api.url,
+            value: api.url.replace(/\/$/, ''),
+          },
+          VITE_APP_STORAGE_BUCKET_NAME: {
+            value: appStorage.bucketName,
+          },
+          VITE_IDENTITY_POOL_ID: {
+            value: identityPool.ref,
+          },
+          VITE_USER_POOL_ID: {
+            value: userPool.userPoolId,
+          },
+          VITE_USER_POOL_WEB_CLIENT_ID: {
+            value: userPoolWebClient.userPoolClientId,
+          },
+          VITE_USER_POOL_DOMAIN_NAME: {
+            value: userPoolDomain.baseUrl().slice(8),
           },
         },
       },
@@ -511,6 +647,7 @@ class ChipTubeStack extends Stack {
           projectName: appProject.projectName,
         },
         physicalResourceId: cr.PhysicalResourceId.of(appProject.projectArn),
+        outputPaths: [],
       },
       policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
         resources: [

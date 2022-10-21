@@ -31,9 +31,16 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    alias: {
-      '@': '/src',
-    },
+    alias: [
+      {
+        find: '@',
+        replacement: '/src',
+      },
+      {
+        find: './runtimeConfig',
+        replacement: './runtimeConfig.browser',
+      },
+    ],
   },
   build: {
     rollupOptions: {
@@ -66,5 +73,12 @@ export default defineConfig({
       },
     },
     chunkSizeWarningLimit: 1536,
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
   },
 });

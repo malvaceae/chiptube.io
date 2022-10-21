@@ -2,16 +2,20 @@
 // Vue.js
 import { ref } from 'vue';
 
+// Vue Router
+import { useRouter } from 'vue-router';
+
+// Amplify
+import { Hub } from 'aws-amplify';
+
+// Amplify - Auth
+import { Auth, CognitoHostedUIIdentityProvider, CognitoUser } from '@aws-amplify/auth';
+
 // Quasar
 import { useQuasar } from 'quasar';
 
-// Axios
-import axios from 'axios';
-
-// set the default base url to api endpoint
-axios.defaults = Object.assign(axios.defaults, {
-  baseURL: import.meta.env.VITE_API_ENDPOINT,
-});
+// get the $router object
+const $router = useRouter();
 
 // get the $q object
 const $q = useQuasar();
@@ -22,6 +26,31 @@ $q.dark.set('auto');
 // variables
 const drawer = ref(false);
 const search = ref('');
+
+// user
+const user = ref<CognitoUser & { attributes: Record<string, any> } | null>(null);
+
+// subscribe auth events
+Hub.listen('auth', ({ payload: { event } }) => {
+  if (event === 'signIn') {
+    $router.replace({});
+  }
+});
+
+// get the current user
+Auth.currentAuthenticatedUser().then((currentUser) => {
+  user.value = currentUser;
+});
+
+// sign in
+const signIn = async () => {
+  await Auth.federatedSignIn({ provider: CognitoHostedUIIdentityProvider.Google });
+};
+
+// sign out
+const signOut = async () => {
+  await Auth.signOut();
+};
 </script>
 
 <template>
@@ -46,9 +75,44 @@ const search = ref('');
         </q-input>
         <q-space />
         <div class="row q-gutter-sm no-wrap items-center">
-          <q-btn flat icon="mdi-dots-vertical" round>
+          <q-btn flat round>
+            <template v-if="user">
+              <q-avatar>
+                <img :src="user.attributes.picture">
+              </q-avatar>
+            </template>
+            <template v-else>
+              <q-icon name="mdi-dots-vertical" />
+            </template>
             <q-menu class="full-width" anchor="bottom right" max-width="300px" self="top right" square>
-              <q-list>
+              <q-list bordered dense padding>
+                <template v-if="user">
+                  <q-item>
+                    <q-item-section avatar>
+                      <q-avatar>
+                        <img :src="user.attributes.picture">
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>
+                        {{ user.attributes.name }}
+                      </q-item-label>
+                      <q-item-label>
+                        {{ user.attributes.email }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-separator spaced />
+                  <q-item clickable v-close-popup @click="signOut">
+                    <q-item-section side>
+                      <q-icon name="mdi-logout" />
+                    </q-item-section>
+                    <q-item-section>
+                      Sign out
+                    </q-item-section>
+                  </q-item>
+                  <q-separator spaced />
+                </template>
                 <q-item clickable v-close-popup @click="$q.dark.toggle()">
                   <q-item-section side>
                     <q-icon name="mdi-theme-light-dark" />
@@ -60,10 +124,12 @@ const search = ref('');
               </q-list>
             </q-menu>
           </q-btn>
-          <q-btn no-wrap outline padding="6px 12px" square>
-            <q-icon class="q-mr-sm" name="mdi-google" />
-            <span class="block">Sign in</span>
-          </q-btn>
+          <template v-if="user === null">
+            <q-btn no-wrap outline padding="6px 12px" square @click="signIn">
+              <q-icon class="q-mr-sm" name="mdi-google" />
+              <span class="block">Sign in</span>
+            </q-btn>
+          </template>
         </div>
       </q-toolbar>
     </q-header>
@@ -89,21 +155,26 @@ const search = ref('');
                 Home
               </q-item-section>
             </q-item>
-            <q-separator spaced />
-            <q-item>
-              <q-item-section class="q-gutter-sm">
-                <div class="q-px-sm">
-                  Sign in to like tunes, comment, and subscribe.
-                </div>
-                <div class="q-px-sm">
-                  <q-btn no-wrap outline padding="6px 18px" square>
-                    <q-icon class="q-mr-sm" name="mdi-google" />
-                    <span class="block">Sign in</span>
-                  </q-btn>
-                </div>
-              </q-item-section>
-            </q-item>
-            <q-separator spaced />
+            <template v-if="user === null">
+              <q-separator spaced />
+              <q-item>
+                <q-item-section class="q-gutter-sm">
+                  <div class="q-px-sm">
+                    Sign in to like tunes, comment, and subscribe.
+                  </div>
+                  <div class="q-px-sm">
+                    <q-btn no-wrap outline padding="6px 18px" square @click="signIn">
+                      <q-icon class="q-mr-sm" name="mdi-google" />
+                      <span class="block">Sign in</span>
+                    </q-btn>
+                  </div>
+                </q-item-section>
+              </q-item>
+              <q-separator spaced />
+            </template>
+            <template v-else>
+              <q-separator spaced />
+            </template>
             <q-item href="https://github.com/malvaceae/chiptube.io" target="_blank" v-ripple>
               <q-item-section side>
                 <q-icon name="mdi-github" />

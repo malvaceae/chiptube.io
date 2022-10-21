@@ -2,8 +2,8 @@
 // Vue.js
 import { ref } from 'vue';
 
-// Axios
-import axios from 'axios';
+// Amplify
+import { API } from 'aws-amplify';
 
 // tunes
 const tunes = ref<Record<string, string>[]>([]);
@@ -13,8 +13,8 @@ const after = ref<string>();
 
 // get tunes
 const getTunes = async (_: number, done: (stop?: boolean) => void) => {
-  const { data } = await axios.get('/tunes', {
-    params: {
+  const data = await API.get('V1', '/tunes', {
+    queryStringParameters: {
       after: after.value,
     },
   });

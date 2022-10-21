@@ -5,8 +5,8 @@ import { onActivated, onDeactivated, ref } from 'vue';
 // Vue Router
 import { useRoute } from 'vue-router';
 
-// Axios
-import axios from 'axios';
+// Amplify
+import { API, Storage } from 'aws-amplify';
 
 // MIDI Player
 import MidiPlayer from '@/components/MidiPlayer.vue';
@@ -19,8 +19,10 @@ const tune = ref<Record<string, string> | null>(null);
 
 // get the tune
 onActivated(() => {
-  axios.get(`/tunes/${$route.params.id}`).then(({ data }) => {
-    tune.value = data;
+  API.get('V1', `/tunes/${$route.params.id}`, {}).then((data) => {
+    Storage.get(`tunes/${data.id}.mid`).then((url) => {
+      tune.value = Object.assign(data, { url });
+    });
   });
 });
 
