@@ -1,3 +1,6 @@
+// Node.js Core Modules
+import { randomFillSync } from 'crypto';
+
 // AWS Lambda
 import {
   APIGatewayProxyEvent,
@@ -28,7 +31,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           });
 
           // Invoke the route.
-          return await route(params, match.groups ?? {});
+          return await route(event, params, match.groups ?? {});
         }
       }
     }
@@ -51,7 +54,7 @@ const routes = new Map([
       path: /^\/tunes$/,
       httpMethod: 'GET',
     },
-    async (params: Record<string, any>, _: Record<string, string>) => {
+    async (event: APIGatewayProxyEvent, params: Record<string, any>) => {
       const ExclusiveStartKey = (({ after }) => {
         try {
           return JSON.parse(Buffer.from(after, 'base64').toString());
@@ -88,10 +91,58 @@ const routes = new Map([
   ],
   [
     {
+      path: /^\/tunes$/,
+      httpMethod: 'POST',
+    },
+    async ({ requestContext: { identity: { cognitoIdentityId: identityId } } }: APIGatewayProxyEvent, { title, description, midiKey }: Record<string, any>) => {
+      if (!title || !description || !midiKey) {
+        return response({
+          message: 'Unprocessable entity',
+        }, 422);
+      }
+
+      while (true) {
+        try {
+          const id = [...randomFillSync(new Uint32Array(11))].map((i) => i % 64).map((i) => {
+            return '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz'[i];
+          }).join('');
+
+          await dynamodb.put({
+            TableName: process.env.APP_TABLE_NAME!,
+            Item: {
+              pk: 'tunes',
+              sk: `tuneId#${id}`,
+              id,
+              title,
+              description,
+              identityId,
+              midiKey,
+              publishedAt: Date.now(),
+              views: 0,
+              likes: 0,
+              favorites: 0,
+              comments: 0,
+            },
+            ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)',
+          }).promise();
+
+          return response({ id });
+        } catch (e: any) {
+          if (e.code === 'ConditionalCheckFailedException') {
+            continue;
+          } else {
+            throw e;
+          }
+        }
+      }
+    },
+  ],
+  [
+    {
       path: /^\/tunes\/(?<id>[\w-]{11})$/,
       httpMethod: 'GET',
     },
-    async (_: Record<string, any>, { id }: Record<string, string>) => {
+    async (event: APIGatewayProxyEvent, params: Record<string, any>, { id }: Record<string, string>) => {
       const { Item: tune } = await dynamodb.get({
         TableName: process.env.APP_TABLE_NAME!,
         Key: {

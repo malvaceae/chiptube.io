@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 // Vue.js
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, toRefs, watchEffect } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watchEffect } from 'vue';
+
+// Amplify
+import { Storage } from 'aws-amplify';
 
 // Quasar
 import { dom, format } from 'quasar';
@@ -15,12 +18,7 @@ import { Midi } from '@tonejs/midi';
 import p5 from 'p5';
 
 // properties
-const props = defineProps<{
-  url: string;
-}>();
-
-// midi url
-const { url } = toRefs(props);
+const props = defineProps<{ identityId: string, midiKey: string }>();
 
 // 88 keys in A0 (21) to C8 (108)
 const keys = [...Array(88).keys()].map((i) => i + 21).map((id) => {
@@ -226,8 +224,14 @@ const play = async () => {
   // set current state to loading
   currentState.value = 'loading';
 
+  // get the midi url
+  const url = await Storage.get(props.midiKey, {
+    level: 'protected',
+    ...props,
+  });
+
   // download and parse the midi file
-  midi.value = await Midi.fromUrl(url.value);
+  midi.value = await Midi.fromUrl(url);
 
   // instruments
   instruments.value = midi.value.tracks.map(({ instrument: { number } }) => {

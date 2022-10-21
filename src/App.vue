@@ -1,18 +1,18 @@
 <script lang="ts" setup>
 // Vue.js
-import { ref } from 'vue';
+import { reactive, ref } from 'vue';
 
 // Vue Router
 import { useRouter } from 'vue-router';
 
 // Amplify
-import { Hub } from 'aws-amplify';
+import { API, Hub, Storage } from 'aws-amplify';
 
 // Amplify - Auth
 import { Auth, CognitoHostedUIIdentityProvider, CognitoUser } from '@aws-amplify/auth';
 
 // Quasar
-import { useQuasar } from 'quasar';
+import { uid, useQuasar } from 'quasar';
 
 // get the $router object
 const $router = useRouter();
@@ -24,6 +24,7 @@ const $q = useQuasar();
 $q.dark.set('auto');
 
 // variables
+const dialog = ref(false);
 const drawer = ref(false);
 const search = ref('');
 
@@ -51,6 +52,46 @@ const signIn = async () => {
 const signOut = async () => {
   await Auth.signOut();
 };
+
+// the tune
+const tune = reactive({
+  title: '',
+  description: '',
+  midi: ref<File | null>(null),
+});
+
+// upload the tune
+const uploadTune = async () => {
+  if (!tune.midi) {
+    return;
+  }
+
+  // show loading
+  $q.loading.show({ spinnerSize: 46 });
+
+  // upload the tune
+  const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, tune.midi, {
+    level: 'protected',
+  });
+
+  // register the tune info
+  const data = await API.post('V1', '/tunes', {
+    body: {
+      title: tune.title,
+      description: tune.description,
+      midiKey,
+    },
+  });
+
+  // move to watch route
+  await $router.push({ name: 'watch', params: { id: data.id } });
+
+  // close dialog
+  dialog.value = false;
+
+  // hide loading
+  $q.loading.hide();
+};
 </script>
 
 <template>
@@ -75,6 +116,11 @@ const signOut = async () => {
         </q-input>
         <q-space />
         <div class="row q-gutter-sm no-wrap items-center">
+          <template v-if="user">
+            <q-btn flat round @click="dialog = !dialog">
+              <q-icon name="mdi-video-plus-outline" />
+            </q-btn>
+          </template>
           <q-btn flat round>
             <template v-if="user">
               <q-avatar>
@@ -195,6 +241,44 @@ const signOut = async () => {
       </router-view>
     </q-page-container>
   </q-layout>
+  <q-dialog v-model="dialog" persistent>
+    <q-card class="full-width" square>
+      <q-card-section class="text-h6">
+        Upload tune
+      </q-card-section>
+      <q-card-section class="q-pt-none">
+        <div class="column q-gutter-md">
+          <q-input v-model="tune.title" label-slot outlined square>
+            <template #label>
+              Title
+            </template>
+          </q-input>
+          <q-input v-model="tune.description" label-slot outlined square type="textarea">
+            <template #label>
+              Description
+            </template>
+          </q-input>
+          <q-file v-model="tune.midi" accept=".mid" label-slot outlined square>
+            <template #prepend>
+              <q-icon name="mdi-file-music" />
+            </template>
+            <template #label>
+              MIDI File
+            </template>
+          </q-file>
+        </div>
+      </q-card-section>
+      <q-separator />
+      <q-card-actions align="right">
+        <q-btn color="grey-6" flat square v-close-popup>
+          <span class="block">Cancel</span>
+        </q-btn>
+        <q-btn color="primary" :disable="!Object.values(tune).every(Boolean)" flat square @click="uploadTune">
+          <span class="block">Upload tune</span>
+        </q-btn>
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>
 
 <style lang="scss" scoped>
