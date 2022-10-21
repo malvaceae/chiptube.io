@@ -58,7 +58,7 @@ const routes = new Map([
       const ExclusiveStartKey = (({ after }) => {
         try {
           return JSON.parse(Buffer.from(after, 'base64').toString());
-        } catch (e) {
+        } catch {
           //
         }
       })(params);
@@ -78,7 +78,7 @@ const routes = new Map([
       const after = ((key) => {
         try {
           return Buffer.from(JSON.stringify(key)).toString('base64');
-        } catch (e) {
+        } catch {
           //
         }
       })(LastEvaluatedKey);
@@ -170,8 +170,8 @@ const parse = (body: string | null): Record<string, any> => {
   const params = (() => {
     try {
       return JSON.parse(body);
-    } catch (e) {
-      return {};
+    } catch {
+      //
     }
   })();
 
