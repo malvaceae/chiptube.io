@@ -152,6 +152,7 @@ const routes = new Map([
               id,
               userId,
               identityId,
+              lastViewedIdentityId: identityId,
               title,
               description,
               midiKey,
@@ -161,7 +162,10 @@ const routes = new Map([
               favorites: 0,
               comments: 0,
             },
-            ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)',
+            ConditionExpression: [
+              'attribute_not_exists(pk)',
+              'attribute_not_exists(sk)',
+            ].join(' AND '),
           }).promise();
 
           return response({ id });
@@ -180,7 +184,35 @@ const routes = new Map([
       path: /^\/tunes\/(?<id>[\w-]{11})$/,
       httpMethod: 'GET',
     },
-    async (event: APIGatewayProxyEvent, params: Record<string, any>, { id }: Record<string, string>) => {
+    async ({ requestContext: { identity: { cognitoIdentityId: identityId } } }: APIGatewayProxyEvent, params: Record<string, any>, { id }: Record<string, string>) => {
+      try {
+        await dynamodb.update({
+          TableName: process.env.APP_TABLE_NAME!,
+          Key: {
+            pk: 'tunes',
+            sk: `tuneId#${id}`,
+          },
+          UpdateExpression: `SET ${[
+            'lastViewedIdentityId = :identityId',
+            '#views = #views + :additionalValue',
+          ].join(', ')}`,
+          ConditionExpression: [
+            'attribute_exists(pk)',
+            'attribute_exists(sk)',
+            'lastViewedIdentityId <> :identityId',
+          ].join(' AND '),
+          ExpressionAttributeNames: {
+            '#views': 'views',
+          },
+          ExpressionAttributeValues: {
+            ':identityId': identityId,
+            ':additionalValue': 1,
+          },
+        }).promise();
+      } catch {
+        //
+      }
+
       const { Item: tune } = await dynamodb.get({
         TableName: process.env.APP_TABLE_NAME!,
         Key: {
