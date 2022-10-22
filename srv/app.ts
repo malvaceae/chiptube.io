@@ -6,13 +6,13 @@ import {
   App,
   CfnOutput,
   CfnParameter,
+  CustomResource,
   Duration,
   IgnoreMode,
   RemovalPolicy,
   Stack,
   StackProps,
   aws_apigateway as apigateway,
-  aws_cloudformation as cloudformation,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
   aws_codebuild as codebuild,
@@ -589,13 +589,11 @@ class ChipTubeStack extends Stack {
         version: '0.2',
         phases: {
           install: {
-            'on-failure': 'CONTINUE',
             'runtime-versions': {
               nodejs: 'latest',
             },
           },
           pre_build: {
-            'on-failure': 'CONTINUE',
             commands: [
               'yarn',
             ],
@@ -603,11 +601,6 @@ class ChipTubeStack extends Stack {
           build: {
             commands: [
               'yarn build',
-            ],
-          },
-          post_build: {
-            commands: [
-              'curl -X PUT -H "Content-Type:" --data-binary "{\\"Status\\":\\"$([ ${CODEBUILD_BUILD_SUCCEEDING} = 1 ] && echo SUCCESS || echo FAILURE)\\",\\"UniqueId\\":\\"${CODEBUILD_BUILD_ID}\\"}" "${SIGNAL_URL}"',
             ],
           },
         },
@@ -626,34 +619,38 @@ class ChipTubeStack extends Stack {
       }),
     });
 
-    // App Build Wait Condition
-    const appBuildWaitCondition = new cloudformation.CfnWaitCondition(this, `AppBuildWaitCondition-${appAsset.assetHash}`, {
-      handle: new cloudformation.CfnWaitConditionHandle(this, `AppBuildWaitConditionHandle-${appAsset.assetHash}`).ref,
-      timeout: '3600',
+    // App Build Handler
+    const appBuildHandler = new nodejs.NodejsFunction(this, 'AppBuildHandler', {
+      architecture: lambda.Architecture.ARM_64,
+      runtime: lambda.Runtime.NODEJS_16_X,
+      timeout: Duration.minutes(15),
+      environment: {
+        APP_PROJECT_NAME: appProject.projectName,
+      },
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: [
+            'codebuild:BatchGetBuilds',
+            'codebuild:StartBuild',
+          ],
+          resources: [
+            appProject.projectArn,
+          ],
+        }),
+      ],
+      bundling: {
+        minify: true,
+      },
+    });
+
+    // App Build Provider
+    const appBuildProvider = new cr.Provider(this, 'AppBuildProvider', {
+      onEventHandler: appBuildHandler,
     });
 
     // App Build
-    new cr.AwsCustomResource(this, 'AppBuild', {
-      onUpdate: {
-        service: 'CodeBuild',
-        action: 'startBuild',
-        parameters: {
-          environmentVariablesOverride: [
-            {
-              name: 'SIGNAL_URL',
-              value: appBuildWaitCondition.handle,
-            },
-          ],
-          projectName: appProject.projectName,
-        },
-        physicalResourceId: cr.PhysicalResourceId.of(appProject.projectArn),
-        outputPaths: [],
-      },
-      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: [
-          appProject.projectArn,
-        ],
-      }),
+    const appBuild = new CustomResource(this, `AppBuild-${appAsset.assetHash}`, {
+      serviceToken: appBuildProvider.serviceToken,
     });
 
     // App Bucket Deployment
@@ -666,7 +663,7 @@ class ChipTubeStack extends Stack {
     });
 
     // Wait for the build to complete.
-    appBucketDeployment.node.addDependency(appBuildWaitCondition);
+    appBucketDeployment.node.addDependency(appBuild);
   }
 }
 
