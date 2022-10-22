@@ -253,6 +253,23 @@ class ChipTubeStack extends Stack {
       ],
     });
 
+    // User Pool Signed In Trigger
+    const userPoolSignedInTrigger = new nodejs.NodejsFunction(this, 'UserPoolSignedInTrigger', {
+      architecture: lambda.Architecture.ARM_64,
+      runtime: lambda.Runtime.NODEJS_16_X,
+      timeout: Duration.seconds(30),
+      memorySize: 1769, // 1 vCPU
+      environment: {
+        APP_TABLE_NAME: appTable.tableName,
+      },
+      bundling: {
+        minify: true,
+      },
+    });
+
+    // Add permissions to access App Table.
+    appTable.grantWriteData(userPoolSignedInTrigger);
+
     // User Pool
     const userPool = new cognito.UserPool(this, 'UserPool', {
       standardAttributes: {
@@ -266,6 +283,9 @@ class ChipTubeStack extends Stack {
           required: true,
         },
       },
+      lambdaTriggers: Object.fromEntries(['postConfirmation', 'postAuthentication'].map((key) => {
+        return [key, userPoolSignedInTrigger];
+      })),
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
