@@ -5,6 +5,9 @@ import { ref } from 'vue';
 // Amplify
 import { API } from 'aws-amplify';
 
+// Quasar
+import { date } from 'quasar';
+
 // tunes
 const tunes = ref<Record<string, any>[]>([]);
 
@@ -36,27 +39,29 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
       <div class="row q-col-gutter-md">
         <div v-for="tune in tunes" class="col-12 col-sm-6 col-md-4 col-lg-3">
           <router-link :to="{ name: 'watch', params: { id: tune.id } }">
-            <q-card bordered flat square>
+            <q-card class="column full-height" flat square>
               <q-img src="@/assets/thumbnail.png">
-                <template v-if="$q.dark.isActive">
-                  <div class="absolute-full" />
-                </template>
                 <div class="absolute-center full-width text-h6 text-center ellipsis">
                   {{ tune.title }}
                 </div>
               </q-img>
-              <q-item>
-                <q-item-section avatar>
+              <q-item class="col-grow">
+                <q-item-section avatar top>
                   <q-avatar>
                     <img :src="tune.user.picture">
                   </q-avatar>
                 </q-item-section>
                 <q-item-section>
+                  <q-space />
                   <q-item-label class="text-subtitle1 text-weight-medium" lines="2">
                     {{ tune.title }}
                   </q-item-label>
-                  <q-item-label caption lines="3">
-                    {{ tune.description }}
+                  <q-space />
+                  <q-item-label class="q-mt-sm" caption>
+                    {{ tune.user.name }}
+                  </q-item-label>
+                  <q-item-label caption>
+                    {{ tune.views.toLocaleString() }} views • {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}
                   </q-item-label>
                 </q-item-section>
               </q-item>

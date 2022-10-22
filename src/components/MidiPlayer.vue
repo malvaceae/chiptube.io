@@ -595,7 +595,6 @@ onUnmounted(() => {
   <div ref="el" class="midi-player relative-position fit text-white non-selectable" @click="toggle">
     <template v-if="currentState === 'stopped'">
       <div class="absolute-full cursor-pointer">
-        <div class="dimmed" />
         <div class="absolute-center">
           <q-btn outline padding="xs lg" size="xl">
             <q-icon name="mdi-play" />
@@ -605,7 +604,6 @@ onUnmounted(() => {
     </template>
     <template v-if="currentState === 'loading'">
       <div class="absolute-full" @click.stop>
-        <div class="dimmed" />
         <div class="absolute-center">
           <q-spinner size="xl" />
         </div>
@@ -659,7 +657,7 @@ body:not(.no-pointer-events--children) .midi-player:not(:hover) .controls {
 .backdrop {
   min-height: 146px;
   max-height: 146px;
-  background-image: linear-gradient(transparent, rgba(0, 0, 0, .75));
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAACSCAYAAACE56BkAAAAAXNSR0IArs4c6QAAAPVJREFUKFNlyOlHGAAcxvHuY93H1n1fW1v3fbej+zAmI5PIRGYiM5JEEkkiiSSRRPoj83nze9Pz4uPrSUh4tURPEpKDFJWKtCBdZSAzeKOykB3kqFzkBfmqAIVBkSrGW7wLSlQpyoJyVYHKoEpVoyaoVXWoDxpUI5qCZtWC98EH1YqPwSfVhvagQ3WiK+hWPegN+lQ/BoJBNYRhjASjagzjwYSaxOfgi/qKb8GUmsZMMKvmMB8sqEUsYRnf8QMr+IlV/MIa1rGB39jEFv7gL7axg3/4j13sYR8HOMQRjnGCU5zhHBe4xBWucYNb3OEeD3jEE55fAOe7I9q0+rDDAAAAAElFTkSuQmCC");
 }
 
 .seekbar {
