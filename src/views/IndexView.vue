@@ -6,7 +6,7 @@ import { ref } from 'vue';
 import { API } from 'aws-amplify';
 
 // tunes
-const tunes = ref<Record<string, string>[]>([]);
+const tunes = ref<Record<string, any>[]>([]);
 
 // the after token
 const after = ref<string>();
@@ -47,7 +47,9 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
               </q-img>
               <q-item>
                 <q-item-section avatar>
-                  <q-skeleton type="QAvatar" />
+                  <q-avatar>
+                    <img :src="tune.user.picture">
+                  </q-avatar>
                 </q-item-section>
                 <q-item-section>
                   <q-item-label class="text-subtitle1 text-weight-medium" lines="2">

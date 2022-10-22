@@ -8,6 +8,9 @@ import { useRoute } from 'vue-router';
 // Amplify
 import { API } from 'aws-amplify';
 
+// Quasar
+import { date } from 'quasar';
+
 // MIDI Player
 import MidiPlayer from '@/components/MidiPlayer.vue';
 
@@ -15,7 +18,7 @@ import MidiPlayer from '@/components/MidiPlayer.vue';
 const $route = useRoute();
 
 // the tune
-const tune = ref<Record<string, string> | null>(null);
+const tune = ref<Record<string, any> | null>(null);
 
 // get the tune
 onActivated(() => {
@@ -35,18 +38,46 @@ onDeactivated(() => (tune.value = null));
         <q-responsive :ratio="16 / 9">
           <midi-player v-if="tune" :identity-id="tune.identityId" :midi-key="tune.midiKey" />
         </q-responsive>
-        <div v-if="tune" class="q-mt-md q-gutter-xs">
-          <div class="text-h6">
-            {{ tune.title }}
-          </div>
-          <div>
-            {{ new Date(tune.publishedAt).toLocaleDateString() }}
-          </div>
+        <q-list v-if="tune" dense padding>
+          <q-item>
+            <q-item-section>
+              <q-item-label class="text-h6">
+                {{ tune.title }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section>
+              <q-item-label>
+                {{ tune.views.toLocaleString() }} views
+              </q-item-label>
+            </q-item-section>
+          </q-item>
           <q-separator spaced />
-          <div>
-            {{ tune.description }}
-          </div>
-        </div>
+          <q-item>
+            <q-item-section avatar>
+              <q-avatar>
+                <img :src="tune.user.picture">
+              </q-avatar>
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-weight-bold">
+                {{ tune.user.name }}
+              </q-item-label>
+              <q-item-label caption>
+                Published on {{ date.formatDate(new Date(tune.publishedAt), 'MMM D, YYYY') }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item>
+            <q-item-section avatar />
+            <q-item-section>
+              <q-item-label>
+                {{ tune.description }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
       </div>
       <div class="col-12 col-md-4">
         <!-- -->

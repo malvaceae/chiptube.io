@@ -83,6 +83,34 @@ const routes = new Map([
         }
       })(LastEvaluatedKey);
 
+      // Get unique user ids.
+      const userIds = [...new Set(tunes?.map(({ userId }) => userId))];
+
+      // Get users.
+      const { Responses } = await dynamodb.batchGet({
+        RequestItems: {
+          [process.env.APP_TABLE_NAME!]: {
+            Keys: userIds.map((userId) => ({
+              pk: 'users',
+              sk: `userId#${userId}`,
+            })),
+            AttributesToGet: [
+              'id',
+              'name',
+              'picture',
+            ],
+          },
+        },
+      }).promise();
+
+      // Get users by id.
+      const users = Responses?.[process.env.APP_TABLE_NAME!]?.reduce?.((users, user) => {
+        return { ...users, [user.id]: user };
+      }, {});
+
+      // Add user to tune.
+      tunes?.forEach?.((tune) => (tune.user = users?.[tune.userId]));
+
       return response({
         tunes,
         after,
@@ -94,7 +122,16 @@ const routes = new Map([
       path: /^\/tunes$/,
       httpMethod: 'POST',
     },
-    async ({ requestContext: { identity: { cognitoIdentityId: identityId } } }: APIGatewayProxyEvent, { title, description, midiKey }: Record<string, any>) => {
+    async ({ requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId } } }: APIGatewayProxyEvent, { title, description, midiKey }: Record<string, any>) => {
+      if (!cognitoAuthenticationProvider) {
+        return response({
+          message: 'Unauthorized',
+        }, 401);
+      }
+
+      // Get user id from cognito authentication provider.
+      const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+
       if (!title || !description || !midiKey) {
         return response({
           message: 'Unprocessable entity',
@@ -113,9 +150,10 @@ const routes = new Map([
               pk: 'tunes',
               sk: `tuneId#${id}`,
               id,
+              userId,
+              identityId,
               title,
               description,
-              identityId,
               midiKey,
               publishedAt: Date.now(),
               views: 0,
@@ -157,7 +195,28 @@ const routes = new Map([
         }, 404);
       }
 
-      return response(tune);
+      const { Item: user } = await dynamodb.get({
+        TableName: process.env.APP_TABLE_NAME!,
+        Key: {
+          pk: 'users',
+          sk: `userId#${tune.userId}`,
+        },
+        AttributesToGet: [
+          'id',
+          'name',
+          'picture',
+        ],
+      }).promise();
+
+      if (user === undefined) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
+      return response(Object.assign(tune, {
+        user,
+      }));
     },
   ],
 ]);
