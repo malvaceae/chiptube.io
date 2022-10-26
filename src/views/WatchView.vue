@@ -6,10 +6,10 @@ import { onActivated, onDeactivated, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 // Amplify
-import { API } from 'aws-amplify';
+import { API, Storage } from 'aws-amplify';
 
 // Quasar
-import { date } from 'quasar';
+import { date, exportFile } from 'quasar';
 
 // MIDI Player
 import MidiPlayer from '@/components/MidiPlayer.vue';
@@ -24,6 +24,23 @@ const toggleIsLiked = async () => {
       isLiked: !tune.value.isLiked,
     },
   });
+};
+
+// download tune
+const downloadTune = async () => {
+  if (tune.value) {
+    const { Body } = await Storage.get(tune.value.midiKey, {
+      level: 'protected',
+      identityId: tune.value.identityId,
+      download: true,
+    });
+
+    if (Body instanceof Blob) {
+      exportFile(`${tune.value.title}.mid`, Body, {
+        mimeType: 'audio/midi',
+      });
+    }
+  }
 };
 
 // the tune
@@ -67,6 +84,10 @@ onDeactivated(() => (tune.value = null));
                 <span class="block">
                   {{ tune.likes.toLocaleString() }}
                 </span>
+              </q-btn>
+              <q-btn flat square @click="downloadTune">
+                <q-icon class="q-mr-sm" name="mdi-download" />
+                <span class="block">Download</span>
               </q-btn>
             </div>
           </q-item>
