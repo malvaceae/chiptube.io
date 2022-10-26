@@ -184,7 +184,7 @@ const routes = new Map([
       path: /^\/tunes\/(?<id>[\w-]{11})$/,
       httpMethod: 'GET',
     },
-    async ({ requestContext: { identity: { cognitoIdentityId: identityId } } }: APIGatewayProxyEvent, params: Record<string, any>, { id }: Record<string, string>) => {
+    async ({ requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId } } }: APIGatewayProxyEvent, params: Record<string, any>, { id }: Record<string, string>) => {
       try {
         await dynamodb.update({
           TableName: process.env.APP_TABLE_NAME!,
@@ -246,9 +246,179 @@ const routes = new Map([
         }, 404);
       }
 
-      return response(Object.assign(tune, {
+      Object.assign(tune, {
         user,
-      }));
+      });
+
+      // Get user id from cognito authentication provider.
+      const userId = cognitoAuthenticationProvider?.split?.(':')?.slice?.(-1)?.[0];
+
+      if (userId) {
+        const { Item: isLiked } = await dynamodb.get({
+          TableName: process.env.APP_TABLE_NAME!,
+          Key: {
+            pk: `userId#${userId}`,
+            sk: `tuneLikeId#${id}`,
+          },
+        }).promise();
+
+        Object.assign(tune, {
+          isLiked: !!isLiked,
+        });
+      }
+
+      return response(tune);
+    },
+  ],
+  [
+    {
+      path: /^\/tunes\/(?<id>[\w-]{11})$/,
+      httpMethod: 'PUT',
+    },
+    async ({ requestContext: { identity: { cognitoAuthenticationProvider } } }: APIGatewayProxyEvent, params: Record<string, any>, { id }: Record<string, string>) => {
+      if (!cognitoAuthenticationProvider) {
+        return response({
+          message: 'Unauthorized',
+        }, 401);
+      }
+
+      // Get user id from cognito authentication provider.
+      const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+
+      if (typeof params.isLiked === 'boolean') {
+        try {
+          if (params.isLiked) {
+            await dynamodb.transactWrite({
+              TransactItems: [
+                {
+                  Put: {
+                    TableName: process.env.APP_TABLE_NAME!,
+                    Item: {
+                      pk: `userId#${userId}`,
+                      sk: `tuneLikeId#${id}`,
+                    },
+                    ConditionExpression: [
+                      'attribute_not_exists(pk)',
+                      'attribute_not_exists(sk)',
+                    ].join(' AND '),
+                  },
+                },
+                {
+                  Update: {
+                    TableName: process.env.APP_TABLE_NAME!,
+                    Key: {
+                      pk: 'tunes',
+                      sk: `tuneId#${id}`,
+                    },
+                    UpdateExpression: 'ADD #likes :additionalValue',
+                    ConditionExpression: [
+                      'attribute_exists(pk)',
+                      'attribute_exists(sk)',
+                    ].join(' AND '),
+                    ExpressionAttributeNames: {
+                      '#likes': 'likes',
+                    },
+                    ExpressionAttributeValues: {
+                      ':additionalValue': 1,
+                    },
+                  },
+                },
+              ],
+            }).promise();
+          } else {
+            await dynamodb.transactWrite({
+              TransactItems: [
+                {
+                  Delete: {
+                    TableName: process.env.APP_TABLE_NAME!,
+                    Key: {
+                      pk: `userId#${userId}`,
+                      sk: `tuneLikeId#${id}`,
+                    },
+                    ConditionExpression: [
+                      'attribute_exists(pk)',
+                      'attribute_exists(sk)',
+                    ].join(' AND '),
+                  },
+                },
+                {
+                  Update: {
+                    TableName: process.env.APP_TABLE_NAME!,
+                    Key: {
+                      pk: 'tunes',
+                      sk: `tuneId#${id}`,
+                    },
+                    UpdateExpression: 'ADD #likes :additionalValue',
+                    ConditionExpression: [
+                      'attribute_exists(pk)',
+                      'attribute_exists(sk)',
+                    ].join(' AND '),
+                    ExpressionAttributeNames: {
+                      '#likes': 'likes',
+                    },
+                    ExpressionAttributeValues: {
+                      ':additionalValue': -1,
+                    },
+                  },
+                },
+              ],
+            }).promise();
+          }
+        } catch {
+          //
+        }
+      }
+
+      const { Item: tune } = await dynamodb.get({
+        TableName: process.env.APP_TABLE_NAME!,
+        Key: {
+          pk: 'tunes',
+          sk: `tuneId#${id}`,
+        },
+      }).promise();
+
+      if (tune === undefined) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
+      const { Item: user } = await dynamodb.get({
+        TableName: process.env.APP_TABLE_NAME!,
+        Key: {
+          pk: 'users',
+          sk: `userId#${tune.userId}`,
+        },
+        AttributesToGet: [
+          'id',
+          'name',
+          'picture',
+        ],
+      }).promise();
+
+      if (user === undefined) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
+      Object.assign(tune, {
+        user,
+      });
+
+      const { Item: isLiked } = await dynamodb.get({
+        TableName: process.env.APP_TABLE_NAME!,
+        Key: {
+          pk: `userId#${userId}`,
+          sk: `tuneLikeId#${id}`,
+        },
+      }).promise();
+
+      Object.assign(tune, {
+        isLiked: !!isLiked,
+      });
+
+      return response(tune);
     },
   ],
 ]);

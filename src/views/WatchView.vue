@@ -17,6 +17,15 @@ import MidiPlayer from '@/components/MidiPlayer.vue';
 // get the $route object
 const $route = useRoute();
 
+// toggle is liked
+const toggleIsLiked = async () => {
+  tune.value &&= await API.put('V1', `/tunes/${$route.params.id}`, {
+    body: {
+      isLiked: !tune.value.isLiked,
+    },
+  });
+};
+
 // the tune
 const tune = ref<Record<string, any> | null>(null);
 
@@ -52,6 +61,14 @@ onDeactivated(() => (tune.value = null));
                 {{ tune.views.toLocaleString() }} views
               </q-item-label>
             </q-item-section>
+            <div class="absolute-right">
+              <q-btn :color="tune.isLiked ? 'blue-5' : void 0" flat square @click="toggleIsLiked">
+                <q-icon class="q-mr-sm" name="mdi-thumb-up" />
+                <span class="block">
+                  {{ tune.likes.toLocaleString() }}
+                </span>
+              </q-btn>
+            </div>
           </q-item>
           <q-separator spaced />
           <q-item>
