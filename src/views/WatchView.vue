@@ -3,7 +3,7 @@
 import { onActivated, onDeactivated, ref } from 'vue';
 
 // Vue Router
-import { useRoute } from 'vue-router';
+import { onBeforeRouteUpdate, useRoute } from 'vue-router';
 
 // Amplify
 import { API, Storage } from 'aws-amplify';
@@ -43,12 +43,47 @@ const downloadTune = async () => {
   }
 };
 
+// tunes
+const tunes = ref<Record<string, any>[]>([]);
+
+// the after token
+const after = ref<string>();
+
+// get tunes
+const getTunes = async (_: number, done: (stop?: boolean) => void) => {
+  const data = await API.get('V1', '/tunes', {
+    queryStringParameters: {
+      after: after.value,
+    },
+  });
+
+  // add tunes
+  tunes.value.push(...data.tunes);
+
+  // update the after token
+  after.value = data.after;
+
+  // complete updates
+  done(!after.value);
+};
+
 // the tune
 const tune = ref<Record<string, any> | null>(null);
 
 // get the tune
 onActivated(() => {
   API.get('V1', `/tunes/${$route.params.id}`, {}).then((data) => {
+    tune.value = data;
+  });
+});
+
+// update the tune
+onBeforeRouteUpdate((to) => {
+  // reset the tune
+  tune.value = null;
+
+  // get the tune
+  API.get('V1', `/tunes/${to.params.id}`, {}).then((data) => {
     tune.value = data;
   });
 });
@@ -118,28 +153,30 @@ onDeactivated(() => (tune.value = null));
         </q-list>
       </div>
       <div class="col-12 col-md-4">
-        <q-list v-if="tune" class="column q-gutter-md">
-          <q-item v-for="i in 24" class="q-py-none">
-            <q-item-section side>
-              <q-img src="@/assets/thumbnail.png" width="148px">
-                <div class="absolute-center full-width text-caption text-center ellipsis">
+        <q-infinite-scroll :offset="250" @load="getTunes">
+          <q-list v-if="tune" class="q-gutter-md">
+            <q-item v-for="tune in tunes" class="q-py-none" active-class="" :to="{ params: { id: tune.id } }">
+              <q-item-section side>
+                <q-img src="@/assets/thumbnail.png" width="148px">
+                  <div class="absolute-center full-width text-caption text-center ellipsis">
+                    {{ tune.title }}
+                  </div>
+                </q-img>
+              </q-item-section>
+              <q-item-section>
+                <q-item-label class="text-subtitle1" lines="2">
                   {{ tune.title }}
-                </div>
-              </q-img>
-            </q-item-section>
-            <q-item-section>
-              <q-item-label class="text-subtitle1" lines="2">
-                {{ tune.title }}
-              </q-item-label>
-              <q-item-label class="q-pt-sm" caption>
-                {{ tune.user.name }}
-              </q-item-label>
-              <q-item-label caption>
-                {{ tune.views.toLocaleString() }} views • {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
+                </q-item-label>
+                <q-item-label class="q-pt-sm" caption>
+                  {{ tune.user.name }}
+                </q-item-label>
+                <q-item-label caption>
+                  {{ tune.views.toLocaleString() }} views • {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-infinite-scroll>
       </div>
     </div>
   </q-page>
