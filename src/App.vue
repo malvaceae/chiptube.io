@@ -167,13 +167,59 @@ const uploadTune = async () => {
                   </q-item>
                   <q-separator spaced />
                 </template>
-                <q-item clickable v-close-popup @click="$q.dark.toggle()">
+                <q-item clickable>
                   <q-item-section side>
                     <q-icon name="mdi-theme-light-dark" />
                   </q-item-section>
                   <q-item-section>
-                    Appearance: {{ $q.dark.isActive ? 'Dark' : 'Light' }}
+                    <template v-if="page.dark === 'auto'">
+                      Appearance: Device theme
+                    </template>
+                    <template v-if="page.dark === true">
+                      Appearance: Dark
+                    </template>
+                    <template v-if="page.dark === false">
+                      Appearance: Light
+                    </template>
                   </q-item-section>
+                  <q-item-section side>
+                    <q-icon name="mdi-chevron-right" />
+                  </q-item-section>
+                  <q-menu anchor="top right" :offset="[1.33125, 9]" self="top right" square>
+                    <q-list bordered padding>
+                      <q-item dense>
+                        <q-item-section>
+                          <q-item-label caption>
+                            Setting applies to this browser only
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item clickable v-close-popup @click="$q.dark.set('auto')">
+                        <q-item-section side>
+                          <q-icon :class="{ invisible: !(page.dark === 'auto') }" name="mdi-check" />
+                        </q-item-section>
+                        <q-item-section>
+                          Use device theme
+                        </q-item-section>
+                      </q-item>
+                      <q-item clickable v-close-popup @click="$q.dark.set(true)">
+                        <q-item-section side>
+                          <q-icon :class="{ invisible: !(page.dark === true) }" name="mdi-check" />
+                        </q-item-section>
+                        <q-item-section>
+                          Dark theme
+                        </q-item-section>
+                      </q-item>
+                      <q-item clickable v-close-popup @click="$q.dark.set(false)">
+                        <q-item-section side>
+                          <q-icon :class="{ invisible: !(page.dark === false) }" name="mdi-check" />
+                        </q-item-section>
+                        <q-item-section>
+                          Light theme
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-menu>
                 </q-item>
               </q-list>
             </q-menu>
