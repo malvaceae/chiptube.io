@@ -4,6 +4,9 @@ import { createApp } from 'vue';
 // Vue Router
 import router from '@/router';
 
+// Pinia
+import pinia from '@/stores';
+
 // Amplify
 import '@/plugins/amplify';
 
@@ -18,6 +21,9 @@ const app = createApp(App);
 
 // use the router
 app.use(router);
+
+// use the pinia
+app.use(pinia);
 
 // use the quasar
 useQuasar(app);

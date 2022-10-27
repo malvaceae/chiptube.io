@@ -1,6 +1,12 @@
 <script lang="ts" setup>
 // Vue.js
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
+
+// Pinia
+import { storeToRefs } from 'pinia';
+
+// MIDI Store
+import { useMidiStore } from '@/stores/midi';
 
 // Amplify
 import { Storage } from 'aws-amplify';
@@ -19,6 +25,9 @@ import p5 from 'p5';
 
 // properties
 const props = defineProps<{ identityId: string, midiKey: string }>();
+
+// volume and mute
+const { volume, mute } = storeToRefs(useMidiStore());
 
 // 88 keys in A0 (21) to C8 (108)
 const keys = [...Array(88).keys()].map((i) => i + 21).map((id) => {
@@ -157,15 +166,25 @@ const notesByKey = computed(() => notesWithKey.value.reduce((notes, note) => {
   return { ...notes, [note.key.id]: [...(notes[note.key.id] ?? []), note] };
 }, {} as Record<number, typeof notesWithKey.value>));
 
-// volume
-const volume = ref(100);
+// set the volume
+const setVolume = (volume: number) => {
+  Tone.Destination.volume.value = Math.log10(volume) * 20 - 40 - 15;
+};
 
-// mute
-const mute = ref(false);
+// set the mute
+const setMute = (mute: boolean) => {
+  Tone.Destination.mute = mute;
+};
+
+// set the initial volume
+setVolume(volume.value);
+
+// set the initial mute
+setMute(mute.value);
 
 // watch volume
-watchEffect(() => {
-  Tone.Destination.volume.value = Math.log10(volume.value) * 20 - 40 - 15;
+watch(volume, () => {
+  setVolume(volume.value);
 
   if (volume.value > 0) {
     mute.value = false;
@@ -175,14 +194,12 @@ watchEffect(() => {
 });
 
 // watch mute
-watchEffect(() => {
-  Tone.Destination.mute = mute.value;
+watch(mute, () => {
+  setMute(mute.value);
 
-  nextTick(() => {
-    if (mute.value === false) {
-      volume.value ||= 30;
-    }
-  });
+  if (mute.value === false) {
+    volume.value ||= 30;
+  }
 });
 
 // volume control value

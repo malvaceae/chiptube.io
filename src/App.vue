@@ -1,18 +1,26 @@
 <script lang="ts" setup>
 // Vue.js
-import { reactive, ref } from 'vue';
+import { reactive, ref, watch } from 'vue';
 
 // Vue Router
 import { useRouter } from 'vue-router';
+
+// Stores
+import { useAuthStore } from '@/stores/auth';
+import { usePageStore } from '@/stores/page';
 
 // Amplify
 import { API, Hub, Storage } from 'aws-amplify';
 
 // Amplify - Auth
-import { Auth, CognitoHostedUIIdentityProvider, CognitoUser } from '@aws-amplify/auth';
+import { Auth, CognitoHostedUIIdentityProvider } from '@aws-amplify/auth';
 
 // Quasar
 import { uid, useQuasar } from 'quasar';
+
+// get stores
+const auth = useAuthStore();
+const page = usePageStore();
 
 // get the $router object
 const $router = useRouter();
@@ -20,16 +28,18 @@ const $router = useRouter();
 // get the $q object
 const $q = useQuasar();
 
-// set dark mode status to 'auto'
-$q.dark.set('auto');
+// set dark mode status
+$q.dark.set(page.dark);
+
+// watch dark mode status
+watch(() => $q.dark.mode, (dark) => {
+  page.dark = dark;
+});
 
 // variables
 const dialog = ref(false);
 const drawer = ref(false);
 const search = ref('');
-
-// user
-const user = ref<CognitoUser & { attributes: Record<string, any> } | null>(null);
 
 // subscribe auth events
 Hub.listen('auth', ({ payload: { event } }) => {
@@ -39,9 +49,7 @@ Hub.listen('auth', ({ payload: { event } }) => {
 });
 
 // get the current user
-Auth.currentAuthenticatedUser().then((currentUser) => {
-  user.value = currentUser;
-});
+Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null));
 
 // sign in
 const signIn = async () => {
@@ -116,15 +124,15 @@ const uploadTune = async () => {
         </q-input>
         <q-space />
         <div class="row q-gutter-md no-wrap items-center">
-          <template v-if="user">
+          <template v-if="auth.user">
             <q-btn flat round @click="dialog = !dialog">
               <q-icon name="mdi-video-plus-outline" />
             </q-btn>
           </template>
           <q-btn flat round>
-            <template v-if="user">
+            <template v-if="auth.user">
               <q-avatar>
-                <img :src="user.attributes.picture">
+                <img :src="auth.user.picture">
               </q-avatar>
             </template>
             <template v-else>
@@ -132,19 +140,19 @@ const uploadTune = async () => {
             </template>
             <q-menu class="full-width" anchor="bottom right" max-width="300px" self="top right" square>
               <q-list bordered dense padding>
-                <template v-if="user">
+                <template v-if="auth.user">
                   <q-item>
                     <q-item-section avatar>
                       <q-avatar>
-                        <img :src="user.attributes.picture">
+                        <img :src="auth.user.picture">
                       </q-avatar>
                     </q-item-section>
                     <q-item-section>
                       <q-item-label>
-                        {{ user.attributes.name }}
+                        {{ auth.user.name }}
                       </q-item-label>
                       <q-item-label>
-                        {{ user.attributes.email }}
+                        {{ auth.user.email }}
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -170,7 +178,7 @@ const uploadTune = async () => {
               </q-list>
             </q-menu>
           </q-btn>
-          <template v-if="user === null">
+          <template v-if="auth.user === null">
             <q-btn no-wrap outline padding="6px 12px" square @click="signIn">
               <q-icon class="q-mr-sm" name="mdi-google" />
               <span class="block">Sign in</span>
@@ -201,7 +209,7 @@ const uploadTune = async () => {
                 Home
               </q-item-section>
             </q-item>
-            <template v-if="user === null">
+            <template v-if="auth.user === null">
               <q-separator spaced />
               <q-item>
                 <q-item-section class="q-gutter-sm">
