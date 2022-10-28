@@ -121,7 +121,7 @@ onDeactivated(() => (tune.value = null));
           <q-item>
             <q-item-section>
               <q-item-label>
-                {{ tune.views.toLocaleString() }} views
+                {{ tune.views.toLocaleString() }} views • {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}
               </q-item-label>
             </q-item-section>
             <div class="absolute-right">
@@ -166,7 +166,7 @@ onDeactivated(() => (tune.value = null));
             </div>
           </q-item>
           <q-separator spaced />
-          <q-item>
+          <q-item class="q-mt-md q-mb-sm">
             <q-item-section avatar>
               <q-avatar>
                 <img :src="tune.user.picture">
@@ -177,15 +177,28 @@ onDeactivated(() => (tune.value = null));
                 {{ tune.user.name }}
               </q-item-label>
               <q-item-label caption>
-                Published on {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}
+                0 subscribers
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-btn color="red" padding="6px 12px" square unelevated>
+                <span class="block">Subscribe</span>
+              </q-btn>
+            </q-item-section>
+          </q-item>
+          <q-item class="q-mt-sm q-mb-md">
+            <q-item-section avatar />
+            <q-item-section>
+              <q-item-label v-for="line in tune.description.split('\n')">
+                {{ line }}
               </q-item-label>
             </q-item-section>
           </q-item>
+          <q-separator spaced />
           <q-item>
-            <q-item-section avatar />
-            <q-item-section>
+            <q-item-section class="items-center">
               <q-item-label>
-                {{ tune.description }}
+                Comments are turned off.
               </q-item-label>
             </q-item-section>
           </q-item>
