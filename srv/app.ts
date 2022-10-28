@@ -122,7 +122,7 @@ class ChipTubeStack extends Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       cors: [
         {
-          maxAge: 3000,
+          maxAge: 86400,
           allowedHeaders: [
             '*',
           ],
@@ -173,6 +173,7 @@ class ChipTubeStack extends Stack {
       restApiName: 'ChipTube API',
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        maxAge: Duration.days(1),
       },
     });
 
