@@ -144,34 +144,55 @@ const routes = new Map([
             return '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz'[i];
           }).join('');
 
-          await dynamodb.put({
-            TableName: process.env.APP_TABLE_NAME!,
-            Item: {
-              pk: 'tunes',
-              sk: `tuneId#${id}`,
-              id,
-              userId,
-              identityId,
-              lastViewedIdentityId: identityId,
-              title,
-              description,
-              midiKey,
-              publishedAt: Date.now(),
-              views: 0,
-              likes: 0,
-              favorites: 0,
-              comments: 0,
-            },
-            ConditionExpression: [
-              'attribute_not_exists(pk)',
-              'attribute_not_exists(sk)',
-            ].join(' AND '),
+          await dynamodb.transactWrite({
+            TransactItems: [
+              {
+                Put: {
+                  TableName: process.env.APP_TABLE_NAME!,
+                  Item: {
+                    pk: 'tunes',
+                    sk: `tuneId#${id}`,
+                    id,
+                    userId,
+                    identityId,
+                    lastViewedIdentityId: identityId,
+                    title,
+                    description,
+                    midiKey,
+                    publishedAt: Date.now(),
+                    views: 0,
+                    likes: 0,
+                    favorites: 0,
+                    comments: 0,
+                  },
+                  ConditionExpression: [
+                    'attribute_not_exists(pk)',
+                    'attribute_not_exists(sk)',
+                  ].join(' AND '),
+                },
+              },
+              {
+                Put: {
+                  TableName: process.env.APP_TABLE_NAME!,
+                  Item: {
+                    pk: `userId#${userId}`,
+                    sk: `tuneId#${id}`,
+                  },
+                  ConditionExpression: [
+                    'attribute_not_exists(pk)',
+                    'attribute_not_exists(sk)',
+                  ].join(' AND '),
+                },
+              },
+            ],
           }).promise();
 
           return response({ id });
         } catch (e: any) {
-          if (e.code === 'ConditionalCheckFailedException') {
-            continue;
+          if (e.code === 'TransactionCanceledException') {
+            await new Promise((resolve) => {
+              setTimeout(resolve, 1000);
+            });
           } else {
             throw e;
           }
