@@ -91,7 +91,7 @@ const routes = new Map([
         RequestItems: {
           [process.env.APP_TABLE_NAME!]: {
             Keys: userIds.map((userId) => ({
-              pk: 'users',
+              pk: `userId#${userId}`,
               sk: `userId#${userId}`,
             })),
             AttributesToGet: [
@@ -230,7 +230,7 @@ const routes = new Map([
       const { Item: user } = await dynamodb.get({
         TableName: process.env.APP_TABLE_NAME!,
         Key: {
-          pk: 'users',
+          pk: `userId#${tune.userId}`,
           sk: `userId#${tune.userId}`,
         },
         AttributesToGet: [
@@ -386,7 +386,7 @@ const routes = new Map([
       const { Item: user } = await dynamodb.get({
         TableName: process.env.APP_TABLE_NAME!,
         Key: {
-          pk: 'users',
+          pk: `userId#${tune.userId}`,
           sk: `userId#${tune.userId}`,
         },
         AttributesToGet: [

@@ -20,7 +20,7 @@ export const handler: PostAuthenticationTriggerHandler | PostConfirmationTrigger
   await dynamodb.put({
     TableName: process.env.APP_TABLE_NAME!,
     Item: {
-      pk: 'users',
+      pk: `userId#${id}`,
       sk: `userId#${id}`,
       id,
       name,
