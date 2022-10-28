@@ -310,14 +310,11 @@ const routes = new Map([
                       pk: 'tunes',
                       sk: `tuneId#${id}`,
                     },
-                    UpdateExpression: 'ADD #likes :additionalValue',
+                    UpdateExpression: 'ADD likes :additionalValue',
                     ConditionExpression: [
                       'attribute_exists(pk)',
                       'attribute_exists(sk)',
                     ].join(' AND '),
-                    ExpressionAttributeNames: {
-                      '#likes': 'likes',
-                    },
                     ExpressionAttributeValues: {
                       ':additionalValue': 1,
                     },
@@ -348,14 +345,11 @@ const routes = new Map([
                       pk: 'tunes',
                       sk: `tuneId#${id}`,
                     },
-                    UpdateExpression: 'ADD #likes :additionalValue',
+                    UpdateExpression: 'ADD likes :additionalValue',
                     ConditionExpression: [
                       'attribute_exists(pk)',
                       'attribute_exists(sk)',
                     ].join(' AND '),
-                    ExpressionAttributeNames: {
-                      '#likes': 'likes',
-                    },
                     ExpressionAttributeValues: {
                       ':additionalValue': -1,
                     },
