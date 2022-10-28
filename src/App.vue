@@ -129,7 +129,7 @@ const uploadTune = async () => {
               <q-icon name="mdi-dots-vertical" />
             </template>
             <q-menu class="full-width" anchor="bottom right" max-width="300px" self="top right" square>
-              <q-list bordered dense padding>
+              <q-list bordered padding>
                 <template v-if="auth.user">
                   <q-item>
                     <q-item-section avatar>
@@ -147,7 +147,7 @@ const uploadTune = async () => {
                     </q-item-section>
                   </q-item>
                   <q-separator spaced />
-                  <q-item clickable v-close-popup @click="Auth.signOut()">
+                  <q-item clickable dense v-close-popup @click="Auth.signOut()">
                     <q-item-section side>
                       <q-icon name="mdi-logout" />
                     </q-item-section>
@@ -157,7 +157,7 @@ const uploadTune = async () => {
                   </q-item>
                   <q-separator spaced />
                 </template>
-                <q-item clickable>
+                <q-item clickable dense>
                   <q-item-section side>
                     <q-icon name="mdi-theme-light-dark" />
                   </q-item-section>
