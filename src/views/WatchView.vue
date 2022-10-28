@@ -5,25 +5,36 @@ import { onActivated, onDeactivated, ref } from 'vue';
 // Vue Router
 import { onBeforeRouteUpdate, useRoute } from 'vue-router';
 
+// Auth Store
+import { useAuthStore } from '@/stores/auth';
+
 // Amplify
 import { API, Storage } from 'aws-amplify';
 
 // Quasar
 import { date, exportFile } from 'quasar';
 
+// Google Sign In
+import GoogleSignIn from '@/components/GoogleSignIn.vue';
+
 // MIDI Player
 import MidiPlayer from '@/components/MidiPlayer.vue';
+
+// get the auth store
+const auth = useAuthStore();
 
 // get the $route object
 const $route = useRoute();
 
 // toggle is liked
 const toggleIsLiked = async () => {
-  tune.value &&= await API.put('V1', `/tunes/${$route.params.id}`, {
-    body: {
-      isLiked: !tune.value.isLiked,
-    },
-  });
+  if (tune.value && auth.user) {
+    tune.value = await API.put('V1', `/tunes/${$route.params.id}`, {
+      body: {
+        isLiked: !tune.value.isLiked,
+      },
+    });
+  }
 };
 
 // download tune
@@ -119,6 +130,29 @@ onDeactivated(() => (tune.value = null));
                 <span class="block">
                   {{ tune.likes.toLocaleString() }}
                 </span>
+                <q-menu v-if="auth.user === null" anchor="bottom right" :offset="[0, 4]" self="top right" square>
+                  <q-list bordered padding>
+                    <q-item dense>
+                      <q-item-section>
+                        <q-item-label class="text-subtitle1 text-weight-medium">
+                          Like this tune?
+                        </q-item-label>
+                      </q-item-section>
+                    </q-item>
+                    <q-item dense>
+                      <q-item-section>
+                        <q-item-label>
+                          Sign in to make your opinion count.
+                        </q-item-label>
+                      </q-item-section>
+                    </q-item>
+                    <q-item>
+                      <q-item-section side>
+                        <google-sign-in />
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
               </q-btn>
               <q-btn flat square @click="downloadTune">
                 <q-icon class="q-mr-sm" name="mdi-download" />

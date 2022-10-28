@@ -10,13 +10,13 @@ import { useAuthStore } from '@/stores/auth';
 import { usePageStore } from '@/stores/page';
 
 // Amplify
-import { API, Hub, Storage } from 'aws-amplify';
-
-// Amplify - Auth
-import { Auth, CognitoHostedUIIdentityProvider } from '@aws-amplify/auth';
+import { API, Auth, Hub, Storage } from 'aws-amplify';
 
 // Quasar
 import { uid, useQuasar } from 'quasar';
+
+// Google Sign In
+import GoogleSignIn from '@/components/GoogleSignIn.vue';
 
 // get stores
 const auth = useAuthStore();
@@ -50,16 +50,6 @@ Hub.listen('auth', ({ payload: { event } }) => {
 
 // get the current user
 Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null));
-
-// sign in
-const signIn = async () => {
-  await Auth.federatedSignIn({ provider: CognitoHostedUIIdentityProvider.Google });
-};
-
-// sign out
-const signOut = async () => {
-  await Auth.signOut();
-};
 
 // the tune
 const tune = reactive({
@@ -157,7 +147,7 @@ const uploadTune = async () => {
                     </q-item-section>
                   </q-item>
                   <q-separator spaced />
-                  <q-item clickable v-close-popup @click="signOut">
+                  <q-item clickable v-close-popup @click="Auth.signOut()">
                     <q-item-section side>
                       <q-icon name="mdi-logout" />
                     </q-item-section>
@@ -225,10 +215,7 @@ const uploadTune = async () => {
             </q-menu>
           </q-btn>
           <template v-if="auth.user === null">
-            <q-btn no-wrap outline padding="6px 12px" square @click="signIn">
-              <q-icon class="q-mr-sm" name="mdi-google" />
-              <span class="block">Sign in</span>
-            </q-btn>
+            <google-sign-in />
           </template>
         </div>
       </q-toolbar>
@@ -263,10 +250,7 @@ const uploadTune = async () => {
                     Sign in to like tunes, comment, and subscribe.
                   </div>
                   <div class="q-px-sm">
-                    <q-btn no-wrap outline padding="6px 18px" square @click="signIn">
-                      <q-icon class="q-mr-sm" name="mdi-google" />
-                      <span class="block">Sign in</span>
-                    </q-btn>
+                    <google-sign-in />
                   </div>
                 </q-item-section>
               </q-item>
@@ -362,12 +346,6 @@ const uploadTune = async () => {
   .q-item__section--side {
     padding-right: 25px;
   }
-}
-
-.mdi-google {
-  color: transparent;
-  background-image: conic-gradient(from 55deg at 40%, #4285f4 70deg, #0f9d58 70deg 175deg, #f4b400 175deg 255deg, #db4437 255deg 360deg);
-  background-clip: text;
 }
 
 a {
