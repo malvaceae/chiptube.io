@@ -83,8 +83,21 @@ const routes = new Map([
         }
       })(LastEvaluatedKey);
 
+      if (tunes === undefined) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
+      if (tunes.length === 0) {
+        return response({
+          tunes,
+          after,
+        });
+      }
+
       // Get unique user ids.
-      const userIds = [...new Set(tunes?.map(({ userId }) => userId))];
+      const userIds = [...new Set(tunes.map(({ userId }) => userId))];
 
       // Get users.
       const { Responses } = await dynamodb.batchGet({
@@ -103,13 +116,19 @@ const routes = new Map([
         },
       }).promise();
 
+      if (Responses === undefined) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
       // Get users by id.
-      const users = Responses?.[process.env.APP_TABLE_NAME!]?.reduce?.((users, user) => {
-        return { ...users, [user.id]: user };
-      }, {});
+      const users = Object.fromEntries(Responses[process.env.APP_TABLE_NAME!].map((user) => {
+        return [user.id, user];
+      }));
 
       // Add user to tune.
-      tunes?.forEach?.((tune) => (tune.user = users?.[tune.userId]));
+      tunes.forEach((tune) => (tune.user = users[tune.userId]));
 
       return response({
         tunes,
@@ -271,22 +290,24 @@ const routes = new Map([
         user,
       });
 
-      // Get user id from cognito authentication provider.
-      const userId = cognitoAuthenticationProvider?.split?.(':')?.slice?.(-1)?.[0];
-
-      if (userId) {
-        const { Item: isLiked } = await dynamodb.get({
-          TableName: process.env.APP_TABLE_NAME!,
-          Key: {
-            pk: `userId#${userId}`,
-            sk: `tuneLikeId#${id}`,
-          },
-        }).promise();
-
-        Object.assign(tune, {
-          isLiked: !!isLiked,
-        });
+      if (!cognitoAuthenticationProvider) {
+        return response(tune);
       }
+
+      // Get user id from cognito authentication provider.
+      const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+
+      const { Item: isLiked } = await dynamodb.get({
+        TableName: process.env.APP_TABLE_NAME!,
+        Key: {
+          pk: `userId#${userId}`,
+          sk: `tuneLikeId#${id}`,
+        },
+      }).promise();
+
+      Object.assign(tune, {
+        isLiked: !!isLiked,
+      });
 
       return response(tune);
     },
