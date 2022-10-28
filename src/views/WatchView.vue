@@ -125,8 +125,13 @@ onDeactivated(() => (tune.value = null));
               </q-item-label>
             </q-item-section>
             <div class="absolute-right">
-              <q-btn :color="tune.isLiked ? 'blue-5' : void 0" flat square @click="toggleIsLiked">
-                <q-icon class="q-mr-sm" name="mdi-thumb-up" />
+              <q-btn flat square @click="toggleIsLiked">
+                <template v-if="tune.isLiked">
+                  <q-icon class="q-mr-sm" name="mdi-thumb-up" />
+                </template>
+                <template v-else>
+                  <q-icon class="q-mr-sm" name="mdi-thumb-up-outline" />
+                </template>
                 <span class="block">
                   {{ tune.likes.toLocaleString() }}
                 </span>
@@ -155,7 +160,7 @@ onDeactivated(() => (tune.value = null));
                 </q-menu>
               </q-btn>
               <q-btn flat square @click="downloadTune">
-                <q-icon class="q-mr-sm" name="mdi-download" />
+                <q-icon class="q-mr-sm" name="mdi-download-outline" />
                 <span class="block">Download</span>
               </q-btn>
             </div>

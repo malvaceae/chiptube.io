@@ -116,7 +116,7 @@ const uploadTune = async () => {
         <div class="row q-gutter-md no-wrap items-center">
           <template v-if="auth.user">
             <q-btn flat round @click="dialog = !dialog">
-              <q-icon name="mdi-video-plus-outline" />
+              <q-icon name="mdi-music-note-plus" />
             </q-btn>
           </template>
           <q-btn flat round>
