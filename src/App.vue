@@ -43,24 +43,29 @@ const search = ref('');
 
 // subscribe auth events
 Hub.listen('auth', ({ payload: { event } }) => {
-  if (event === 'signIn') {
-    $router.replace({});
+  switch (event) {
+    case 'signIn':
+    case 'signIn_failure':
+      $router.replace({});
   }
 });
 
 // get the current user
 Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null));
 
+// the midi
+const midi = ref<File | null>(null);
+
 // the tune
 const tune = reactive({
   title: '',
   description: '',
-  midi: ref<File | null>(null),
+  midi,
 });
 
 // upload the tune
 const uploadTune = async () => {
-  if (!tune.midi) {
+  if (tune.midi === null) {
     return;
   }
 
