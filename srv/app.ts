@@ -8,7 +8,6 @@ import {
   CustomResource,
   Duration,
   IgnoreMode,
-  RemovalPolicy,
   Stack,
   StackProps,
   aws_apigateway as apigateway,
@@ -72,7 +71,6 @@ class ChipTubeStack extends Stack {
         name: 'sk',
         type: dynamodb.AttributeType.STRING,
       },
-      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     // Add the GSI for adjacency list.
@@ -154,8 +152,6 @@ class ChipTubeStack extends Stack {
           ],
         },
       ],
-      removalPolicy: RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
     });
 
     // App Storage Bucket Name
@@ -225,8 +221,6 @@ class ChipTubeStack extends Stack {
     // App Bucket
     const appBucket = new s3.Bucket(this, 'AppBucket', {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
     });
 
     // Origin Access Identity
@@ -344,7 +338,6 @@ class ChipTubeStack extends Stack {
       lambdaTriggers: Object.fromEntries(['postConfirmation', 'postAuthentication'].map((key) => {
         return [key, userPoolSignedInTrigger];
       })),
-      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     // User Pool Id
