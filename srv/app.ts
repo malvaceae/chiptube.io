@@ -5,7 +5,6 @@ import { join } from 'path';
 import {
   App,
   CfnOutput,
-  CfnParameter,
   CustomResource,
   Duration,
   IgnoreMode,
@@ -13,6 +12,7 @@ import {
   Stack,
   StackProps,
   aws_apigateway as apigateway,
+  aws_certificatemanager as acm,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
   aws_codebuild as codebuild,
@@ -21,6 +21,8 @@ import {
   aws_iam as iam,
   aws_lambda as lambda,
   aws_lambda_nodejs as nodejs,
+  aws_route53 as route53,
+  aws_route53_targets as targets,
   aws_s3 as s3,
   aws_s3_assets as assets,
   aws_s3_deployment as s3deploy,
@@ -45,6 +47,20 @@ class ChipTubeStack extends Stack {
    */
   constructor(scope?: Construct, id?: string, props?: StackProps) {
     super(scope, id, props);
+
+    // Context Values
+    const [googleClientId, googleClientSecret, domainName] = [
+      this.node.tryGetContext('googleClientId'),
+      this.node.tryGetContext('googleClientSecret'),
+      this.node.tryGetContext('domainName'),
+    ];
+
+    // Validate context values.
+    this.node.addValidation({
+      validate: () => Object.entries({ googleClientId, googleClientSecret }).reduce((errors, [key, value]) => {
+        return typeof value === 'string' && value.length > 0 ? errors : [...errors, `The ${key} is required.`];
+      }, [] as string[]),
+    });
 
     // App Table
     const appTable = new dynamodb.Table(this, 'AppTable', {
@@ -231,6 +247,30 @@ class ChipTubeStack extends Stack {
       ],
     }));
 
+    // If the domain name exists, create Route53 and ACM resources.
+    const [zone, certificate, domainNames] = (() => {
+      if (domainName) {
+        // Hosted Zone
+        const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
+          domainName,
+        });
+
+        // Certificate
+        const certificate = new acm.DnsValidatedCertificate(this, 'Certificate', {
+          hostedZone,
+          region: 'us-east-1',
+          domainName,
+          subjectAlternativeNames: [
+            `*.${domainName}`,
+          ],
+        });
+
+        return [hostedZone, certificate, [domainName]];
+      } else {
+        return [];
+      }
+    })();
+
     // App Distribution
     const appDistribution = new cloudfront.Distribution(this, 'AppDistribution', {
       defaultBehavior: {
@@ -239,7 +279,9 @@ class ChipTubeStack extends Stack {
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
+      certificate,
       defaultRootObject: 'index.html',
+      domainNames,
       errorResponses: [
         {
           httpStatus: 403,
@@ -253,6 +295,21 @@ class ChipTubeStack extends Stack {
         },
       ],
     });
+
+    // If the domain name exists, create a alias record to App Distribution.
+    const appDistributionAliasRecord = (() => {
+      if (zone) {
+        // App Distribution Alias Record
+        return new route53.ARecord(this, 'AppDistributionAliasRecord', {
+          zone,
+          target: route53.RecordTarget.fromAlias(
+            new targets.CloudFrontTarget(
+              appDistribution,
+            ),
+          ),
+        });
+      }
+    })();
 
     // User Pool Signed In Trigger
     const userPoolSignedInTrigger = new nodejs.NodejsFunction(this, 'UserPoolSignedInTrigger', {
@@ -303,11 +360,11 @@ class ChipTubeStack extends Stack {
         },
         callbackUrls: [
           'http://localhost:5173',
-          `https://${appDistribution.domainName}`,
+          `https://${domainName || appDistribution.domainName}`,
         ],
         logoutUrls: [
           'http://localhost:5173',
-          `https://${appDistribution.domainName}`,
+          `https://${domainName || appDistribution.domainName}`,
         ],
         scopes: [
           cognito.OAuthScope.EMAIL,
@@ -327,33 +384,52 @@ class ChipTubeStack extends Stack {
       value: userPoolWebClient.userPoolClientId,
     });
 
-    // User Pool Domain
-    const userPoolDomain = userPool.addDomain('Domain', {
-      cognitoDomain: {
-        domainPrefix: api.restApiId,
-      },
-    });
+    // Create a user pool domain with the domain name if it exists.
+    const userPoolDomain = (() => {
+      if (zone && certificate && appDistributionAliasRecord) {
+        // User Pool Domain
+        const userPoolDomain = userPool.addDomain('Domain', {
+          customDomain: {
+            domainName: `auth.${domainName}`,
+            certificate,
+          },
+        });
+
+        // Wait for the App Distribution Alias Record to create.
+        userPoolDomain.node.addDependency(appDistributionAliasRecord);
+
+        // User Pool Domain Alias Record
+        new route53.ARecord(this, 'UserPoolDomainAliasRecord', {
+          zone,
+          recordName: 'auth',
+          target: route53.RecordTarget.fromAlias(
+            new targets.UserPoolDomainTarget(
+              userPoolDomain,
+            ),
+          ),
+        });
+
+        return userPoolDomain;
+      } else {
+        // User Pool Domain
+        return userPool.addDomain('Domain', {
+          cognitoDomain: {
+            domainPrefix: api.restApiId,
+          },
+        });
+      }
+    })();
 
     // User Pool Domain Name
     new CfnOutput(this, 'UserPoolDomainName', {
       value: userPoolDomain.baseUrl().slice(8),
     });
 
-    // Google Client Id
-    const googleClientId = new CfnParameter(this, 'GoogleClientId', {
-      description: 'Google Client Id',
-    });
-
-    // Google Client Secret
-    const googleClientSecret = new CfnParameter(this, 'GoogleClientSecret', {
-      description: 'Google Client Secret',
-    });
-
     // User Pool Identity Provider Google
     new cognito.UserPoolIdentityProviderGoogle(this, 'UserPoolIdentityProviderGoogle', {
       userPool,
-      clientId: googleClientId.valueAsString,
-      clientSecret: googleClientSecret.valueAsString,
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
       scopes: ['profile', 'email', 'openid'],
       attributeMapping: {
         email: {
@@ -690,5 +766,7 @@ class ChipTubeStack extends Stack {
 
 const app = new App();
 new ChipTubeStack(app, 'ChipTube', {
-  env: { region: 'ap-northeast-1' },
+  env: Object.fromEntries(['account', 'region'].map((key) => [
+    key, process.env[`CDK_DEFAULT_${key.toUpperCase()}`],
+  ])),
 });
