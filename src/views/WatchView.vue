@@ -190,7 +190,14 @@ onDeactivated(() => (tune.value = null));
             <q-item-section avatar />
             <q-item-section>
               <q-item-label v-for="line in tune.description.split('\n')">
-                {{ line }}
+                <template v-for="text in line.split(/(?=https?:\/\/[!#-;=?-[\]_a-z~]+)|(?![!#-;=?-[\]_a-z~])/)">
+                  <a v-if="/^https?:\/\/[!#-;=?-[\]_a-z~]+$/.test(text)" :href="text" target="_blank">
+                    {{ text }}
+                  </a>
+                  <template v-else>
+                    {{ text }}
+                  </template>
+                </template>
               </q-item-label>
             </q-item-section>
           </q-item>
@@ -233,3 +240,13 @@ onDeactivated(() => (tune.value = null));
     </div>
   </q-page>
 </template>
+
+<style lang="scss" scoped>
+a:not(.q-link) {
+  color: $blue;
+}
+
+a:not(.q-link):visited {
+  color: $purple;
+}
+</style>
