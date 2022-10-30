@@ -38,7 +38,7 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
     <q-infinite-scroll :offset="250" @load="getTunes">
       <div class="row q-col-gutter-md">
         <div v-for="tune in tunes" class="col-12 col-sm-6 col-md-4 col-lg-3">
-          <router-link :to="{ name: 'watch', params: { id: tune.id } }">
+          <router-link :to="{ name: 'watch', query: { v: tune.id } }">
             <q-card class="column full-height" flat square>
               <q-img src="@/assets/thumbnail.png">
                 <div class="absolute-center full-width text-h6 text-center ellipsis">

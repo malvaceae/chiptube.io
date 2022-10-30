@@ -87,7 +87,7 @@ const uploadTune = async () => {
   });
 
   // move to watch route
-  await $router.push({ name: 'watch', params: { id: data.id } });
+  await $router.push({ name: 'watch', query: { v: data.id } });
 
   // close dialog
   dialog.value = false;

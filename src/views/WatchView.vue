@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 // Vue.js
-import { onActivated, onDeactivated, ref } from 'vue';
+import { onActivated, onDeactivated, ref, toRef } from 'vue';
 
 // Vue Router
-import { onBeforeRouteUpdate, useRoute } from 'vue-router';
+import { onBeforeRouteUpdate } from 'vue-router';
 
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
@@ -20,16 +20,19 @@ import GoogleSignIn from '@/components/GoogleSignIn.vue';
 // MIDI Player
 import MidiPlayer from '@/components/MidiPlayer.vue';
 
+// properties
+const props = defineProps<{ id: string }>();
+
+// get the tune id
+const id = toRef(props, 'id');
+
 // get the auth store
 const auth = useAuthStore();
-
-// get the $route object
-const $route = useRoute();
 
 // toggle is liked
 const toggleIsLiked = async () => {
   if (tune.value && auth.user) {
-    tune.value = await API.put('V1', `/tunes/${$route.params.id}`, {
+    tune.value = await API.put('V1', `/tunes/${id.value}`, {
       body: {
         isLiked: !tune.value.isLiked,
       },
@@ -83,18 +86,18 @@ const tune = ref<Record<string, any> | null>(null);
 
 // get the tune
 onActivated(() => {
-  API.get('V1', `/tunes/${$route.params.id}`, {}).then((data) => {
+  API.get('V1', `/tunes/${id.value}`, {}).then((data) => {
     tune.value = data;
   });
 });
 
 // update the tune
-onBeforeRouteUpdate((to) => {
+onBeforeRouteUpdate(({ query: { v: id } }) => {
   // reset the tune
   tune.value = null;
 
   // get the tune
-  API.get('V1', `/tunes/${to.params.id}`, {}).then((data) => {
+  API.get('V1', `/tunes/${id}`, {}).then((data) => {
     tune.value = data;
   });
 });
@@ -214,7 +217,7 @@ onDeactivated(() => (tune.value = null));
       <div class="col-12 col-md-4">
         <q-infinite-scroll :offset="250" @load="getTunes">
           <q-list v-if="tune" class="q-gutter-md">
-            <q-item v-for="tune in tunes" class="q-py-none" active-class="" :to="{ params: { id: tune.id } }">
+            <q-item v-for="tune in tunes" class="q-py-none" active-class="" :to="{ query: { v: tune.id } }">
               <q-item-section side>
                 <q-img src="@/assets/thumbnail.png" width="148px">
                   <div class="absolute-center full-width text-caption text-center ellipsis">

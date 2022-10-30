@@ -8,9 +8,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/IndexView.vue'),
   },
   {
-    path: '/:id([\\w-]{11})',
+    path: '/watch',
     name: 'watch',
     component: () => import('@/views/WatchView.vue'),
+    props: ({ query: { v: id } }) => ({ id }),
   },
 ];
 
