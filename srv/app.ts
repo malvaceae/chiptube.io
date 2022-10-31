@@ -61,6 +61,30 @@ class ChipTubeStack extends Stack {
       }, [] as string[]),
     });
 
+    // If the domain name exists, create Route53 and ACM resources.
+    const [zone, certificate, domainNames] = (() => {
+      if (domainName) {
+        // Hosted Zone
+        const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
+          domainName,
+        });
+
+        // Certificate
+        const certificate = new acm.DnsValidatedCertificate(this, 'Certificate', {
+          hostedZone,
+          region: 'us-east-1',
+          domainName,
+          subjectAlternativeNames: [
+            `*.${domainName}`,
+          ],
+        });
+
+        return [hostedZone, certificate, [domainName]];
+      } else {
+        return [];
+      }
+    })();
+
     // App Table
     const appTable = new dynamodb.Table(this, 'AppTable', {
       partitionKey: {
@@ -194,12 +218,39 @@ class ChipTubeStack extends Stack {
       (defaultChild as apigateway.CfnMethod).authorizationType = apigateway.AuthorizationType.IAM;
     });
 
+    // If the domain name exists, create a alias record to Api.
+    const apiEndpoint = (() => {
+      if (zone && certificate) {
+        // Api Domain Name
+        const apiDomainName = api.addDomainName('DomainName', {
+          domainName: `api.${domainName}`,
+          certificate,
+          endpointType: apigateway.EndpointType.EDGE,
+        });
+
+        // Api Domain Alias Record
+        new route53.ARecord(this, 'ApiDomainAliasRecord', {
+          zone,
+          recordName: 'api',
+          target: route53.RecordTarget.fromAlias(
+            new targets.ApiGatewayDomain(
+              apiDomainName,
+            ),
+          ),
+        });
+
+        return `https://${apiDomainName.domainName}`;
+      } else {
+        return api.url.replace(/\/$/, '');
+      }
+    })();
+
     // Remove the default endpoint output.
     api.node.tryRemoveChild('Endpoint');
 
     // Api Endpoint
     new CfnOutput(this, 'ApiEndpoint', {
-      value: api.url.replace(/\/$/, ''),
+      value: apiEndpoint,
     });
 
     // Add the Gateway Response when the status code is 4XX.
@@ -240,30 +291,6 @@ class ChipTubeStack extends Stack {
         appBucket.arnForObjects('*'),
       ],
     }));
-
-    // If the domain name exists, create Route53 and ACM resources.
-    const [zone, certificate, domainNames] = (() => {
-      if (domainName) {
-        // Hosted Zone
-        const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
-          domainName,
-        });
-
-        // Certificate
-        const certificate = new acm.DnsValidatedCertificate(this, 'Certificate', {
-          hostedZone,
-          region: 'us-east-1',
-          domainName,
-          subjectAlternativeNames: [
-            `*.${domainName}`,
-          ],
-        });
-
-        return [hostedZone, certificate, [domainName]];
-      } else {
-        return [];
-      }
-    })();
 
     // App Distribution
     const appDistribution = new cloudfront.Distribution(this, 'AppDistribution', {
@@ -656,7 +683,7 @@ class ChipTubeStack extends Stack {
         buildImage: codebuild.LinuxBuildImage.STANDARD_6_0,
         environmentVariables: {
           VITE_API_ENDPOINT: {
-            value: api.url.replace(/\/$/, ''),
+            value: apiEndpoint,
           },
           VITE_APP_STORAGE_BUCKET_NAME: {
             value: appStorage.bucketName,
