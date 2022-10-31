@@ -78,7 +78,7 @@ const uploadTune = async () => {
   });
 
   // register the tune info
-  const data = await API.post('V1', '/tunes', {
+  const data = await API.post('Api', '/tunes', {
     body: {
       title: tune.title,
       description: tune.description,

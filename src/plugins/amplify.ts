@@ -40,7 +40,7 @@ Amplify.configure({
   API: {
     endpoints: [
       {
-        name: 'V1',
+        name: 'Api',
         endpoint,
         region,
       },

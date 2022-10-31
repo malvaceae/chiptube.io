@@ -16,7 +16,7 @@ const after = ref<string>();
 
 // get tunes
 const getTunes = async (_: number, done: (stop?: boolean) => void) => {
-  const data = await API.get('V1', '/tunes', {
+  const data = await API.get('Api', '/tunes', {
     queryStringParameters: {
       after: after.value,
     },

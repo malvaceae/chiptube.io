@@ -32,7 +32,7 @@ const auth = useAuthStore();
 // toggle is liked
 const toggleIsLiked = async () => {
   if (tune.value && auth.user) {
-    tune.value = await API.put('V1', `/tunes/${id.value}`, {
+    tune.value = await API.put('Api', `/tunes/${id.value}`, {
       body: {
         isLiked: !tune.value.isLiked,
       },
@@ -65,7 +65,7 @@ const after = ref<string>();
 
 // get tunes
 const getTunes = async (_: number, done: (stop?: boolean) => void) => {
-  const data = await API.get('V1', '/tunes', {
+  const data = await API.get('Api', '/tunes', {
     queryStringParameters: {
       after: after.value,
     },
@@ -86,7 +86,7 @@ const tune = ref<Record<string, any> | null>(null);
 
 // get the tune
 onActivated(() => {
-  API.get('V1', `/tunes/${id.value}`, {}).then((data) => {
+  API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
     tune.value = data;
   });
 });
@@ -97,7 +97,7 @@ onBeforeRouteUpdate(({ query: { v: id } }) => {
   tune.value = null;
 
   // get the tune
-  API.get('V1', `/tunes/${id}`, {}).then((data) => {
+  API.get('Api', `/tunes/${id}`, {}).then((data) => {
     tune.value = data;
   });
 });
