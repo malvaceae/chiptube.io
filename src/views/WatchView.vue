@@ -197,13 +197,15 @@ onDeactivated(() => (tune.value = null));
           <q-item class="q-mt-sm q-mb-md">
             <q-item-section avatar />
             <q-item-section>
-              <q-item-label v-for="line in tune.description.split('\n')">
-                <template v-for="text in line.split(/(?=https?:\/\/[!#-;=?-[\]_a-z~]+)|(?![!#-;=?-[\]_a-z~])/)">
-                  <a v-if="/^https?:\/\/[!#-;=?-[\]_a-z~]+$/.test(text)" :href="text" target="_blank">
-                    {{ text }}
-                  </a>
-                  <template v-else>
-                    {{ text }}
+              <q-item-label :style="{ whiteSpace: 'pre-wrap' }">
+                <template v-for="line in tune.description.split(/(?=\n)/)">
+                  <template v-for="text in line.split(/(?=https?:\/\/[!#-;=?-[\]_a-z~]+)|(?![!#-;=?-[\]_a-z~])/)">
+                    <a v-if="/^https?:\/\/[!#-;=?-[\]_a-z~]+$/.test(text)" :href="text" target="_blank">
+                      {{ text }}
+                    </a>
+                    <template v-else>
+                      {{ text }}
+                    </template>
                   </template>
                 </template>
               </q-item-label>
