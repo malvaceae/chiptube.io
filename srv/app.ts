@@ -668,6 +668,7 @@ class ChipTubeStack extends Stack {
         '!index.html',
         '!package.json',
         '!postcss.config.js',
+        '!public',
         '!src',
         '!tsconfig.json',
         '!vite.config.ts',
