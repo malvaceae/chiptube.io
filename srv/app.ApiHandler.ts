@@ -77,9 +77,7 @@ const routes = new Map([
           const tokenizer = await getTokenizer();
 
           // Tokenize the search query.
-          const keywords = [...new Set(tokenizer.tokenize(query).filter(({ word_type, pos, pos_detail_1 }) => {
-            return pos === '名詞' && !(word_type === 'UNKNOWN' && pos_detail_1 === 'サ変接続');
-          }).map(({ surface_form }) => surface_form.normalize('NFKC').toLowerCase()))];
+          const keywords = [...new Set(getNouns(tokenize(tokenizer, query)).map(normalize))];
 
           // Get tune ids by keyword.
           const tuneIdsByKeyword = await Promise.all(keywords.map((keyword) => {
@@ -295,9 +293,7 @@ const routes = new Map([
           const tokenizer = await getTokenizer();
 
           // Tokenize title and description.
-          const keywords = [title, description].flatMap((text) => tokenizer.tokenize(text)).filter(({ word_type, pos, pos_detail_1 }) => {
-            return pos === '名詞' && !(word_type === 'UNKNOWN' && pos_detail_1 === 'サ変接続');
-          }).map(({ surface_form }) => surface_form.normalize('NFKC').toLowerCase());
+          const keywords = [title, description].flatMap((text) => getNouns(tokenize(tokenizer, text)).map(normalize));
 
           // Get number of occurrences by keyword.
           const occurrences = [...keywords.reduce((keywords, keyword) => {
@@ -582,6 +578,28 @@ const getTokenizer = ((cache?: Tokenizer<IpadicFeatures>) => async () => {
     });
   });
 })();
+
+const tokenize = (tokenizer: Tokenizer<IpadicFeatures>, text: string): IpadicFeatures[] => {
+  return text.normalize('NFKC').split(/https?:\/\/[!#-;=?-[\]_a-z~]+/).flatMap((text) => {
+    return tokenizer.tokenize(text);
+  });
+};
+
+const getNouns = (morphemes: IpadicFeatures[]): string[] => {
+  return morphemes.flatMap(({ surface_form, pos, pos_detail_1, basic_form }) => {
+    if (pos === '名詞' && !(pos_detail_1 === 'サ変接続' && basic_form === '*')) {
+      return [surface_form];
+    } else {
+      return [];
+    }
+  });
+};
+
+const normalize = (text: string): string => {
+  return text.toLowerCase().replace(/[ぁ-ゖ]/g, (s) => {
+    return String.fromCharCode(s.charCodeAt(0) + 0x60);
+  });
+};
 
 const parse = (body: string | null): Record<string, any> => {
   if (body === null) {
