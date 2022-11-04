@@ -39,7 +39,16 @@ watch(() => $q.dark.mode, (dark) => {
 // variables
 const dialog = ref(false);
 const drawer = ref(false);
-const search = ref('');
+
+// the search query
+const query = ref(new URLSearchParams(location.search).get('q') ?? '');
+
+// search
+const search = async (e: KeyboardEvent | PointerEvent) => {
+  if (query.value && (e instanceof PointerEvent || e.key === 'Enter')) {
+    await $router.push({ name: 'search', query: { q: query.value } });
+  }
+};
 
 // subscribe auth events
 Hub.listen('auth', ({ payload: { event } }) => {
@@ -110,9 +119,9 @@ const uploadTune = async () => {
           </router-link>
         </q-toolbar-title>
         <q-space />
-        <q-input v-model="search" class="col-grow gt-xs" dense outlined placeholder="Search" square>
+        <q-input v-model="query" class="col-grow gt-xs" dense outlined placeholder="Search" square @keyup="search">
           <template #after>
-            <q-btn flat round @click="void 0">
+            <q-btn flat round @click="search">
               <q-icon name="mdi-magnify" />
             </q-btn>
           </template>

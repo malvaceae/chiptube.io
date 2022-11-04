@@ -8,6 +8,13 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 
+// kuromoji.js
+import {
+  builder as kuromoji,
+  IpadicFeatures,
+  Tokenizer,
+} from 'kuromoji';
+
 // AWS SDK
 import { DynamoDB } from 'aws-sdk';
 
@@ -55,7 +62,7 @@ const routes = new Map([
       httpMethod: 'GET',
     },
     async (event: APIGatewayProxyEvent, params: Record<string, any>) => {
-      const ExclusiveStartKey = (({ after }) => {
+      const exclusiveStartKey = (({ after }) => {
         try {
           return JSON.parse(Buffer.from(after, 'base64').toString());
         } catch {
@@ -63,44 +70,117 @@ const routes = new Map([
         }
       })(params);
 
-      const { Items: tunes, LastEvaluatedKey } = await dynamodb.query({
-        TableName: process.env.APP_TABLE_NAME!,
-        IndexName: 'LSI-PublishedAt',
-        Limit: 24,
-        ScanIndexForward: false,
-        ExclusiveStartKey,
-        KeyConditionExpression: 'pk = :pk',
-        ExpressionAttributeValues: {
-          ':pk': 'tunes',
-        },
-      }).promise();
+      const { tunes, lastEvaluatedKey } = await (async ({ query }) => {
+        // Get tunes with the search query if it exists.
+        if (typeof query === 'string' && query.length > 0) {
+          // Get a kuromoji tokenizer.
+          const tokenizer = await getTokenizer();
 
-      const after = ((key) => {
+          // Tokenize the search query.
+          const keywords = [...new Set(tokenizer.tokenize(query).filter(({ word_type, pos, pos_detail_1 }) => {
+            return pos === '名詞' && !(word_type === 'UNKNOWN' && pos_detail_1 === 'サ変接続');
+          }).map(({ surface_form }) => surface_form.normalize('NFKC').toLowerCase()))];
+
+          // Get tune ids by keyword.
+          const tuneIdsByKeyword = await Promise.all(keywords.map((keyword) => {
+            return dynamodb.query({
+              TableName: process.env.APP_TABLE_NAME!,
+              KeyConditionExpression: 'pk = :pk',
+              ExpressionAttributeValues: {
+                ':pk': `tuneKeyword#${keyword}`,
+              },
+            }).promise();
+          }));
+
+          // Get tune ids.
+          const tuneIds = tuneIdsByKeyword.flatMap(({ Items }) => Items ?? []);
+
+          // Get tune ids sorted by relevance.
+          const sortedTuneIds = [...new Set(tuneIds.map(({ tuneId }) => tuneId))].sort((a, b) => {
+            return (
+              tuneIds.filter(({ tuneId }) => tuneId === b).reduce((sum, { occurrences }) => sum + occurrences, 0) -
+              tuneIds.filter(({ tuneId }) => tuneId === a).reduce((sum, { occurrences }) => sum + occurrences, 0)
+            );
+          });
+
+          // Skip to after the exclusive start key.
+          if (typeof exclusiveStartKey === 'string' && exclusiveStartKey.length > 0) {
+            sortedTuneIds.splice(0, sortedTuneIds.indexOf(exclusiveStartKey) + 1);
+          }
+
+          if (sortedTuneIds.length === 0) {
+            return {};
+          }
+
+          // Set maximum number of tunes to evaluate.
+          sortedTuneIds.splice(24);
+
+          // Get raw responses.
+          const { Responses: responses } = await dynamodb.batchGet({
+            RequestItems: {
+              [process.env.APP_TABLE_NAME!]: {
+                Keys: sortedTuneIds.map((tuneId) => ({
+                  pk: 'tunes',
+                  sk: `tuneId#${tuneId}`,
+                })),
+              },
+            },
+          }).promise();
+
+          // Get tunes.
+          const tunes = responses?.[process.env.APP_TABLE_NAME!];
+
+          // Get the last evaluated key.
+          const lastEvaluatedKey = (() => {
+            if (tunes?.length === 24) {
+              return tunes?.[23]?.id;
+            }
+          })();
+
+          return {
+            tunes,
+            lastEvaluatedKey,
+          };
+        } else {
+          // Get tunes and the last evaluated key.
+          const { Items: tunes, LastEvaluatedKey: lastEvaluatedKey } = await dynamodb.query({
+            TableName: process.env.APP_TABLE_NAME!,
+            IndexName: 'LSI-PublishedAt',
+            Limit: 24,
+            ScanIndexForward: false,
+            ExclusiveStartKey: exclusiveStartKey,
+            KeyConditionExpression: 'pk = :pk',
+            ExpressionAttributeValues: {
+              ':pk': 'tunes',
+            },
+          }).promise();
+
+          return {
+            tunes,
+            lastEvaluatedKey,
+          };
+        }
+      })(params);
+
+      if (!tunes?.length) {
+        return response({
+          tunes: [],
+        });
+      }
+
+      const after = (() => {
         try {
-          return Buffer.from(JSON.stringify(key)).toString('base64');
+          return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString('base64');
         } catch {
           //
         }
-      })(LastEvaluatedKey);
-
-      if (tunes === undefined) {
-        return response({
-          message: 'Not found',
-        }, 404);
-      }
-
-      if (tunes.length === 0) {
-        return response({
-          tunes,
-          after,
-        });
-      }
+      })();
 
       // Get unique user ids.
       const userIds = [...new Set(tunes.map(({ userId }) => userId))];
 
-      // Get users.
-      const { Responses } = await dynamodb.batchGet({
+      // Get raw responses.
+      const { Responses: responses } = await dynamodb.batchGet({
         RequestItems: {
           [process.env.APP_TABLE_NAME!]: {
             Keys: userIds.map((userId) => ({
@@ -116,19 +196,24 @@ const routes = new Map([
         },
       }).promise();
 
-      if (Responses === undefined) {
+      // Get users.
+      const users = responses?.[process.env.APP_TABLE_NAME!];
+
+      if (users === undefined) {
         return response({
           message: 'Not found',
         }, 404);
       }
 
       // Get users by id.
-      const users = Object.fromEntries(Responses[process.env.APP_TABLE_NAME!].map((user) => {
+      const usersById = Object.fromEntries(users.map((user) => {
         return [user.id, user];
       }));
 
       // Add user to tune.
-      tunes.forEach((tune) => (tune.user = users[tune.userId]));
+      tunes.forEach((tune) => Object.assign(tune, {
+        user: usersById[tune.userId],
+      }));
 
       return response({
         tunes,
@@ -205,6 +290,37 @@ const routes = new Map([
               },
             ],
           }).promise();
+
+          // Get a kuromoji tokenizer.
+          const tokenizer = await getTokenizer();
+
+          // Tokenize title and description.
+          const keywords = [title, description].flatMap((text) => tokenizer.tokenize(text)).filter(({ word_type, pos, pos_detail_1 }) => {
+            return pos === '名詞' && !(word_type === 'UNKNOWN' && pos_detail_1 === 'サ変接続');
+          }).map(({ surface_form }) => surface_form.normalize('NFKC').toLowerCase());
+
+          // Get number of occurrences by keyword.
+          const occurrences = [...keywords.reduce((keywords, keyword) => {
+            return keywords.set(keyword, keywords.get(keyword)! + 1 || 1);
+          }, new Map<string, number>)];
+
+          // Add keywords.
+          await Promise.all([...Array(Math.ceil(occurrences.length / 25)).keys()].map((i) => occurrences.slice(i * 25, (i + 1) * 25)).map((occurrences) => {
+            return dynamodb.batchWrite({
+              RequestItems: {
+                [process.env.APP_TABLE_NAME!]: occurrences.map(([keyword, occurrences]) => ({
+                  PutRequest: {
+                    Item: {
+                      pk: `tuneKeyword#${keyword}`,
+                      sk: `tuneId#${id}`,
+                      tuneId: id,
+                      occurrences,
+                    },
+                  },
+                })),
+              },
+            }).promise();
+          }));
 
           return response({ id });
         } catch (e: any) {
@@ -458,6 +574,14 @@ const routes = new Map([
     },
   ],
 ]);
+
+const getTokenizer = ((cache?: Tokenizer<IpadicFeatures>) => async () => {
+  return cache ??= await new Promise<Tokenizer<IpadicFeatures>>((resolve, reject) => {
+    kuromoji({ dicPath: 'node_modules/kuromoji/dict' }).build((err, tokenizer) => {
+      err ? reject(err) : resolve(tokenizer);
+    });
+  });
+})();
 
 const parse = (body: string | null): Record<string, any> => {
   if (body === null) {

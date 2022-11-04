@@ -194,6 +194,9 @@ class ChipTubeStack extends Stack {
       },
       bundling: {
         minify: true,
+        nodeModules: [
+          'kuromoji',
+        ],
       },
     });
 
