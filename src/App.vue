@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 
 // Vue Router
 import { useRouter } from 'vue-router';
@@ -24,6 +24,13 @@ const page = usePageStore();
 
 // get the $router object
 const $router = useRouter();
+
+// the drawer behavior
+const drawerBehavior = computed(() => {
+  if ($router.resolve(location.pathname).name === 'watch') {
+    return 'mobile';
+  }
+});
 
 // get the $q object
 const $q = useQuasar();
@@ -112,8 +119,8 @@ const uploadTune = async () => {
 </script>
 
 <template>
-  <q-layout view="hHh lpR fFf">
-    <q-header bordered>
+  <q-layout view="hHh LpR fFf">
+    <q-header>
       <q-toolbar>
         <q-btn flat round @click="drawer = !drawer">
           <q-icon name="mdi-menu" />
@@ -148,7 +155,7 @@ const uploadTune = async () => {
               <q-icon name="mdi-dots-vertical" />
             </template>
             <q-menu class="full-width" anchor="bottom right" max-width="300px" self="top right" square>
-              <q-list bordered padding>
+              <q-list padding>
                 <template v-if="auth.user">
                   <q-item>
                     <q-item-section avatar>
@@ -166,7 +173,7 @@ const uploadTune = async () => {
                     </q-item-section>
                   </q-item>
                   <q-separator spaced />
-                  <q-item clickable dense v-close-popup @click="Auth.signOut()">
+                  <q-item class="q-py-sm" clickable dense v-close-popup @click="Auth.signOut()">
                     <q-item-section side>
                       <q-icon name="mdi-logout" />
                     </q-item-section>
@@ -176,7 +183,7 @@ const uploadTune = async () => {
                   </q-item>
                   <q-separator spaced />
                 </template>
-                <q-item clickable dense>
+                <q-item class="q-py-sm" clickable dense>
                   <q-item-section side>
                     <q-icon name="mdi-theme-light-dark" />
                   </q-item-section>
@@ -194,16 +201,16 @@ const uploadTune = async () => {
                   <q-item-section side>
                     <q-icon name="mdi-chevron-right" />
                   </q-item-section>
-                  <q-menu anchor="top right" :offset="[1.33125, 9]" self="top right" square>
-                    <q-list bordered padding>
-                      <q-item dense>
+                  <q-menu anchor="top right" auto-close :offset="[1.33125, 9]" self="top right" square>
+                    <q-list padding>
+                      <q-item class="q-pb-sm" dense>
                         <q-item-section>
                           <q-item-label caption>
                             Setting applies to this browser only
                           </q-item-label>
                         </q-item-section>
                       </q-item>
-                      <q-item clickable v-close-popup @click="$q.dark.set('auto')">
+                      <q-item class="q-py-sm" clickable dense @click="$q.dark.set('auto')">
                         <q-item-section side>
                           <q-icon :class="{ invisible: !(page.dark === 'auto') }" name="mdi-check" />
                         </q-item-section>
@@ -211,7 +218,7 @@ const uploadTune = async () => {
                           Use device theme
                         </q-item-section>
                       </q-item>
-                      <q-item clickable v-close-popup @click="$q.dark.set(true)">
+                      <q-item class="q-py-sm" clickable dense @click="$q.dark.set(true)">
                         <q-item-section side>
                           <q-icon :class="{ invisible: !(page.dark === true) }" name="mdi-check" />
                         </q-item-section>
@@ -219,7 +226,7 @@ const uploadTune = async () => {
                           Dark theme
                         </q-item-section>
                       </q-item>
-                      <q-item clickable v-close-popup @click="$q.dark.set(false)">
+                      <q-item class="q-py-sm" clickable dense @click="$q.dark.set(false)">
                         <q-item-section side>
                           <q-icon :class="{ invisible: !(page.dark === false) }" name="mdi-check" />
                         </q-item-section>
@@ -230,6 +237,32 @@ const uploadTune = async () => {
                     </q-list>
                   </q-menu>
                 </q-item>
+                <q-separator spaced />
+                <q-item class="q-py-sm" disable dense>
+                  <q-item-section side>
+                    <q-icon name="mdi-cog-outline" />
+                  </q-item-section>
+                  <q-item-section>
+                    Settings
+                  </q-item-section>
+                </q-item>
+                <q-separator spaced />
+                <q-item class="q-py-sm" disable dense>
+                  <q-item-section side>
+                    <q-icon name="mdi-help-circle-outline" />
+                  </q-item-section>
+                  <q-item-section>
+                    Help
+                  </q-item-section>
+                </q-item>
+                <q-item class="q-py-sm" disable dense>
+                  <q-item-section side>
+                    <q-icon name="mdi-message-alert-outline" />
+                  </q-item-section>
+                  <q-item-section>
+                    Send feedback
+                  </q-item-section>
+                </q-item>
               </q-list>
             </q-menu>
           </q-btn>
@@ -239,9 +272,9 @@ const uploadTune = async () => {
         </div>
       </q-toolbar>
     </q-header>
-    <q-drawer v-model="drawer" behavior="mobile" :width="240">
+    <q-drawer v-model="drawer" :behavior="drawerBehavior" :persistent="$q.screen.gt.sm" show-if-above :width="240">
       <div class="column full-height">
-        <q-toolbar>
+        <q-toolbar v-if="drawerBehavior === 'mobile' || $q.screen.lt.md">
           <q-btn flat round @click="drawer = !drawer">
             <q-icon name="mdi-menu" />
           </q-btn>
@@ -261,7 +294,51 @@ const uploadTune = async () => {
                 Home
               </q-item-section>
             </q-item>
-            <template v-if="auth.user === null">
+            <q-item disable v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-youtube-subscription" />
+              </q-item-section>
+              <q-item-section>
+                Subscriptions
+              </q-item-section>
+            </q-item>
+            <q-item disable v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-pinwheel-outline" />
+              </q-item-section>
+              <q-item-section>
+                Playground
+              </q-item-section>
+            </q-item>
+            <q-separator spaced />
+            <q-item disable v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-music-box-multiple-outline" />
+              </q-item-section>
+              <q-item-section>
+                Library
+              </q-item-section>
+            </q-item>
+            <q-item disable v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-history" />
+              </q-item-section>
+              <q-item-section>
+                History
+              </q-item-section>
+            </q-item>
+            <template v-if="auth.user">
+              <q-item disable v-ripple>
+                <q-item-section side>
+                  <q-icon name="mdi-thumb-up-outline" />
+                </q-item-section>
+                <q-item-section>
+                  Liked tunes
+                </q-item-section>
+              </q-item>
+              <q-separator spaced />
+            </template>
+            <template v-else>
               <q-separator spaced />
               <q-item>
                 <q-item-section class="q-gutter-sm">
@@ -275,9 +352,42 @@ const uploadTune = async () => {
               </q-item>
               <q-separator spaced />
             </template>
-            <template v-else>
-              <q-separator spaced />
-            </template>
+            <q-item disable v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-cog-outline" />
+              </q-item-section>
+              <q-item-section>
+                Settings
+              </q-item-section>
+            </q-item>
+            <q-item disable v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-flag-outline" />
+              </q-item-section>
+              <q-item-section>
+                Report history
+              </q-item-section>
+            </q-item>
+            <q-item disable v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-help-circle-outline" />
+              </q-item-section>
+              <q-item-section>
+                Help
+              </q-item-section>
+            </q-item>
+            <q-item disable v-ripple>
+              <q-item-section side>
+                <q-icon name="mdi-message-alert-outline" />
+              </q-item-section>
+              <q-item-section>
+                Send feedback
+              </q-item-section>
+            </q-item>
+            <q-separator spaced />
+            <q-item-label header>
+              Others
+            </q-item-label>
             <q-item href="https://github.com/malvaceae/chiptube.io" target="_blank" v-ripple>
               <q-item-section side>
                 <q-icon name="mdi-github" />
@@ -286,6 +396,7 @@ const uploadTune = async () => {
                 GitHub
               </q-item-section>
             </q-item>
+            <q-separator spaced />
           </q-list>
         </q-scroll-area>
       </div>
@@ -365,6 +476,10 @@ const uploadTune = async () => {
   .q-item__section--side {
     padding-right: 25px;
   }
+}
+
+.q-drawer .q-list .q-item__label--header {
+  padding: 8px 25px 16px;
 }
 
 a {
