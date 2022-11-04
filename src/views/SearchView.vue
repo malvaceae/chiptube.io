@@ -6,13 +6,18 @@ import { ref, toRef, watch } from 'vue';
 import { API } from 'aws-amplify';
 
 // Quasar
-import { date, useQuasar } from 'quasar';
+import { date, useMeta, useQuasar } from 'quasar';
 
 // properties
 const props = defineProps<{ query: string }>();
 
 // get the search query
 const query = toRef(props, 'query');
+
+// use meta
+useMeta(() => ({
+  title: query.value,
+}));
 
 // get the $q object
 const $q = useQuasar();

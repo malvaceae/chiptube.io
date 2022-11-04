@@ -12,7 +12,7 @@ import { useAuthStore } from '@/stores/auth';
 import { API, Storage } from 'aws-amplify';
 
 // Quasar
-import { date, exportFile } from 'quasar';
+import { date, exportFile, useMeta } from 'quasar';
 
 // Google Sign In
 import GoogleSignIn from '@/components/GoogleSignIn.vue';
@@ -83,6 +83,11 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
 
 // the tune
 const tune = ref<Record<string, any> | null>(null);
+
+// use meta
+useMeta(() => ({
+  title: tune.value?.title,
+}));
 
 // get the tune
 onActivated(() => {

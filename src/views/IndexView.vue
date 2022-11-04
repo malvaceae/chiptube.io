@@ -6,7 +6,13 @@ import { ref } from 'vue';
 import { API } from 'aws-amplify';
 
 // Quasar
-import { date } from 'quasar';
+import { date, useMeta } from 'quasar';
+
+// use meta
+useMeta({
+  title: 'ChipTube',
+  titleTemplate: (title) => title,
+});
 
 // tunes
 const tunes = ref<Record<string, any>[]>([]);

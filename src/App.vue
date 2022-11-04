@@ -13,7 +13,7 @@ import { usePageStore } from '@/stores/page';
 import { API, Auth, Hub, Storage } from 'aws-amplify';
 
 // Quasar
-import { uid, useQuasar } from 'quasar';
+import { uid, useMeta, useQuasar } from 'quasar';
 
 // Google Sign In
 import GoogleSignIn from '@/components/GoogleSignIn.vue';
@@ -34,6 +34,11 @@ $q.dark.set(page.dark);
 // watch dark mode status
 watch(() => $q.dark.mode, (dark) => {
   page.dark = dark;
+});
+
+// use meta
+useMeta({
+  titleTemplate: (title) => `${title} - ChipTube`,
 });
 
 // variables
