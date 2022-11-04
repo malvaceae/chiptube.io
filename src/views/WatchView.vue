@@ -1,9 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { onActivated, onDeactivated, ref, toRef } from 'vue';
-
-// Vue Router
-import { onBeforeRouteUpdate } from 'vue-router';
+import { ref, toRef } from 'vue';
 
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
@@ -90,25 +87,9 @@ useMeta(() => ({
 }));
 
 // get the tune
-onActivated(() => {
-  API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
-    tune.value = data;
-  });
+API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
+  tune.value = data;
 });
-
-// update the tune
-onBeforeRouteUpdate(({ query: { v: id } }) => {
-  // reset the tune
-  tune.value = null;
-
-  // get the tune
-  API.get('Api', `/tunes/${id}`, {}).then((data) => {
-    tune.value = data;
-  });
-});
-
-// reset the tune
-onDeactivated(() => (tune.value = null));
 </script>
 
 <template>

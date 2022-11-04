@@ -403,8 +403,8 @@ const uploadTune = async () => {
     </q-drawer>
     <q-page-container>
       <router-view v-slot="{ Component }">
-        <keep-alive>
-          <component :is="Component" />
+        <keep-alive :include="/(?:Index|Search)View/" max="1">
+          <component :is="Component" :key="$route.fullPath" />
         </keep-alive>
       </router-view>
     </q-page-container>
