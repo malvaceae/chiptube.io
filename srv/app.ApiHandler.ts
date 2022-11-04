@@ -126,7 +126,9 @@ const routes = new Map([
           }).promise();
 
           // Get tunes.
-          const tunes = responses?.[process.env.APP_TABLE_NAME!];
+          const tunes = responses?.[process.env.APP_TABLE_NAME!]?.sort?.((a, b) => {
+            return sortedTuneIds.indexOf(a.id) - sortedTuneIds.indexOf(b.id);
+          });
 
           // Get the last evaluated key.
           const lastEvaluatedKey = (() => {
