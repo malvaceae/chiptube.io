@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { ref, toRef, watch } from 'vue';
+import { ref, toRefs } from 'vue';
 
 // Amplify
 import { API } from 'aws-amplify';
@@ -12,7 +12,7 @@ import { date, useMeta, useQuasar } from 'quasar';
 const props = defineProps<{ query: string }>();
 
 // get the search query
-const query = toRef(props, 'query');
+const { query } = toRefs(props);
 
 // use meta
 useMeta(() => ({
@@ -53,20 +53,6 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
   // hide loading
   $q.loading.hide();
 };
-
-// watch the search query
-watch(query, () => {
-  // reset tunes
-  tunes.value = [];
-
-  // reset the after token
-  after.value = void 0;
-
-  // get tunes
-  getTunes(0, () => {
-    //
-  });
-});
 </script>
 
 <template>

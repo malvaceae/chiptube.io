@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { ref, toRef } from 'vue';
+import { ref, toRefs } from 'vue';
 
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
@@ -21,7 +21,7 @@ import MidiPlayer from '@/components/MidiPlayer.vue';
 const props = defineProps<{ id: string }>();
 
 // get the tune id
-const id = toRef(props, 'id');
+const { id } = toRefs(props);
 
 // get the auth store
 const auth = useAuthStore();
@@ -64,6 +64,7 @@ const after = ref<string>();
 const getTunes = async (_: number, done: (stop?: boolean) => void) => {
   const data = await API.get('Api', '/tunes', {
     queryStringParameters: {
+      query: [tune.value?.title, tune.value?.description].join('\n'),
       after: after.value,
     },
   });
@@ -203,8 +204,8 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
         </q-list>
       </div>
       <div class="col-12 col-md-4">
-        <q-infinite-scroll :offset="250" @load="getTunes">
-          <q-list v-if="tune" class="q-gutter-md">
+        <q-infinite-scroll v-if="tune" :offset="250" @load="getTunes">
+          <q-list class="q-gutter-md">
             <q-item v-for="tune in tunes" class="q-py-none" active-class="" :to="{ query: { v: tune.id } }">
               <q-item-section side>
                 <q-img src="@/assets/thumbnail.png" width="148px">
@@ -226,6 +227,11 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
               </q-item-section>
             </q-item>
           </q-list>
+          <template #loading>
+            <div class="row justify-center q-my-md">
+              <q-spinner-dots size="lg" />
+            </div>
+          </template>
         </q-infinite-scroll>
       </div>
     </div>
