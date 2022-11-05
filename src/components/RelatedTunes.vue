@@ -14,8 +14,8 @@ const props = defineProps<{ query: string }>();
 // get the search query
 const { query } = toRefs(props);
 
-// root element
-const el = ref<HTMLElement>();
+// the scroll target
+const scrollTarget = ref<HTMLElement>();
 
 // tunes
 const tunes = ref<Record<string, any>[]>([]);
@@ -44,8 +44,8 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
 </script>
 
 <template>
-  <q-infinite-scroll ref="el" :offset="250" :scroll-target="el" @load="getTunes">
-    <q-list class="q-gutter-md">
+  <q-infinite-scroll :offset="250" :scroll-target="scrollTarget" @load="getTunes">
+    <q-list ref="scrollTarget" class="q-gutter-md">
       <q-item v-for="tune in tunes" class="q-py-none" active-class="" :to="{ query: { v: tune.id } }">
         <q-item-section side>
           <q-img src="@/assets/thumbnail.png" width="148px">
