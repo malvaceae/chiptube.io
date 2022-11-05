@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 // Vue Router
 import { useRouter } from 'vue-router';
@@ -10,13 +10,16 @@ import { useAuthStore } from '@/stores/auth';
 import { usePageStore } from '@/stores/page';
 
 // Amplify
-import { API, Auth, Hub, Storage } from 'aws-amplify';
+import { Auth, Hub } from 'aws-amplify';
 
 // Quasar
-import { uid, useMeta, useQuasar } from 'quasar';
+import { useMeta, useQuasar } from 'quasar';
 
 // Google Sign In
 import GoogleSignIn from '@/components/GoogleSignIn.vue';
+
+// Tune Dialog
+import TuneDialog from '@/components/TuneDialog.vue';
 
 // get stores
 const auth = useAuthStore();
@@ -48,8 +51,7 @@ useMeta({
   titleTemplate: (title) => `${title} - ChipTube`,
 });
 
-// variables
-const dialog = ref(false);
+// the drawer state
 const drawer = ref(false);
 
 // the search query
@@ -78,49 +80,6 @@ const isLoading = ref(true);
 Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null)).finally(() => {
   isLoading.value = false;
 });
-
-// the midi
-const midi = ref<File | null>(null);
-
-// the tune
-const tune = reactive({
-  title: '',
-  description: '',
-  midi,
-});
-
-// upload the tune
-const uploadTune = async () => {
-  if (tune.midi === null) {
-    return;
-  }
-
-  // show loading
-  $q.loading.show({ spinnerSize: 46 });
-
-  // upload the tune
-  const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, tune.midi, {
-    level: 'protected',
-  });
-
-  // register the tune info
-  const data = await API.post('Api', '/tunes', {
-    body: {
-      title: tune.title,
-      description: tune.description,
-      midiKey,
-    },
-  });
-
-  // move to watch route
-  await $router.push({ name: 'watch', query: { v: data.id } });
-
-  // close dialog
-  dialog.value = false;
-
-  // hide loading
-  $q.loading.hide();
-};
 </script>
 
 <template>
@@ -147,7 +106,7 @@ const uploadTune = async () => {
         <div class="row q-gutter-md no-wrap items-center">
           <template v-if="!isLoading">
             <template v-if="auth.user">
-              <q-btn flat round @click="dialog = !dialog">
+              <q-btn flat round @click="$q.dialog({ component: TuneDialog })">
                 <q-icon name="mdi-music-note-plus" />
               </q-btn>
             </template>
@@ -424,44 +383,6 @@ const uploadTune = async () => {
       </router-view>
     </q-page-container>
   </q-layout>
-  <q-dialog v-model="dialog" persistent>
-    <q-card class="full-width" square>
-      <q-card-section class="text-h6">
-        Upload tune
-      </q-card-section>
-      <q-card-section class="q-pt-none">
-        <div class="column q-gutter-md">
-          <q-input v-model="tune.title" label-slot outlined square>
-            <template #label>
-              Title
-            </template>
-          </q-input>
-          <q-input v-model="tune.description" label-slot outlined square type="textarea">
-            <template #label>
-              Description
-            </template>
-          </q-input>
-          <q-file v-model="tune.midi" accept=".mid" label-slot outlined square>
-            <template #prepend>
-              <q-icon name="mdi-file-music" />
-            </template>
-            <template #label>
-              MIDI File
-            </template>
-          </q-file>
-        </div>
-      </q-card-section>
-      <q-separator />
-      <q-card-actions align="right">
-        <q-btn color="grey-6" flat square v-close-popup>
-          <span class="block">Cancel</span>
-        </q-btn>
-        <q-btn color="primary" :disable="!Object.values(tune).every(Boolean)" flat square @click="uploadTune">
-          <span class="block">Upload tune</span>
-        </q-btn>
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
 </template>
 
 <style lang="scss" scoped>
