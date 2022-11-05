@@ -17,6 +17,9 @@ import GoogleSignIn from '@/components/GoogleSignIn.vue';
 // MIDI Player
 import MidiPlayer from '@/components/MidiPlayer.vue';
 
+// Related Tunes
+import RelatedTunes from '@/components/RelatedTunes.vue';
+
 // properties
 const props = defineProps<{ id: string }>();
 
@@ -54,31 +57,6 @@ const downloadTune = async () => {
   }
 };
 
-// tunes
-const tunes = ref<Record<string, any>[]>([]);
-
-// the after token
-const after = ref<string>();
-
-// get tunes
-const getTunes = async (_: number, done: (stop?: boolean) => void) => {
-  const data = await API.get('Api', '/tunes', {
-    queryStringParameters: {
-      query: [tune.value?.title, tune.value?.description].join('\n'),
-      after: after.value,
-    },
-  });
-
-  // add tunes
-  tunes.value.push(...data.tunes);
-
-  // update the after token
-  after.value = data.after;
-
-  // complete updates
-  done(!after.value);
-};
-
 // the tune
 const tune = ref<Record<string, any> | null>(null);
 
@@ -98,23 +76,38 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
     <div class="row q-col-gutter-md">
       <div class="col-12 col-md-8">
         <q-responsive :ratio="16 / 9">
-          <midi-player v-if="tune" :identity-id="tune.identityId" :midi-key="tune.midiKey" />
+          <template v-if="tune">
+            <midi-player :identity-id="tune.identityId" :midi-key="tune.midiKey" />
+          </template>
+          <template v-else>
+            <q-skeleton animation="none" square />
+          </template>
         </q-responsive>
-        <q-list v-if="tune" dense padding>
+        <q-list dense padding>
           <q-item>
             <q-item-section>
               <q-item-label class="text-h6">
-                {{ tune.title }}
+                <template v-if="tune">
+                  {{ tune.title }}
+                </template>
+                <template v-else>
+                  <q-skeleton class="text-subtitle1" animation="none" type="text" />
+                </template>
               </q-item-label>
             </q-item-section>
           </q-item>
           <q-item>
             <q-item-section>
               <q-item-label>
-                {{ tune.views.toLocaleString() }} views • {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}
+                <template v-if="tune">
+                  {{ tune.views.toLocaleString() }} views • {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}
+                </template>
+                <template v-else>
+                  <q-skeleton animation="none" type="text" width="35%" />
+                </template>
               </q-item-label>
             </q-item-section>
-            <div class="absolute-right">
+            <div v-if="tune" class="absolute-right">
               <q-btn flat square @click="toggleIsLiked">
                 <template v-if="tune.isLiked">
                   <q-icon class="q-mr-sm" name="mdi-thumb-up" />
@@ -159,36 +152,60 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
           <q-item class="q-mt-md q-mb-sm">
             <q-item-section avatar>
               <q-avatar>
-                <img :src="tune.user.picture">
+                <template v-if="tune">
+                  <img :src="tune.user.picture">
+                </template>
+                <template v-else>
+                  <q-skeleton animation="none" type="QAvatar" />
+                </template>
               </q-avatar>
             </q-item-section>
             <q-item-section>
               <q-item-label class="text-weight-bold">
-                {{ tune.user.name }}
+                <template v-if="tune">
+                  {{ tune.user.name }}
+                </template>
+                <template v-else>
+                  <q-skeleton animation="none" type="text" width="65%" />
+                </template>
               </q-item-label>
               <q-item-label caption>
-                0 subscribers
+                <template v-if="tune">
+                  0 subscribers
+                </template>
+                <template v-else>
+                  <q-skeleton animation="none" type="text" width="35%" />
+                </template>
               </q-item-label>
             </q-item-section>
             <q-item-section side>
-              <q-btn color="red" padding="6px 12px" square unelevated>
-                <span class="block">Subscribe</span>
-              </q-btn>
+              <template v-if="tune">
+                <q-btn color="red" padding="6px 12px" square unelevated>
+                  <span class="block">Subscribe</span>
+                </q-btn>
+              </template>
             </q-item-section>
           </q-item>
           <q-item class="q-mt-sm q-mb-md">
             <q-item-section avatar />
             <q-item-section>
               <q-item-label :style="{ whiteSpace: 'pre-wrap' }">
-                <template v-for="line in tune.description.split(/(?=\n)/)">
-                  <template v-for="text in line.split(/(?=https?:\/\/[!#-;=?-[\]_a-z~]+)|(?![!#-;=?-[\]_a-z~])/)">
-                    <a v-if="/^https?:\/\/[!#-;=?-[\]_a-z~]+$/.test(text)" :href="text" target="_blank">
-                      {{ text }}
-                    </a>
-                    <template v-else>
-                      {{ text }}
+                <template v-if="tune">
+                  <template v-for="line in tune.description.split(/(?=\n)/)">
+                    <template v-for="text in line.split(/(?=https?:\/\/[!#-;=?-[\]_a-z~]+)|(?![!#-;=?-[\]_a-z~])/)">
+                      <a v-if="/^https?:\/\/[!#-;=?-[\]_a-z~]+$/.test(text)" :href="text" target="_blank">
+                        {{ text }}
+                      </a>
+                      <template v-else>
+                        {{ text }}
+                      </template>
                     </template>
                   </template>
+                </template>
+                <template v-else>
+                  <q-skeleton animation="none" type="text" />
+                  <q-skeleton animation="none" type="text" />
+                  <q-skeleton animation="none" type="text" />
                 </template>
               </q-item-label>
             </q-item-section>
@@ -204,35 +221,29 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
         </q-list>
       </div>
       <div class="col-12 col-md-4">
-        <q-infinite-scroll v-if="tune" :offset="250" @load="getTunes">
+        <template v-if="tune">
+          <related-tunes :query="[tune.title, tune.description].join('\n')" />
+        </template>
+        <template v-else>
           <q-list class="q-gutter-md">
-            <q-item v-for="tune in tunes" class="q-py-none" active-class="" :to="{ query: { v: tune.id } }">
+            <q-item v-for="_ in 24" class="q-py-none">
               <q-item-section side>
-                <q-img src="@/assets/thumbnail.png" width="148px">
-                  <div class="absolute-center full-width text-caption text-center ellipsis">
-                    {{ tune.title }}
-                  </div>
-                </q-img>
+                <q-skeleton animation="none" height="83.25px" square width="148px" />
               </q-item-section>
               <q-item-section>
-                <q-item-label class="text-subtitle1" lines="2">
-                  {{ tune.title }}
+                <q-item-label>
+                  <q-skeleton class="text-subtitle1" animation="none" type="text" />
                 </q-item-label>
-                <q-item-label class="q-pt-sm" caption>
-                  {{ tune.user.name }}
+                <q-item-label>
+                  <q-skeleton animation="none" type="text" width="35%" />
                 </q-item-label>
-                <q-item-label caption>
-                  {{ tune.views.toLocaleString() }} views • {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}
+                <q-item-label>
+                  <q-skeleton animation="none" type="text" width="65%" />
                 </q-item-label>
               </q-item-section>
             </q-item>
           </q-list>
-          <template #loading>
-            <div class="row justify-center q-my-md">
-              <q-spinner-dots size="lg" />
-            </div>
-          </template>
-        </q-infinite-scroll>
+        </template>
       </div>
     </div>
   </q-page>
