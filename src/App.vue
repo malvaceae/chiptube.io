@@ -71,8 +71,13 @@ Hub.listen('auth', ({ payload: { event } }) => {
   }
 });
 
+// is loading
+const isLoading = ref(true);
+
 // get the current user
-Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null));
+Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null)).finally(() => {
+  isLoading.value = false;
+});
 
 // the midi
 const midi = ref<File | null>(null);
@@ -140,134 +145,144 @@ const uploadTune = async () => {
         </q-input>
         <q-space />
         <div class="row q-gutter-md no-wrap items-center">
-          <template v-if="auth.user">
-            <q-btn flat round @click="dialog = !dialog">
-              <q-icon name="mdi-music-note-plus" />
-            </q-btn>
-          </template>
-          <q-btn flat round>
+          <template v-if="!isLoading">
             <template v-if="auth.user">
-              <q-avatar>
-                <img :src="auth.user.picture">
-              </q-avatar>
+              <q-btn flat round @click="dialog = !dialog">
+                <q-icon name="mdi-music-note-plus" />
+              </q-btn>
             </template>
-            <template v-else>
-              <q-icon name="mdi-dots-vertical" />
-            </template>
-            <q-menu class="full-width" anchor="bottom right" max-width="300px" self="top right" square>
-              <q-list padding>
-                <template v-if="auth.user">
-                  <q-item>
-                    <q-item-section avatar>
-                      <q-avatar>
-                        <img :src="auth.user.picture">
-                      </q-avatar>
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>
-                        {{ auth.user.name }}
-                      </q-item-label>
-                      <q-item-label>
-                        {{ auth.user.email }}
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-separator spaced />
-                  <q-item class="q-py-sm" clickable dense v-close-popup @click="Auth.signOut()">
+            <q-btn flat round>
+              <template v-if="auth.user">
+                <q-avatar>
+                  <img :src="auth.user.picture">
+                </q-avatar>
+              </template>
+              <template v-else>
+                <q-icon name="mdi-dots-vertical" />
+              </template>
+              <q-menu class="full-width" anchor="bottom right" max-width="300px" self="top right" square>
+                <q-list padding>
+                  <template v-if="auth.user">
+                    <q-item>
+                      <q-item-section avatar>
+                        <q-avatar>
+                          <img :src="auth.user.picture">
+                        </q-avatar>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>
+                          {{ auth.user.name }}
+                        </q-item-label>
+                        <q-item-label>
+                          {{ auth.user.email }}
+                        </q-item-label>
+                      </q-item-section>
+                    </q-item>
+                    <q-separator spaced />
+                    <q-item class="q-py-sm" clickable dense v-close-popup @click="Auth.signOut()">
+                      <q-item-section side>
+                        <q-icon name="mdi-logout" />
+                      </q-item-section>
+                      <q-item-section>
+                        Sign out
+                      </q-item-section>
+                    </q-item>
+                    <q-separator spaced />
+                  </template>
+                  <q-item class="q-py-sm" clickable dense>
                     <q-item-section side>
-                      <q-icon name="mdi-logout" />
+                      <q-icon name="mdi-theme-light-dark" />
                     </q-item-section>
                     <q-item-section>
-                      Sign out
+                      <template v-if="page.dark === 'auto'">
+                        Appearance: Device theme
+                      </template>
+                      <template v-if="page.dark === true">
+                        Appearance: Dark
+                      </template>
+                      <template v-if="page.dark === false">
+                        Appearance: Light
+                      </template>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-icon name="mdi-chevron-right" />
+                    </q-item-section>
+                    <q-menu anchor="top right" auto-close :offset="[1.33125, 9]" self="top right" square>
+                      <q-list padding>
+                        <q-item class="q-pb-sm" dense>
+                          <q-item-section>
+                            <q-item-label caption>
+                              Setting applies to this browser only
+                            </q-item-label>
+                          </q-item-section>
+                        </q-item>
+                        <q-item class="q-py-sm" clickable dense @click="$q.dark.set('auto')">
+                          <q-item-section side>
+                            <q-icon :class="{ invisible: !(page.dark === 'auto') }" name="mdi-check" />
+                          </q-item-section>
+                          <q-item-section>
+                            Use device theme
+                          </q-item-section>
+                        </q-item>
+                        <q-item class="q-py-sm" clickable dense @click="$q.dark.set(true)">
+                          <q-item-section side>
+                            <q-icon :class="{ invisible: !(page.dark === true) }" name="mdi-check" />
+                          </q-item-section>
+                          <q-item-section>
+                            Dark theme
+                          </q-item-section>
+                        </q-item>
+                        <q-item class="q-py-sm" clickable dense @click="$q.dark.set(false)">
+                          <q-item-section side>
+                            <q-icon :class="{ invisible: !(page.dark === false) }" name="mdi-check" />
+                          </q-item-section>
+                          <q-item-section>
+                            Light theme
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-menu>
+                  </q-item>
+                  <q-separator spaced />
+                  <q-item class="q-py-sm" disable dense>
+                    <q-item-section side>
+                      <q-icon name="mdi-cog-outline" />
+                    </q-item-section>
+                    <q-item-section>
+                      Settings
                     </q-item-section>
                   </q-item>
                   <q-separator spaced />
-                </template>
-                <q-item class="q-py-sm" clickable dense>
-                  <q-item-section side>
-                    <q-icon name="mdi-theme-light-dark" />
-                  </q-item-section>
-                  <q-item-section>
-                    <template v-if="page.dark === 'auto'">
-                      Appearance: Device theme
-                    </template>
-                    <template v-if="page.dark === true">
-                      Appearance: Dark
-                    </template>
-                    <template v-if="page.dark === false">
-                      Appearance: Light
-                    </template>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-icon name="mdi-chevron-right" />
-                  </q-item-section>
-                  <q-menu anchor="top right" auto-close :offset="[1.33125, 9]" self="top right" square>
-                    <q-list padding>
-                      <q-item class="q-pb-sm" dense>
-                        <q-item-section>
-                          <q-item-label caption>
-                            Setting applies to this browser only
-                          </q-item-label>
-                        </q-item-section>
-                      </q-item>
-                      <q-item class="q-py-sm" clickable dense @click="$q.dark.set('auto')">
-                        <q-item-section side>
-                          <q-icon :class="{ invisible: !(page.dark === 'auto') }" name="mdi-check" />
-                        </q-item-section>
-                        <q-item-section>
-                          Use device theme
-                        </q-item-section>
-                      </q-item>
-                      <q-item class="q-py-sm" clickable dense @click="$q.dark.set(true)">
-                        <q-item-section side>
-                          <q-icon :class="{ invisible: !(page.dark === true) }" name="mdi-check" />
-                        </q-item-section>
-                        <q-item-section>
-                          Dark theme
-                        </q-item-section>
-                      </q-item>
-                      <q-item class="q-py-sm" clickable dense @click="$q.dark.set(false)">
-                        <q-item-section side>
-                          <q-icon :class="{ invisible: !(page.dark === false) }" name="mdi-check" />
-                        </q-item-section>
-                        <q-item-section>
-                          Light theme
-                        </q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-menu>
-                </q-item>
-                <q-separator spaced />
-                <q-item class="q-py-sm" disable dense>
-                  <q-item-section side>
-                    <q-icon name="mdi-cog-outline" />
-                  </q-item-section>
-                  <q-item-section>
-                    Settings
-                  </q-item-section>
-                </q-item>
-                <q-separator spaced />
-                <q-item class="q-py-sm" disable dense>
-                  <q-item-section side>
-                    <q-icon name="mdi-help-circle-outline" />
-                  </q-item-section>
-                  <q-item-section>
-                    Help
-                  </q-item-section>
-                </q-item>
-                <q-item class="q-py-sm" disable dense>
-                  <q-item-section side>
-                    <q-icon name="mdi-message-alert-outline" />
-                  </q-item-section>
-                  <q-item-section>
-                    Send feedback
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </q-menu>
-          </q-btn>
-          <template v-if="auth.user === null">
-            <google-sign-in />
+                  <q-item class="q-py-sm" disable dense>
+                    <q-item-section side>
+                      <q-icon name="mdi-help-circle-outline" />
+                    </q-item-section>
+                    <q-item-section>
+                      Help
+                    </q-item-section>
+                  </q-item>
+                  <q-item class="q-py-sm" disable dense>
+                    <q-item-section side>
+                      <q-icon name="mdi-message-alert-outline" />
+                    </q-item-section>
+                    <q-item-section>
+                      Send feedback
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
+            <template v-if="auth.user === null">
+              <google-sign-in />
+            </template>
+          </template>
+          <template v-else>
+            <q-avatar size="42px">
+              <q-skeleton animation="none" type="QAvatar" />
+            </q-avatar>
+            <q-avatar size="42px">
+              <q-skeleton animation="none" type="QAvatar" />
+            </q-avatar>
           </template>
         </div>
       </q-toolbar>
@@ -284,7 +299,7 @@ const uploadTune = async () => {
             </router-link>
           </q-toolbar-title>
         </q-toolbar>
-        <q-scroll-area class="col-grow">
+        <q-scroll-area v-if="!isLoading" class="col-grow">
           <q-list dense padding>
             <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" :to="{ name: 'index' }" v-ripple>
               <q-item-section side>
