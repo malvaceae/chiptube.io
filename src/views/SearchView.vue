@@ -17,6 +17,11 @@ const { query } = toRefs(props);
 // use meta
 useMeta(() => ({
   title: query.value,
+  meta: {
+    description: {
+      content: 'Enjoy the tunes you love, upload original MIDI files, and share it all with friends, family, and the world on ChipTube.',
+    },
+  },
 }));
 
 // get the $q object

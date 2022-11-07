@@ -63,6 +63,11 @@ const tune = ref<Record<string, any> | null>(null);
 // use meta
 useMeta(() => ({
   title: tune.value?.title,
+  meta: {
+    description: {
+      content: tune.value?.description ?? 'Enjoy the tunes you love, upload original MIDI files, and share it all with friends, family, and the world on ChipTube.',
+    },
+  },
 }));
 
 // get the tune

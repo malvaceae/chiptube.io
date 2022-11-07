@@ -49,6 +49,11 @@ watch(() => $q.dark.mode, (dark) => {
 // use meta
 useMeta({
   titleTemplate: (title) => `${title} - ChipTube`,
+  meta: {
+    description: {
+      name: 'description',
+    },
+  },
 });
 
 // the drawer state
