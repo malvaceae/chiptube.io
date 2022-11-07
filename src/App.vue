@@ -166,7 +166,7 @@ Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes
                     <q-item-section side>
                       <q-icon name="mdi-chevron-right" />
                     </q-item-section>
-                    <q-menu anchor="top right" auto-close :offset="[1.33125, 9]" self="top right" square>
+                    <q-menu anchor="top right" :offset="[1.33125, 9]" self="top right" square>
                       <q-list padding>
                         <q-item class="q-pb-sm" dense>
                           <q-item-section>
@@ -175,7 +175,7 @@ Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes
                             </q-item-label>
                           </q-item-section>
                         </q-item>
-                        <q-item class="q-py-sm" clickable dense @click="$q.dark.set('auto')">
+                        <q-item class="q-py-sm" clickable dense v-close-popup @click="$q.dark.set('auto')">
                           <q-item-section side>
                             <q-icon :class="{ invisible: !(page.dark === 'auto') }" name="mdi-check" />
                           </q-item-section>
@@ -183,7 +183,7 @@ Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes
                             Use device theme
                           </q-item-section>
                         </q-item>
-                        <q-item class="q-py-sm" clickable dense @click="$q.dark.set(true)">
+                        <q-item class="q-py-sm" clickable dense v-close-popup @click="$q.dark.set(true)">
                           <q-item-section side>
                             <q-icon :class="{ invisible: !(page.dark === true) }" name="mdi-check" />
                           </q-item-section>
@@ -191,7 +191,7 @@ Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes
                             Dark theme
                           </q-item-section>
                         </q-item>
-                        <q-item class="q-py-sm" clickable dense @click="$q.dark.set(false)">
+                        <q-item class="q-py-sm" clickable dense v-close-popup @click="$q.dark.set(false)">
                           <q-item-section side>
                             <q-icon :class="{ invisible: !(page.dark === false) }" name="mdi-check" />
                           </q-item-section>
