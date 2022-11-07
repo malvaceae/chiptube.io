@@ -221,29 +221,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
         </q-list>
       </div>
       <div class="col-12 col-md-4">
-        <template v-if="tune">
-          <related-tunes :query="[tune.title, tune.description].join('\n')" />
-        </template>
-        <template v-else>
-          <q-list class="q-gutter-md">
-            <q-item v-for="_ in 24" class="q-py-none">
-              <q-item-section side>
-                <q-skeleton animation="none" height="83.25px" square width="148px" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>
-                  <q-skeleton class="text-subtitle1" animation="none" type="text" />
-                </q-item-label>
-                <q-item-label>
-                  <q-skeleton animation="none" type="text" width="35%" />
-                </q-item-label>
-                <q-item-label>
-                  <q-skeleton animation="none" type="text" width="65%" />
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </template>
+        <related-tunes :id="id" />
       </div>
     </div>
   </q-page>

@@ -9,10 +9,10 @@ import { API } from 'aws-amplify';
 import { date } from 'quasar';
 
 // properties
-const props = defineProps<{ query: string }>();
+const props = defineProps<{ id: string }>();
 
-// get the search query
-const { query } = toRefs(props);
+// get the tune id
+const { id } = toRefs(props);
 
 // the scroll target
 const scrollTarget = ref<HTMLElement>();
@@ -25,9 +25,8 @@ const after = ref<string>();
 
 // get tunes
 const getTunes = async (_: number, done: (stop?: boolean) => void) => {
-  const data = await API.get('Api', '/tunes', {
+  const data = await API.get('Api', `/tunes/${id.value}/tunes`, {
     queryStringParameters: {
-      query: query.value,
       after: after.value,
     },
   });
