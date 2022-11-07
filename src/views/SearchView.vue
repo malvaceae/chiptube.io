@@ -19,7 +19,7 @@ useMeta(() => ({
   title: query.value,
   meta: {
     description: {
-      content: 'Enjoy the tunes you love, upload original MIDI files, and share it all with friends, family, and the world on ChipTube.',
+      content: 'Enjoy the tunes you love, upload original MIDI file, and share it all with friends, family, and the world on ChipTube.',
     },
   },
 }));

@@ -65,7 +65,7 @@ useMeta(() => ({
   title: tune.value?.title,
   meta: {
     description: {
-      content: tune.value?.description ?? 'Enjoy the tunes you love, upload original MIDI files, and share it all with friends, family, and the world on ChipTube.',
+      content: tune.value?.description ?? 'Enjoy the tunes you love, upload original MIDI file, and share it all with friends, family, and the world on ChipTube.',
     },
   },
 }));
