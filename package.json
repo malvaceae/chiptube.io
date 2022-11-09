@@ -8,7 +8,7 @@
     "@tonejs/midi": "^2.0.28",
     "@types/aws-lambda": "^8.10.108",
     "@types/kuromoji": "^0.1.1",
-    "@types/node": "^18.7.16",
+    "@types/node": "^16.11.7",
     "@types/p5": "^1.4.3",
     "@vitejs/plugin-vue": "^3.2.0",
     "autoprefixer": "^10.4.13",
