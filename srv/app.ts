@@ -308,11 +308,13 @@ class ChipTubeStack extends Stack {
       domainNames,
       errorResponses: [
         {
+          ttl: Duration.days(1),
           httpStatus: 403,
           responseHttpStatus: 200,
           responsePagePath: '/',
         },
         {
+          ttl: Duration.days(1),
           httpStatus: 404,
           responseHttpStatus: 200,
           responsePagePath: '/',
