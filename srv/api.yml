@@ -37,6 +37,10 @@ paths:
                   after:
                     type: string
                     format: byte
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     post:
       tags:
         - Tunes
@@ -69,6 +73,12 @@ paths:
                 properties:
                   id:
                     $ref: "#/components/schemas/TuneId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /tunes/{id}:
     get:
       tags:
@@ -87,6 +97,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Tune"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     put:
       tags:
         - Tunes
@@ -112,6 +126,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Tune"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /tunes/{id}/tunes:
     get:
       tags:
@@ -145,6 +165,10 @@ paths:
                   after:
                     type: string
                     format: byte
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 components:
   schemas:
     TuneId:
@@ -213,3 +237,35 @@ components:
           type: string
         picture:
           type: string
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    UnprocessableEntity:
+      description: Unprocessable Entity
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
