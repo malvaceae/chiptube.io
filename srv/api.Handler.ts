@@ -25,19 +25,10 @@ const dynamodb = new DynamoDB.DocumentClient({
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-    for (let [{ resource, httpMethod }, route] of routes) {
+    for (const [{ resource, httpMethod }, route] of routes) {
       if (httpMethod === event.httpMethod) {
         if (resource === event.resource) {
-          // Parse the JSON of request body.
-          const params = parse(event.body);
-
-          // Merge query string parameters.
-          Object.entries(event.multiValueQueryStringParameters ?? {}).forEach(([name, values]) => {
-            params[name] = values && values.length ? values.length === 1 ? values[0] : values : '';
-          });
-
-          // Invoke the route.
-          return await route(event, params);
+          return await route(event);
         }
       }
     }
@@ -60,18 +51,20 @@ const routes = new Map([
       resource: '/tunes',
       httpMethod: 'GET',
     },
-    async (event: APIGatewayProxyEvent, params: Record<string, any>) => {
+    async ({ queryStringParameters }: APIGatewayProxyEvent) => {
       const exclusiveStartKey = (({ after }) => {
-        try {
-          return JSON.parse(Buffer.from(after, 'base64').toString());
-        } catch {
-          //
+        if (after) {
+          try {
+            return JSON.parse(Buffer.from(after, 'base64').toString());
+          } catch {
+            //
+          }
         }
-      })(params);
+      })(queryStringParameters ?? {});
 
       const { tunes, lastEvaluatedKey } = await (async ({ query }) => {
         // Get tunes with the search query if it exists.
-        if (typeof query === 'string' && query.length > 0) {
+        if (query) {
           // Get a kuromoji tokenizer.
           const tokenizer = await getTokenizer();
 
@@ -159,7 +152,7 @@ const routes = new Map([
             lastEvaluatedKey,
           };
         }
-      })(params);
+      })(queryStringParameters ?? {});
 
       if (!tunes?.length) {
         return response({
@@ -167,13 +160,15 @@ const routes = new Map([
         });
       }
 
-      const after = (() => {
-        try {
-          return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString('base64');
-        } catch {
-          //
+      const after = ((lastEvaluatedKey) => {
+        if (lastEvaluatedKey) {
+          try {
+            return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString('base64');
+          } catch {
+            //
+          }
         }
-      })();
+      })(lastEvaluatedKey);
 
       // Get unique user ids.
       const userIds = [...new Set(tunes.map(({ userId }) => userId))];
@@ -225,7 +220,7 @@ const routes = new Map([
       resource: '/tunes',
       httpMethod: 'POST',
     },
-    async ({ requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId } } }: APIGatewayProxyEvent, { title, description, midiKey }: Record<string, any>) => {
+    async ({ body, requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId } } }: APIGatewayProxyEvent) => {
       if (!cognitoAuthenticationProvider) {
         return response({
           message: 'Unauthorized',
@@ -234,6 +229,9 @@ const routes = new Map([
 
       // Get the user id from cognito authentication provider.
       const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+
+      // Parse the JSON of request body.
+      const { title, description, midiKey } = JSON.parse(body ?? '{}');
 
       if (!title || !description || !midiKey) {
         return response({
@@ -437,177 +435,10 @@ const routes = new Map([
   ],
   [
     {
-      resource: '/tunes/{id}/tunes',
-      httpMethod: 'GET',
-    },
-    async ({ pathParameters }: APIGatewayProxyEvent, params: Record<string, any>) => {
-      // Get the tune id.
-      const { id } = pathParameters ?? {};
-
-      if (!id) {
-        return response({
-          message: 'Not found',
-        }, 404);
-      }
-
-      const exclusiveStartKey = (({ after }) => {
-        try {
-          return JSON.parse(Buffer.from(after, 'base64').toString());
-        } catch {
-          //
-        }
-      })(params);
-
-      const { tunes, lastEvaluatedKey } = await (async () => {
-        // Get keywords.
-        const { Items: keywords } = await dynamodb.query({
-          TableName: process.env.APP_TABLE_NAME!,
-          IndexName: 'GSI-AdjacencyList',
-          KeyConditionExpression: [
-            'sk = :sk',
-            'begins_with(pk, :pk)',
-          ].join(' AND '),
-          ExpressionAttributeValues: {
-            ':sk': `tuneId#${id}`,
-            ':pk': 'tuneKeyword#',
-          },
-        }).promise();
-
-        if (keywords === undefined) {
-          return {};
-        }
-
-        // Get tune ids by keyword.
-        const tuneIdsByKeyword = await Promise.all(keywords.map(({ keyword }) => {
-          return dynamodb.query({
-            TableName: process.env.APP_TABLE_NAME!,
-            FilterExpression: 'tuneId <> :tuneId',
-            KeyConditionExpression: 'pk = :pk',
-            ExpressionAttributeValues: {
-              ':pk': `tuneKeyword#${keyword}`,
-              ':tuneId': id,
-            },
-          }).promise();
-        }));
-
-        // Get tune ids.
-        const tuneIds = tuneIdsByKeyword.flatMap(({ Items }) => Items ?? []);
-
-        // Get tune ids sorted by relevance.
-        const sortedTuneIds = [...new Set(tuneIds.map(({ tuneId }) => tuneId))].sort((a, b) => {
-          return (
-            tuneIds.filter(({ tuneId }) => tuneId === b).reduce((sum, { occurrences }) => sum + occurrences, 0) -
-            tuneIds.filter(({ tuneId }) => tuneId === a).reduce((sum, { occurrences }) => sum + occurrences, 0)
-          );
-        });
-
-        // Skip to after the exclusive start key.
-        if (typeof exclusiveStartKey === 'string' && exclusiveStartKey.length > 0) {
-          sortedTuneIds.splice(0, sortedTuneIds.indexOf(exclusiveStartKey) + 1);
-        }
-
-        if (sortedTuneIds.length === 0) {
-          return {};
-        }
-
-        // Set maximum number of tunes to evaluate.
-        sortedTuneIds.splice(24);
-
-        // Get raw responses.
-        const { Responses: responses } = await dynamodb.batchGet({
-          RequestItems: {
-            [process.env.APP_TABLE_NAME!]: {
-              Keys: sortedTuneIds.map((tuneId) => ({
-                pk: 'tunes',
-                sk: `tuneId#${tuneId}`,
-              })),
-            },
-          },
-        }).promise();
-
-        // Get tunes.
-        const tunes = responses?.[process.env.APP_TABLE_NAME!]?.sort?.((a, b) => {
-          return sortedTuneIds.indexOf(a.id) - sortedTuneIds.indexOf(b.id);
-        });
-
-        // Get the last evaluated key.
-        const lastEvaluatedKey = (() => {
-          if (tunes?.length === 24) {
-            return tunes?.[23]?.id;
-          }
-        })();
-
-        return {
-          tunes,
-          lastEvaluatedKey,
-        };
-      })();
-
-      if (!tunes?.length) {
-        return response({
-          tunes: [],
-        });
-      }
-
-      const after = (() => {
-        try {
-          return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString('base64');
-        } catch {
-          //
-        }
-      })();
-
-      // Get unique user ids.
-      const userIds = [...new Set(tunes.map(({ userId }) => userId))];
-
-      // Get raw responses.
-      const { Responses: responses } = await dynamodb.batchGet({
-        RequestItems: {
-          [process.env.APP_TABLE_NAME!]: {
-            Keys: userIds.map((userId) => ({
-              pk: `userId#${userId}`,
-              sk: `userId#${userId}`,
-            })),
-            AttributesToGet: [
-              'id',
-              'name',
-              'picture',
-            ],
-          },
-        },
-      }).promise();
-
-      // Get users.
-      const users = responses?.[process.env.APP_TABLE_NAME!];
-
-      if (users === undefined) {
-        return response({
-          message: 'Not found',
-        }, 404);
-      }
-
-      // Get users by id.
-      const usersById = Object.fromEntries(users.map((user) => {
-        return [user.id, user];
-      }));
-
-      // Add user to tune.
-      tunes.forEach((tune) => Object.assign(tune, {
-        user: usersById[tune.userId],
-      }));
-
-      return response({
-        tunes,
-        after,
-      });
-    },
-  ],
-  [
-    {
       resource: '/tunes/{id}',
       httpMethod: 'PUT',
     },
-    async ({ pathParameters, requestContext: { identity: { cognitoAuthenticationProvider } } }: APIGatewayProxyEvent, params: Record<string, any>) => {
+    async ({ body, pathParameters, requestContext: { identity: { cognitoAuthenticationProvider } } }: APIGatewayProxyEvent) => {
       if (!cognitoAuthenticationProvider) {
         return response({
           message: 'Unauthorized',
@@ -616,6 +447,9 @@ const routes = new Map([
 
       // Get the user id from cognito authentication provider.
       const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+
+      // Parse the JSON of request body.
+      const params = JSON.parse(body ?? '{}');
 
       // Get the tune id.
       const { id } = pathParameters ?? {};
@@ -756,6 +590,177 @@ const routes = new Map([
       return response(tune);
     },
   ],
+  [
+    {
+      resource: '/tunes/{id}/tunes',
+      httpMethod: 'GET',
+    },
+    async ({ pathParameters, queryStringParameters }: APIGatewayProxyEvent) => {
+      // Get the tune id.
+      const { id } = pathParameters ?? {};
+
+      if (!id) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
+      const exclusiveStartKey = (({ after }) => {
+        if (after) {
+          try {
+            return JSON.parse(Buffer.from(after, 'base64').toString());
+          } catch {
+            //
+          }
+        }
+      })(queryStringParameters ?? {});
+
+      const { tunes, lastEvaluatedKey } = await (async () => {
+        // Get keywords.
+        const { Items: keywords } = await dynamodb.query({
+          TableName: process.env.APP_TABLE_NAME!,
+          IndexName: 'GSI-AdjacencyList',
+          KeyConditionExpression: [
+            'sk = :sk',
+            'begins_with(pk, :pk)',
+          ].join(' AND '),
+          ExpressionAttributeValues: {
+            ':sk': `tuneId#${id}`,
+            ':pk': 'tuneKeyword#',
+          },
+        }).promise();
+
+        if (keywords === undefined) {
+          return {};
+        }
+
+        // Get tune ids by keyword.
+        const tuneIdsByKeyword = await Promise.all(keywords.map(({ keyword }) => {
+          return dynamodb.query({
+            TableName: process.env.APP_TABLE_NAME!,
+            FilterExpression: 'tuneId <> :tuneId',
+            KeyConditionExpression: 'pk = :pk',
+            ExpressionAttributeValues: {
+              ':pk': `tuneKeyword#${keyword}`,
+              ':tuneId': id,
+            },
+          }).promise();
+        }));
+
+        // Get tune ids.
+        const tuneIds = tuneIdsByKeyword.flatMap(({ Items }) => Items ?? []);
+
+        // Get tune ids sorted by relevance.
+        const sortedTuneIds = [...new Set(tuneIds.map(({ tuneId }) => tuneId))].sort((a, b) => {
+          return (
+            tuneIds.filter(({ tuneId }) => tuneId === b).reduce((sum, { occurrences }) => sum + occurrences, 0) -
+            tuneIds.filter(({ tuneId }) => tuneId === a).reduce((sum, { occurrences }) => sum + occurrences, 0)
+          );
+        });
+
+        // Skip to after the exclusive start key.
+        if (typeof exclusiveStartKey === 'string' && exclusiveStartKey.length > 0) {
+          sortedTuneIds.splice(0, sortedTuneIds.indexOf(exclusiveStartKey) + 1);
+        }
+
+        if (sortedTuneIds.length === 0) {
+          return {};
+        }
+
+        // Set maximum number of tunes to evaluate.
+        sortedTuneIds.splice(24);
+
+        // Get raw responses.
+        const { Responses: responses } = await dynamodb.batchGet({
+          RequestItems: {
+            [process.env.APP_TABLE_NAME!]: {
+              Keys: sortedTuneIds.map((tuneId) => ({
+                pk: 'tunes',
+                sk: `tuneId#${tuneId}`,
+              })),
+            },
+          },
+        }).promise();
+
+        // Get tunes.
+        const tunes = responses?.[process.env.APP_TABLE_NAME!]?.sort?.((a, b) => {
+          return sortedTuneIds.indexOf(a.id) - sortedTuneIds.indexOf(b.id);
+        });
+
+        // Get the last evaluated key.
+        const lastEvaluatedKey = (() => {
+          if (tunes?.length === 24) {
+            return tunes?.[23]?.id;
+          }
+        })();
+
+        return {
+          tunes,
+          lastEvaluatedKey,
+        };
+      })();
+
+      if (!tunes?.length) {
+        return response({
+          tunes: [],
+        });
+      }
+
+      const after = ((lastEvaluatedKey) => {
+        if (lastEvaluatedKey) {
+          try {
+            return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString('base64');
+          } catch {
+            //
+          }
+        }
+      })(lastEvaluatedKey);
+
+      // Get unique user ids.
+      const userIds = [...new Set(tunes.map(({ userId }) => userId))];
+
+      // Get raw responses.
+      const { Responses: responses } = await dynamodb.batchGet({
+        RequestItems: {
+          [process.env.APP_TABLE_NAME!]: {
+            Keys: userIds.map((userId) => ({
+              pk: `userId#${userId}`,
+              sk: `userId#${userId}`,
+            })),
+            AttributesToGet: [
+              'id',
+              'name',
+              'picture',
+            ],
+          },
+        },
+      }).promise();
+
+      // Get users.
+      const users = responses?.[process.env.APP_TABLE_NAME!];
+
+      if (users === undefined) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
+      // Get users by id.
+      const usersById = Object.fromEntries(users.map((user) => {
+        return [user.id, user];
+      }));
+
+      // Add user to tune.
+      tunes.forEach((tune) => Object.assign(tune, {
+        user: usersById[tune.userId],
+      }));
+
+      return response({
+        tunes,
+        after,
+      });
+    },
+  ],
 ]);
 
 const getTokenizer = ((cache?: Tokenizer<IpadicFeatures>) => async () => {
@@ -786,26 +791,6 @@ const normalize = (text: string): string => {
   return text.toLowerCase().replace(/[ぁ-ゖ]/g, (s) => {
     return String.fromCharCode(s.charCodeAt(0) + 0x60);
   });
-};
-
-const parse = (body: string | null): Record<string, any> => {
-  if (body === null) {
-    return {};
-  }
-
-  const params = (() => {
-    try {
-      return JSON.parse(body);
-    } catch {
-      //
-    }
-  })();
-
-  if (params instanceof Object) {
-    return params;
-  } else {
-    return {};
-  }
 };
 
 const response = (body: any, statusCode = 200): APIGatewayProxyResult => {
