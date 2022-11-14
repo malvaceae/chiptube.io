@@ -1,0 +1,215 @@
+openapi: 3.0.3
+info:
+  title: ChipTube API
+  version: 1.0.0
+servers:
+  - url: https://api.chiptube.io
+paths:
+  /tunes:
+    get:
+      tags:
+        - Tunes
+      operationId: getTunes
+      parameters:
+        - name: after
+          in: query
+          schema:
+            type: string
+            format: byte
+        - name: query
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tunes
+                properties:
+                  tunes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Tune"
+                  after:
+                    type: string
+                    format: byte
+    post:
+      tags:
+        - Tunes
+      operationId: postTune
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - midiKey
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                midiKey:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    $ref: "#/components/schemas/TuneId"
+  /tunes/{id}:
+    get:
+      tags:
+        - Tunes
+      operationId: getTuneById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/TuneId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tune"
+    put:
+      tags:
+        - Tunes
+      operationId: putTuneById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/TuneId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isLiked:
+                  type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tune"
+  /tunes/{id}/tunes:
+    get:
+      tags:
+        - Tunes
+      operationId: getTunesById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/TuneId"
+        - name: after
+          in: query
+          schema:
+            type: string
+            format: byte
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tunes
+                properties:
+                  tunes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Tune"
+                  after:
+                    type: string
+                    format: byte
+components:
+  schemas:
+    TuneId:
+      type: string
+      pattern: ^[\w-]{11}$
+    Tune:
+      type: object
+      required:
+        - id
+        - userId
+        - user
+        - identityId
+        - lastViewedIdentityId
+        - title
+        - description
+        - midiKey
+        - publishedAt
+        - views
+        - likes
+        - favorites
+        - comments
+      properties:
+        id:
+          $ref: "#/components/schemas/TuneId"
+        userId:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        identityId:
+          type: string
+        lastViewedIdentityId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        midiKey:
+          type: string
+        publishedAt:
+          type: integer
+          format: int64
+        views:
+          type: integer
+          format: int64
+        likes:
+          type: integer
+          format: int64
+        favorites:
+          type: integer
+          format: int64
+        comments:
+          type: integer
+          format: int64
+        isLiked:
+          type: boolean
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - picture
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        picture:
+          type: string

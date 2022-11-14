@@ -25,10 +25,9 @@ const dynamodb = new DynamoDB.DocumentClient({
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-    for (let [{ path, httpMethod }, route] of routes) {
+    for (let [{ resource, httpMethod }, route] of routes) {
       if (httpMethod === event.httpMethod) {
-        let match: RegExpExecArray | null;
-        if (match = path.exec(event.path)) {
+        if (resource === event.resource) {
           // Parse the JSON of request body.
           const params = parse(event.body);
 
@@ -38,7 +37,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           });
 
           // Invoke the route.
-          return await route(event, params, match.groups ?? {});
+          return await route(event, params);
         }
       }
     }
@@ -58,7 +57,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 const routes = new Map([
   [
     {
-      path: /^\/tunes$/,
+      resource: '/tunes',
       httpMethod: 'GET',
     },
     async (event: APIGatewayProxyEvent, params: Record<string, any>) => {
@@ -223,7 +222,7 @@ const routes = new Map([
   ],
   [
     {
-      path: /^\/tunes$/,
+      resource: '/tunes',
       httpMethod: 'POST',
     },
     async ({ requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId } } }: APIGatewayProxyEvent, { title, description, midiKey }: Record<string, any>) => {
@@ -233,7 +232,7 @@ const routes = new Map([
         }, 401);
       }
 
-      // Get user id from cognito authentication provider.
+      // Get the user id from cognito authentication provider.
       const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
 
       if (!title || !description || !midiKey) {
@@ -336,10 +335,19 @@ const routes = new Map([
   ],
   [
     {
-      path: /^\/tunes\/(?<id>[\w-]{11})$/,
+      resource: '/tunes/{id}',
       httpMethod: 'GET',
     },
-    async ({ requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId } } }: APIGatewayProxyEvent, params: Record<string, any>, { id }: Record<string, string>) => {
+    async ({ pathParameters, requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId } } }: APIGatewayProxyEvent) => {
+      // Get the tune id.
+      const { id } = pathParameters ?? {};
+
+      if (!id) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
       try {
         await dynamodb.update({
           TableName: process.env.APP_TABLE_NAME!,
@@ -409,7 +417,7 @@ const routes = new Map([
         return response(tune);
       }
 
-      // Get user id from cognito authentication provider.
+      // Get the user id from cognito authentication provider.
       const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
 
       const { Item: isLiked } = await dynamodb.get({
@@ -429,10 +437,19 @@ const routes = new Map([
   ],
   [
     {
-      path: /^\/tunes\/(?<id>[\w-]{11})\/tunes$/,
+      resource: '/tunes/{id}/tunes',
       httpMethod: 'GET',
     },
-    async (event: APIGatewayProxyEvent, params: Record<string, any>, { id }: Record<string, string>) => {
+    async ({ pathParameters }: APIGatewayProxyEvent, params: Record<string, any>) => {
+      // Get the tune id.
+      const { id } = pathParameters ?? {};
+
+      if (!id) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
       const exclusiveStartKey = (({ after }) => {
         try {
           return JSON.parse(Buffer.from(after, 'base64').toString());
@@ -587,18 +604,27 @@ const routes = new Map([
   ],
   [
     {
-      path: /^\/tunes\/(?<id>[\w-]{11})$/,
+      resource: '/tunes/{id}',
       httpMethod: 'PUT',
     },
-    async ({ requestContext: { identity: { cognitoAuthenticationProvider } } }: APIGatewayProxyEvent, params: Record<string, any>, { id }: Record<string, string>) => {
+    async ({ pathParameters, requestContext: { identity: { cognitoAuthenticationProvider } } }: APIGatewayProxyEvent, params: Record<string, any>) => {
       if (!cognitoAuthenticationProvider) {
         return response({
           message: 'Unauthorized',
         }, 401);
       }
 
-      // Get user id from cognito authentication provider.
+      // Get the user id from cognito authentication provider.
       const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+
+      // Get the tune id.
+      const { id } = pathParameters ?? {};
+
+      if (!id) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
 
       if (typeof params.isLiked === 'boolean') {
         try {

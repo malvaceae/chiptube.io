@@ -31,6 +31,9 @@ import {
 // Constructs
 import { Construct } from 'constructs';
 
+// Api
+import { ChipTubeApi } from './api';
+
 /**
  * A root construct which represents a single CloudFormation stack.
  */
@@ -183,43 +186,16 @@ class ChipTubeStack extends Stack {
       value: appStorage.bucketName,
     });
 
-    // Api Handler
-    const apiHandler = new nodejs.NodejsFunction(this, 'ApiHandler', {
-      architecture: lambda.Architecture.ARM_64,
-      runtime: lambda.Runtime.NODEJS_16_X,
-      timeout: Duration.seconds(30),
-      memorySize: 1769, // 1 vCPU
-      environment: {
-        APP_TABLE_NAME: appTable.tableName,
-      },
-      bundling: {
-        minify: true,
-        nodeModules: [
-          'kuromoji',
-        ],
-      },
+    // Api
+    const api = new ChipTubeApi(this, 'Api', {
+      specFile: join(__dirname, 'api.yml'),
     });
+
+    // Add environment variable for access App Table.
+    api.handler.addEnvironment('APP_TABLE_NAME', appTable.tableName);
 
     // Add permissions to access App Table.
-    appTable.grantReadWriteData(apiHandler);
-
-    // Api
-    const api = new apigateway.LambdaRestApi(this, 'Api', {
-      handler: apiHandler,
-      deployOptions: {
-        stageName: 'v1',
-      },
-      restApiName: 'ChipTube API',
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        maxAge: Duration.days(1),
-      },
-    });
-
-    // Set the authorization type to AWS_IAM.
-    api.methods.filter(({ httpMethod }) => httpMethod === 'ANY').forEach(({ node: { defaultChild } }) => {
-      (defaultChild as apigateway.CfnMethod).authorizationType = apigateway.AuthorizationType.IAM;
-    });
+    appTable.grantReadWriteData(api.handler);
 
     // If the domain name exists, create a alias record to Api.
     const apiEndpoint = (() => {
@@ -248,28 +224,9 @@ class ChipTubeStack extends Stack {
       }
     })();
 
-    // Remove the default endpoint output.
-    api.node.tryRemoveChild('Endpoint');
-
     // Api Endpoint
     new CfnOutput(this, 'ApiEndpoint', {
       value: apiEndpoint,
-    });
-
-    // Add the Gateway Response when the status code is 4XX.
-    api.addGatewayResponse('ApiGatewayResponseDefault4XX', {
-      type: apigateway.ResponseType.DEFAULT_4XX,
-      responseHeaders: {
-        'Access-Control-Allow-Origin': "'*'",
-      },
-    });
-
-    // Add the Gateway Response when the status code is 5XX.
-    api.addGatewayResponse('ApiGatewayResponseDefault5XX', {
-      type: apigateway.ResponseType.DEFAULT_5XX,
-      responseHeaders: {
-        'Access-Control-Allow-Origin': "'*'",
-      },
     });
 
     // App Bucket
