@@ -5,6 +5,7 @@ import { readFileSync } from 'fs';
 import {
   Duration,
   aws_apigateway as apigateway,
+  aws_iam as iam,
   aws_lambda as lambda,
   aws_lambda_nodejs as nodejs,
 } from 'aws-cdk-lib';
@@ -63,11 +64,20 @@ export class ChipTubeApi extends apigateway.RestApi {
       runtime: lambda.Runtime.NODEJS_16_X,
       timeout: Duration.seconds(30),
       memorySize: 1769, // 1 vCPU
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: [
+            'comprehend:DetectDominantLanguage',
+            'comprehend:DetectSyntax',
+            'translate:TranslateText',
+          ],
+          resources: [
+            '*',
+          ],
+        }),
+      ],
       bundling: {
         minify: true,
-        nodeModules: [
-          'kuromoji',
-        ],
       },
     });
 

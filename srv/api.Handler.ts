@@ -1,6 +1,9 @@
 // Node.js Core Modules
 import { randomFillSync } from 'crypto';
 
+// Pluralize
+import { singular } from 'pluralize';
+
 // AWS Lambda
 import {
   APIGatewayProxyEvent,
@@ -8,19 +11,26 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 
-// kuromoji.js
-import {
-  builder as kuromoji,
-  IpadicFeatures,
-  Tokenizer,
-} from 'kuromoji';
-
 // AWS SDK
-import { DynamoDB } from 'aws-sdk';
+import {
+  Comprehend,
+  DynamoDB,
+  Translate,
+} from 'aws-sdk';
+
+// AWS SDK - Comprehend
+const comprehend = new Comprehend({
+  apiVersion: '2017-11-27',
+});
 
 // AWS SDK - DynamoDB
 const dynamodb = new DynamoDB.DocumentClient({
   apiVersion: '2012-08-10',
+});
+
+// AWS SDK - Translate
+const translate = new Translate({
+  apiVersion: '2017-07-01',
 });
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -65,11 +75,8 @@ const routes = new Map([
       const { tunes, lastEvaluatedKey } = await (async ({ query }) => {
         // Get tunes with the search query if it exists.
         if (query) {
-          // Get a kuromoji tokenizer.
-          const tokenizer = await getTokenizer();
-
           // Tokenize the search query.
-          const keywords = [...new Set(getNouns(tokenize(tokenizer, query)).map(normalize))];
+          const keywords = [...new Set(getWords(await tokenize(query)).map(normalize))];
 
           // Get tune ids by keyword.
           const tuneIdsByKeyword = await Promise.all(keywords.map((keyword) => {
@@ -288,11 +295,8 @@ const routes = new Map([
             ],
           }).promise();
 
-          // Get a kuromoji tokenizer.
-          const tokenizer = await getTokenizer();
-
           // Tokenize title and description.
-          const keywords = [title, description].flatMap((text) => getNouns(tokenize(tokenizer, text)).map(normalize));
+          const keywords = getWords(await tokenize([title, description].join())).map(normalize);
 
           // Get number of occurrences by keyword.
           const occurrences = [...keywords.reduce((keywords, keyword) => {
@@ -763,34 +767,35 @@ const routes = new Map([
   ],
 ]);
 
-const getTokenizer = ((cache?: Tokenizer<IpadicFeatures>) => async () => {
-  return cache ??= await new Promise<Tokenizer<IpadicFeatures>>((resolve, reject) => {
-    kuromoji({ dicPath: 'node_modules/kuromoji/dict' }).build((err, tokenizer) => {
-      err ? reject(err) : resolve(tokenizer);
-    });
-  });
-})();
+const tokenize = async (text: string): Promise<Comprehend.ListOfSyntaxTokens> => {
+  // Translate text to English.
+  const { TranslatedText: translatedText } = await translate.translateText({
+    Text: text.normalize('NFKC'),
+    SourceLanguageCode: 'auto',
+    TargetLanguageCode: 'en',
+  }).promise();
 
-const tokenize = (tokenizer: Tokenizer<IpadicFeatures>, text: string): IpadicFeatures[] => {
-  return text.normalize('NFKC').split(/https?:\/\/[!#-;=?-[\]_a-z~]+/).flatMap((text) => {
-    return tokenizer.tokenize(text);
-  });
+  // Detect syntax.
+  const { SyntaxTokens: syntaxTokens } = await comprehend.detectSyntax({
+    Text: translatedText,
+    LanguageCode: 'en',
+  }).promise();
+
+  if (!syntaxTokens) {
+    return [];
+  }
+
+  return syntaxTokens;
 };
 
-const getNouns = (morphemes: IpadicFeatures[]): string[] => {
-  return morphemes.flatMap(({ surface_form, pos, pos_detail_1, basic_form }) => {
-    if (pos === '名詞' && !(pos_detail_1 === 'サ変接続' && basic_form === '*')) {
-      return [surface_form];
-    } else {
-      return [];
-    }
-  });
+const getWords = (syntaxTokens: Comprehend.ListOfSyntaxTokens): string[] => {
+  return syntaxTokens.filter(({ PartOfSpeech: partOfSpeech }) => {
+    return !/^(?:ADP|DET|PUNCT)$/.test(partOfSpeech?.Tag ?? '');
+  }).flatMap(({ Text: word }) => word ? [word] : []);
 };
 
-const normalize = (text: string): string => {
-  return text.toLowerCase().replace(/[ぁ-ゖ]/g, (s) => {
-    return String.fromCharCode(s.charCodeAt(0) + 0x60);
-  });
+const normalize = (word: string): string => {
+  return singular(word.toLowerCase());
 };
 
 const response = (body: any, statusCode = 200): APIGatewayProxyResult => {
