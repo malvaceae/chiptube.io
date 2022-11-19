@@ -191,8 +191,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
               </template>
             </q-item-section>
           </q-item>
-          <q-item class="q-mt-sm q-mb-md">
-            <q-item-section avatar />
+          <q-item class="q-mt-sm q-mb-md" :inset-level="1">
             <q-item-section>
               <q-item-label :style="{ whiteSpace: 'pre-wrap' }">
                 <template v-if="tune">
