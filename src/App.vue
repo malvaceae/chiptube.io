@@ -36,6 +36,13 @@ const drawerBehavior = computed(() => {
   }
 });
 
+// watch current route
+watch($router.currentRoute, ({ name }) => {
+  if (['account', 'watch'].includes(String(name))) {
+    drawer.value = false;
+  }
+});
+
 // get the $q object
 const $q = useQuasar();
 
