@@ -198,9 +198,11 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
                 <template v-if="tune">
                   <template v-for="line in tune.description.split(/(?=\n)/)">
                     <template v-for="text in line.split(/(?=https?:\/\/[!#-;=?-[\]_a-z~]+)|(?![!#-;=?-[\]_a-z~])/)">
-                      <a v-if="/^https?:\/\/[!#-;=?-[\]_a-z~]+$/.test(text)" :href="text" target="_blank">
-                        {{ text }}
-                      </a>
+                      <template v-if="/^https?:\/\/[!#-;=?-[\]_a-z~]+$/.test(text)">
+                        <a :href="text" rel="ugc nofollow" target="_blank">
+                          {{ text }}
+                        </a>
+                      </template>
                       <template v-else>
                         {{ text }}
                       </template>
