@@ -168,7 +168,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
             <q-item-section>
               <q-item-label class="text-weight-bold">
                 <template v-if="tune">
-                  {{ tune.user.name }}
+                  {{ tune.user.nickname }}
                 </template>
                 <template v-else>
                   <q-skeleton animation="none" type="text" width="65%" />

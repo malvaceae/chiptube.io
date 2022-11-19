@@ -30,7 +30,8 @@ const $router = useRouter();
 
 // the drawer behavior
 const drawerBehavior = computed(() => {
-  if ($router.resolve(location.pathname).name === 'watch') {
+  const { name } = $router.resolve(location.pathname);
+  if (['account', 'watch'].includes(String(name))) {
     return 'mobile';
   }
 });
@@ -135,7 +136,7 @@ Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes
                       </q-item-section>
                       <q-item-section>
                         <q-item-label>
-                          {{ auth.user.name }}
+                          {{ auth.user.nickname }}
                         </q-item-label>
                         <q-item-label>
                           {{ auth.user.email }}
@@ -208,7 +209,7 @@ Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes
                     </q-menu>
                   </q-item>
                   <q-separator spaced />
-                  <q-item class="q-py-sm" disable dense>
+                  <q-item class="q-py-sm" active-class="" dense :to="{ name: 'account' }">
                     <q-item-section side>
                       <q-icon name="mdi-cog-outline" />
                     </q-item-section>
@@ -331,7 +332,7 @@ Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes
               </q-item>
               <q-separator spaced />
             </template>
-            <q-item disable v-ripple>
+            <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" :to="{ name: 'account' }" v-ripple>
               <q-item-section side>
                 <q-icon name="mdi-cog-outline" />
               </q-item-section>

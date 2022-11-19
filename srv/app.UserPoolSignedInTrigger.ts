@@ -7,7 +7,15 @@ import {
 } from 'aws-lambda';
 
 // AWS SDK
-import { DynamoDB } from 'aws-sdk';
+import {
+  CognitoIdentityServiceProvider,
+  DynamoDB,
+} from 'aws-sdk';
+
+// AWS SDK - Cognito
+const cognito = new CognitoIdentityServiceProvider({
+  apiVersion: '2016-04-18',
+});
 
 // AWS SDK - DynamoDB
 const dynamodb = new DynamoDB.DocumentClient({
@@ -15,7 +23,7 @@ const dynamodb = new DynamoDB.DocumentClient({
 });
 
 export const handler: PostAuthenticationTriggerHandler | PostConfirmationTriggerHandler = async (event: PostAuthenticationTriggerEvent | PostConfirmationTriggerEvent): Promise<any> => {
-  const { sub: id, name, email, picture } = event.request.userAttributes;
+  const { userPoolId, userName, request: { userAttributes: { sub: id, name, nickname, email, picture } } } = event;
 
   await dynamodb.put({
     TableName: process.env.APP_TABLE_NAME!,
@@ -23,11 +31,26 @@ export const handler: PostAuthenticationTriggerHandler | PostConfirmationTrigger
       pk: `userId#${id}`,
       sk: `userId#${id}`,
       id,
+      userName,
       name,
+      nickname: nickname ?? name,
       email,
       picture,
     },
   }).promise();
+
+  if (!nickname) {
+    await cognito.adminUpdateUserAttributes({
+      UserPoolId: userPoolId,
+      Username: userName,
+      UserAttributes: [
+        {
+          Name: 'nickname',
+          Value: name,
+        },
+      ],
+    }).promise();
+  }
 
   return event;
 };

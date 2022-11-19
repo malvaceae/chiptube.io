@@ -72,7 +72,7 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
                   </q-item-label>
                   <q-space />
                   <q-item-label class="q-mt-sm" caption>
-                    {{ tune.user.name }}
+                    {{ tune.user.nickname }}
                   </q-item-label>
                   <q-item-label caption>
                     {{ tune.views.toLocaleString() }} views • {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}

@@ -294,6 +294,24 @@ class ChipTubeStack extends Stack {
       }
     })();
 
+    // User Pool
+    const userPool = new cognito.UserPool(this, 'UserPool', {
+      standardAttributes: {
+        email: {
+          required: true,
+        },
+        fullname: {
+          required: true,
+        },
+        profilePicture: {
+          required: true,
+        },
+      },
+    });
+
+    // Add permissions to access User Pool.
+    userPool.grant(api.handler, 'cognito-idp:AdminUpdateUserAttributes');
+
     // User Pool Signed In Trigger
     const userPoolSignedInTrigger = new nodejs.NodejsFunction(this, 'UserPoolSignedInTrigger', {
       architecture: lambda.Architecture.ARM_64,
@@ -311,22 +329,23 @@ class ChipTubeStack extends Stack {
     // Add permissions to access App Table.
     appTable.grantWriteData(userPoolSignedInTrigger);
 
-    // User Pool
-    const userPool = new cognito.UserPool(this, 'UserPool', {
-      standardAttributes: {
-        email: {
-          required: true,
-        },
-        fullname: {
-          required: true,
-        },
-        profilePicture: {
-          required: true,
-        },
-      },
-      lambdaTriggers: Object.fromEntries(['postConfirmation', 'postAuthentication'].map((key) => {
-        return [key, userPoolSignedInTrigger];
-      })),
+    // Add permissions to access User Pool.
+    userPoolSignedInTrigger.role?.attachInlinePolicy?.(new iam.Policy(this, 'UserPoolSignedInTriggerServiceRolePolicy', {
+      statements: [
+        new iam.PolicyStatement({
+          actions: [
+            'cognito-idp:AdminUpdateUserAttributes',
+          ],
+          resources: [
+            userPool.userPoolArn,
+          ],
+        }),
+      ],
+    }));
+
+    // Add lambda triggers to User Pool.
+    [cognito.UserPoolOperation.POST_AUTHENTICATION, cognito.UserPoolOperation.POST_CONFIRMATION].forEach((operation) => {
+      userPool.addTrigger(operation, userPoolSignedInTrigger);
     });
 
     // User Pool Id

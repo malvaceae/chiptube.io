@@ -13,10 +13,16 @@ import {
 
 // AWS SDK
 import {
+  CognitoIdentityServiceProvider,
   Comprehend,
   DynamoDB,
   Translate,
 } from 'aws-sdk';
+
+// AWS SDK - Cognito
+const cognito = new CognitoIdentityServiceProvider({
+  apiVersion: '2016-04-18',
+});
 
 // AWS SDK - Comprehend
 const comprehend = new Comprehend({
@@ -190,7 +196,7 @@ const routes = new Map([
             })),
             AttributesToGet: [
               'id',
-              'name',
+              'nickname',
               'picture',
             ],
           },
@@ -400,7 +406,7 @@ const routes = new Map([
         },
         AttributesToGet: [
           'id',
-          'name',
+          'nickname',
           'picture',
         ],
       }).promise();
@@ -564,7 +570,7 @@ const routes = new Map([
         },
         AttributesToGet: [
           'id',
-          'name',
+          'nickname',
           'picture',
         ],
       }).promise();
@@ -733,7 +739,7 @@ const routes = new Map([
             })),
             AttributesToGet: [
               'id',
-              'name',
+              'nickname',
               'picture',
             ],
           },
@@ -762,6 +768,71 @@ const routes = new Map([
       return response({
         tunes,
         after,
+      });
+    },
+  ],
+  [
+    {
+      resource: '/users/me',
+      httpMethod: 'PUT',
+    },
+    async ({ body, requestContext: { identity: { cognitoAuthenticationProvider } } }: APIGatewayProxyEvent) => {
+      if (!cognitoAuthenticationProvider) {
+        return response({
+          message: 'Unauthorized',
+        }, 401);
+      }
+
+      // Get the user id from cognito authentication provider.
+      const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+
+      // Get the user pool id from cognito authentication provider.
+      const userPoolId = cognitoAuthenticationProvider.split(':')[0].split('/').slice(-1)[0];
+
+      // Parse the JSON of request body.
+      const params = JSON.parse(body ?? '{}');
+
+      if (params.nickname && typeof params.nickname === 'string') {
+        const { Attributes: user } = await dynamodb.update({
+          TableName: process.env.APP_TABLE_NAME!,
+          Key: {
+            pk: `userId#${userId}`,
+            sk: `userId#${userId}`,
+          },
+          ReturnValues: 'ALL_NEW',
+          UpdateExpression: `SET ${[
+            '#nickname = :nickname',
+          ].join(', ')}`,
+          ConditionExpression: [
+            'attribute_exists(pk)',
+            'attribute_exists(sk)',
+          ].join(' AND '),
+          ExpressionAttributeNames: {
+            '#nickname': 'nickname',
+          },
+          ExpressionAttributeValues: {
+            ':nickname': params.nickname,
+          },
+        }).promise();
+
+        if (!user) {
+          throw Error('The user not found.');
+        }
+
+        await cognito.adminUpdateUserAttributes({
+          UserPoolId: userPoolId,
+          Username: user.userName,
+          UserAttributes: [
+            {
+              Name: 'nickname',
+              Value: params.nickname,
+            },
+          ],
+        }).promise();
+      }
+
+      return response({
+        message: 'OK',
       });
     },
   ],
