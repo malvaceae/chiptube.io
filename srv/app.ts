@@ -431,7 +431,11 @@ class ChipTubeStack extends Stack {
       userPool,
       clientId: googleClientId,
       clientSecret: googleClientSecret,
-      scopes: ['profile', 'email', 'openid'],
+      scopes: [
+        'profile',
+        'email',
+        'openid',
+      ],
       attributeMapping: {
         email: {
           attributeName: 'email',
