@@ -847,17 +847,43 @@ const getUserPoolId = (cognitoAuthenticationProvider: string): string => {
 };
 
 const tokenize = async (text: string): Promise<Comprehend.ListOfSyntaxTokens> => {
-  // Translate text to English.
-  const { TranslatedText: translatedText } = await translate.translateText({
-    Text: text.normalize('NFKC'),
-    SourceLanguageCode: 'auto',
-    TargetLanguageCode: 'en',
-  }).promise();
+  // Detect dominant language and translate text.
+  const { translatedText, languageCode } = await (async (text) => {
+    try {
+      // Detect dominant language.
+      const { Languages: languages } = await comprehend.detectDominantLanguage({
+        Text: text,
+      }).promise();
+
+      if (!languages?.[0]?.LanguageCode) {
+        return { translatedText: text };
+      }
+
+      // Get the language code.
+      const { LanguageCode: languageCode } = languages[0];
+
+      // If the detected language code is supported by the DetectSyntax API, return it.
+      if (['en', 'es', 'fr', 'de', 'it', 'pt'].includes(languageCode)) {
+        return { translatedText: text, languageCode };
+      }
+
+      // Translate text to English.
+      const { TranslatedText: translatedText } = await translate.translateText({
+        Text: text,
+        SourceLanguageCode: languageCode,
+        TargetLanguageCode: 'en',
+      }).promise();
+
+      return { translatedText };
+    } catch {
+      return { translatedText: text };
+    }
+  })(text.normalize('NFKC'));
 
   // Detect syntax.
   const { SyntaxTokens: syntaxTokens } = await comprehend.detectSyntax({
     Text: translatedText,
-    LanguageCode: 'en',
+    LanguageCode: languageCode ?? 'en',
   }).promise();
 
   if (!syntaxTokens) {
