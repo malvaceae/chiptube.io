@@ -881,16 +881,14 @@ const tokenize = async (text: string): Promise<Comprehend.ListOfSyntaxTokens> =>
   })(text.normalize('NFKC'));
 
   // Detect syntax.
-  const { SyntaxTokens: syntaxTokens } = await comprehend.detectSyntax({
-    Text: translatedText,
-    LanguageCode: languageCode ?? 'en',
-  }).promise();
+  return await (async ({ text, languageCode }) => {
+    const { SyntaxTokens: syntaxTokens } = await comprehend.detectSyntax({
+      Text: text,
+      LanguageCode: languageCode,
+    }).promise();
 
-  if (!syntaxTokens) {
-    return [];
-  }
-
-  return syntaxTokens;
+    return syntaxTokens ?? [];
+  })({ text: translatedText, languageCode: languageCode ?? 'en' });
 };
 
 const getWords = (syntaxTokens: Comprehend.ListOfSyntaxTokens): string[] => {
