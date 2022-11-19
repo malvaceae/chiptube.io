@@ -241,7 +241,7 @@ const routes = new Map([
       }
 
       // Get the user id from cognito authentication provider.
-      const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+      const userId = getUserId(cognitoAuthenticationProvider);
 
       // Parse the JSON of request body.
       const { title, description, midiKey } = JSON.parse(body ?? '{}');
@@ -426,7 +426,7 @@ const routes = new Map([
       }
 
       // Get the user id from cognito authentication provider.
-      const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+      const userId = getUserId(cognitoAuthenticationProvider);
 
       const { Item: isLiked } = await dynamodb.get({
         TableName: process.env.APP_TABLE_NAME!,
@@ -456,7 +456,7 @@ const routes = new Map([
       }
 
       // Get the user id from cognito authentication provider.
-      const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+      const userId = getUserId(cognitoAuthenticationProvider);
 
       // Parse the JSON of request body.
       const params = JSON.parse(body ?? '{}');
@@ -784,10 +784,10 @@ const routes = new Map([
       }
 
       // Get the user id from cognito authentication provider.
-      const userId = cognitoAuthenticationProvider.split(':').slice(-1)[0];
+      const userId = getUserId(cognitoAuthenticationProvider);
 
       // Get the user pool id from cognito authentication provider.
-      const userPoolId = cognitoAuthenticationProvider.split(':')[0].split('/').slice(-1)[0];
+      const userPoolId = getUserPoolId(cognitoAuthenticationProvider);
 
       // Parse the JSON of request body.
       const params = JSON.parse(body ?? '{}');
@@ -837,6 +837,14 @@ const routes = new Map([
     },
   ],
 ]);
+
+const getUserId = (cognitoAuthenticationProvider: string): string => {
+  return cognitoAuthenticationProvider.split(':')[2];
+};
+
+const getUserPoolId = (cognitoAuthenticationProvider: string): string => {
+  return cognitoAuthenticationProvider.split(':')[0].split('/')[2];
+};
 
 const tokenize = async (text: string): Promise<Comprehend.ListOfSyntaxTokens> => {
   // Translate text to English.
