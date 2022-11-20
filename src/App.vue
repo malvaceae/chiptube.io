@@ -31,15 +31,8 @@ const $router = useRouter();
 // the drawer behavior
 const drawerBehavior = computed(() => {
   const { name } = $router.resolve(location.pathname);
-  if (['account', 'watch'].includes(String(name))) {
+  if (['watch'].includes(String(name))) {
     return 'mobile';
-  }
-});
-
-// watch current route
-watch($router.currentRoute, ({ name }) => {
-  if (['account', 'watch'].includes(String(name))) {
-    drawer.value = false;
   }
 });
 
@@ -216,7 +209,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                     </q-menu>
                   </q-item>
                   <q-separator spaced />
-                  <q-item class="q-py-sm" active-class="" dense :to="{ name: 'account' }">
+                  <q-item class="q-py-sm" active-class="" dense :to="{ name: 'settings' }">
                     <q-item-section side>
                       <q-icon name="mdi-cog-outline" />
                     </q-item-section>
@@ -339,7 +332,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
               </q-item>
               <q-separator spaced />
             </template>
-            <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" :to="{ name: 'account' }" v-ripple>
+            <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" :to="{ name: 'settings' }" v-ripple>
               <q-item-section side>
                 <q-icon name="mdi-cog-outline" />
               </q-item-section>

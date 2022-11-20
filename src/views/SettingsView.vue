@@ -70,23 +70,11 @@ const updateUser = async () => {
 <template>
   <q-page padding>
     <div class="row q-col-gutter-lg">
-      <div class="col col-shrink">
-        <q-list dense>
-          <q-item-label class="text-h6" header>
-            Settings
-          </q-item-label>
-          <q-item class="rounded-borders" :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" :to="{}">
-            <q-item-section>
-              Account
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </div>
       <div class="col col-grow">
         <q-card flat square>
           <q-card-section>
             <div class="q-mb-lg text-subtitle1 text-weight-medium">
-              Account
+              Settings
             </div>
             <div class="q-mb-sm text-h6">
               Choose how you appear and what you see on ChipTube
@@ -100,7 +88,7 @@ const updateUser = async () => {
             <div class="q-mb-sm text-subtitle1 text-weight-medium">
               Your account
             </div>
-            <div class="q-mb-lg">
+            <div class="q-mb-md">
               You sign in to ChipTube with your Google Account
             </div>
             <div class="column q-gutter-md text-weight-medium">
@@ -159,17 +147,3 @@ const updateUser = async () => {
     </div>
   </q-page>
 </template>
-
-<style lang="scss" scoped>
-.row .col:first-of-type {
-  flex-basis: 240px;
-}
-
-.row .col .q-list .q-item {
-  padding: 8px 16px;
-}
-
-.row .col .q-list .q-item__label--header {
-  padding: 0 8px 16px;
-}
-</style>

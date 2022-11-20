@@ -14,15 +14,15 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/IndexView.vue'),
   },
   {
-    path: '/account',
-    name: 'account',
-    component: () => import('@/views/AccountView.vue'),
-  },
-  {
     path: '/search',
     name: 'search',
     component: () => import('@/views/SearchView.vue'),
     props: ({ query: { q: query } }) => ({ query }),
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('@/views/SettingsView.vue'),
   },
   {
     path: '/watch',
@@ -47,7 +47,7 @@ router.beforeEach(async ({ name }) => {
     return true;
   }
 
-  if (['account'].includes(String(name))) {
+  if (['settings'].includes(String(name))) {
     return await Auth.federatedSignIn({ provider: CognitoHostedUIIdentityProvider.Google }).then(() => {
       return false;
     });
