@@ -45,13 +45,10 @@ const updateUser = async () => {
         },
       });
 
-      // update user attributes
-      await Auth.updateUserAttributes(await Auth.currentAuthenticatedUser(), {
-        //
-      });
-
       // get the current user
-      auth.user = (await Auth.currentAuthenticatedUser()).attributes;
+      await Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => {
+        auth.user = attributes;
+      });
     } catch (e: any) {
       if (e.response.status === 422) {
         $q.notify({

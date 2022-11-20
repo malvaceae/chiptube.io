@@ -90,7 +90,7 @@ Hub.listen('auth', ({ payload: { event } }) => {
 const isLoading = ref(true);
 
 // get the current user
-Auth.currentAuthenticatedUser().then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null)).finally(() => {
+Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null)).finally(() => {
   isLoading.value = false;
 });
 </script>
