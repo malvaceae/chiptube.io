@@ -12,6 +12,7 @@
     "@types/p5": "^1.4.3",
     "@types/pluralize": "^0.0.29",
     "@vitejs/plugin-vue": "^3.2.0",
+    "ajv": "^8.11.2",
     "autoprefixer": "^10.4.13",
     "aws-amplify": "^5.0.3",
     "aws-cdk": "^2.51.1",

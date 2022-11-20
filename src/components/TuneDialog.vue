@@ -47,28 +47,49 @@ const uploadTune = async ({ title, description, midi }: typeof tune) => {
   // show loading
   $q.loading.show({ spinnerSize: 46 });
 
-  // upload the tune
-  const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, midi, {
-    level: 'protected',
-  });
+  try {
+    // upload the tune
+    const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, midi, {
+      level: 'protected',
+    });
 
-  // register the tune info
-  const { id } = await API.post('Api', '/tunes', {
-    body: {
-      title,
-      description,
-      midiKey,
-    },
-  });
+    try {
+      // register the tune info
+      const { id } = await API.post('Api', '/tunes', {
+        body: {
+          title,
+          description,
+          midiKey,
+        },
+      });
 
-  // move to watch route
-  await $router.push({ name: 'watch', query: { v: id } });
+      // move to watch route
+      await $router.push({ name: 'watch', query: { v: id } });
+
+      // close dialog
+      onDialogOK();
+    } catch (e: any) {
+      if (e.response.status === 422) {
+        $q.notify({
+          type: 'negative',
+          message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
+            return messages.map((message) => `The ${field} ${message}.`);
+          }).join('<br>'),
+          html: true,
+        });
+      }
+
+      // remove the tune
+      await Storage.remove(midiKey, {
+        level: 'protected',
+      });
+    }
+  } catch {
+    //
+  }
 
   // hide loading
   $q.loading.hide();
-
-  // close dialog
-  onDialogOK();
 };
 </script>
 

@@ -4,6 +4,9 @@ import { randomFillSync } from 'crypto';
 // Pluralize
 import { singular } from 'pluralize';
 
+// Ajv
+import Ajv from 'ajv';
+
 // AWS Lambda
 import {
   APIGatewayProxyEvent,
@@ -37,6 +40,11 @@ const dynamodb = new DynamoDB.DocumentClient({
 // AWS SDK - Translate
 const translate = new Translate({
   apiVersion: '2017-07-01',
+});
+
+// Ajv
+const ajv = new Ajv({
+  allErrors: true,
 });
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -244,13 +252,47 @@ const routes = new Map([
       const userId = getUserId(cognitoAuthenticationProvider);
 
       // Parse the JSON of request body.
-      const { title, description, midiKey } = JSON.parse(body ?? '{}');
+      const params = JSON.parse(body ?? '{}');
 
-      if (!title || !description || !midiKey) {
+      // Compile the parameter schema.
+      const validate = ajv.compile({
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 255,
+          },
+          description: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 1023,
+          },
+          midiKey: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 255,
+          },
+        },
+        required: [
+          'title',
+          'description',
+          'midiKey',
+        ],
+      });
+
+      // Validate request parameters.
+      if (!validate(params)) {
         return response({
           message: 'Unprocessable entity',
+          errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
+            return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
+          }, {} as Record<string, string[]>),
         }, 422);
       }
+
+      // Get a title, a description and a midi key.
+      const { title, description, midiKey } = params;
 
       while (true) {
         try {
@@ -460,6 +502,26 @@ const routes = new Map([
 
       // Parse the JSON of request body.
       const params = JSON.parse(body ?? '{}');
+
+      // Compile the parameter schema.
+      const validate = ajv.compile<{ isLiked?: boolean }>({
+        type: 'object',
+        properties: {
+          isLiked: {
+            type: 'boolean',
+          },
+        },
+      });
+
+      // Validate request parameters.
+      if (!validate(params)) {
+        return response({
+          message: 'Unprocessable entity',
+          errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
+            return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
+          }, {} as Record<string, string[]>),
+        }, 422);
+      }
 
       // Get the tune id.
       const { id } = pathParameters ?? {};
@@ -792,7 +854,29 @@ const routes = new Map([
       // Parse the JSON of request body.
       const params = JSON.parse(body ?? '{}');
 
-      if (params.nickname && typeof params.nickname === 'string') {
+      // Compile the parameter schema.
+      const validate = ajv.compile<{ nickname?: string }>({
+        type: 'object',
+        properties: {
+          nickname: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 255,
+          },
+        },
+      });
+
+      // Validate request parameters.
+      if (!validate(params)) {
+        return response({
+          message: 'Unprocessable entity',
+          errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
+            return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
+          }, {} as Record<string, string[]>),
+        }, 422);
+      }
+
+      if (params.nickname) {
         const { Attributes: user } = await dynamodb.update({
           TableName: process.env.APP_TABLE_NAME!,
           Key: {

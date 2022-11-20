@@ -37,20 +37,32 @@ const updateUser = async () => {
     // show loading
     $q.loading.show({ spinnerSize: 46 });
 
-    // update the user
-    await API.put('Api', '/users/me', {
-      body: {
-        nickname: nickname.value,
-      },
-    });
+    try {
+      // update the user
+      await API.put('Api', '/users/me', {
+        body: {
+          nickname: nickname.value,
+        },
+      });
 
-    // update user attributes
-    await Auth.updateUserAttributes(await Auth.currentAuthenticatedUser(), {
-      //
-    });
+      // update user attributes
+      await Auth.updateUserAttributes(await Auth.currentAuthenticatedUser(), {
+        //
+      });
 
-    // get the current user
-    auth.user = (await Auth.currentAuthenticatedUser()).attributes;
+      // get the current user
+      auth.user = (await Auth.currentAuthenticatedUser()).attributes;
+    } catch (e: any) {
+      if (e.response.status === 422) {
+        $q.notify({
+          type: 'negative',
+          message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
+            return messages.map((message) => `The ${field} ${message}.`);
+          }).join('<br>'),
+          html: true,
+        });
+      }
+    }
 
     // hide loading
     $q.loading.hide();

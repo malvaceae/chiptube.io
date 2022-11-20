@@ -130,6 +130,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalServerError"
   /tunes/{id}/tunes:
@@ -196,6 +198,8 @@ paths:
                     type: string
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalServerError"
 components:
@@ -291,7 +295,16 @@ components:
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/Error"
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - type: object
+                properties:
+                  errors:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: string
     InternalServerError:
       description: Internal Server Error
       content:
