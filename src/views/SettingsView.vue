@@ -69,81 +69,77 @@ const updateUser = async () => {
 
 <template>
   <q-page padding>
-    <div class="row q-col-gutter-lg">
-      <div class="col col-grow">
-        <q-card flat square>
-          <q-card-section>
-            <div class="q-mb-lg text-subtitle1 text-weight-medium">
-              Settings
+    <q-card flat square>
+      <q-card-section>
+        <div class="q-mb-lg text-subtitle1 text-weight-medium">
+          Settings
+        </div>
+        <div class="q-mb-sm text-h6">
+          Choose how you appear and what you see on ChipTube
+        </div>
+        <div class="q-mb-lg">
+          Signed in as {{ auth.user?.email }}
+        </div>
+      </q-card-section>
+      <q-separator inset />
+      <q-card-section>
+        <div class="q-mb-sm text-subtitle1 text-weight-medium">
+          Your account
+        </div>
+        <div class="q-mb-md">
+          You sign in to ChipTube with your Google Account
+        </div>
+        <div class="column q-gutter-md text-weight-medium">
+          <div class="row items-center q-gutter-sm">
+            <div class="col-12 col-md-2">
+              User ID
             </div>
-            <div class="q-mb-sm text-h6">
-              Choose how you appear and what you see on ChipTube
-            </div>
-            <div class="q-mb-lg">
-              Signed in as {{ auth.user?.email }}
-            </div>
-          </q-card-section>
-          <q-separator inset />
-          <q-card-section>
-            <div class="q-mb-sm text-subtitle1 text-weight-medium">
-              Your account
-            </div>
-            <div class="q-mb-md">
-              You sign in to ChipTube with your Google Account
-            </div>
-            <div class="column q-gutter-md text-weight-medium">
-              <div class="row items-center q-gutter-sm">
-                <div class="col-12 col-md-2">
+            <div class="col">
+              <q-input label-slot :model-value="auth.user?.sub" outlined readonly square>
+                <template #label>
                   User ID
-                </div>
-                <div class="col">
-                  <q-input label-slot :model-value="auth.user?.sub" outlined readonly square>
-                    <template #label>
-                      User ID
-                    </template>
-                  </q-input>
-                </div>
-              </div>
-              <div class="row items-center q-gutter-sm">
-                <div class="col-12 col-md-2">
-                  Email
-                </div>
-                <div class="col">
-                  <q-input label-slot :model-value="auth.user?.email" outlined readonly square>
-                    <template #label>
-                      Email
-                    </template>
-                  </q-input>
-                </div>
-              </div>
-              <div class="row items-center q-gutter-sm">
-                <div class="col-12 col-md-2">
-                  Name
-                </div>
-                <div class="col">
-                  <q-input label-slot :model-value="auth.user?.name" outlined readonly square>
-                    <template #label>
-                      Name
-                    </template>
-                  </q-input>
-                </div>
-              </div>
-              <div class="row items-center q-gutter-sm">
-                <div class="col-12 col-md-2">
-                  Nickname
-                </div>
-                <div class="col">
-                  <q-input v-model="nickname" label-slot outlined square @blur="updateUser" @keyup.enter="updateUser">
-                    <template #label>
-                      Nickname
-                    </template>
-                  </q-input>
-                </div>
-              </div>
+                </template>
+              </q-input>
             </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
+          </div>
+          <div class="row items-center q-gutter-sm">
+            <div class="col-12 col-md-2">
+              Email
+            </div>
+            <div class="col">
+              <q-input label-slot :model-value="auth.user?.email" outlined readonly square>
+                <template #label>
+                  Email
+                </template>
+              </q-input>
+            </div>
+          </div>
+          <div class="row items-center q-gutter-sm">
+            <div class="col-12 col-md-2">
+              Name
+            </div>
+            <div class="col">
+              <q-input label-slot :model-value="auth.user?.name" outlined readonly square>
+                <template #label>
+                  Name
+                </template>
+              </q-input>
+            </div>
+          </div>
+          <div class="row items-center q-gutter-sm">
+            <div class="col-12 col-md-2">
+              Nickname
+            </div>
+            <div class="col">
+              <q-input v-model="nickname" label-slot outlined square @blur="updateUser" @keyup.enter="updateUser">
+                <template #label>
+                  Nickname
+                </template>
+              </q-input>
+            </div>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
   </q-page>
 </template>
