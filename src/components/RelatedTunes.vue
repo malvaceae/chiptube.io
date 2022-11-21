@@ -17,6 +17,9 @@ const { id } = toRefs(props);
 // the scroll target
 const scrollTarget = ref<HTMLElement>();
 
+// is loading
+const isLoading = ref(true);
+
 // tunes
 const tunes = ref<Record<string, any>[]>([]);
 
@@ -25,6 +28,10 @@ const after = ref<string>();
 
 // get tunes
 const getTunes = async (_: number, done: (stop?: boolean) => void) => {
+  // start loading
+  isLoading.value = true;
+
+  // get tunes
   const data = await API.get('Api', `/tunes/${id.value}/tunes`, {
     queryStringParameters: {
       after: after.value,
@@ -39,6 +46,9 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
 
   // complete updates
   done(!after.value);
+
+  // stop loading
+  isLoading.value = false;
 };
 </script>
 
@@ -66,6 +76,11 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
         </q-item-section>
       </q-item>
     </q-list>
+    <template v-if="!isLoading && tunes.length === 0">
+      <div class="q-my-md text-subtitle1 text-center">
+        No related tunes found
+      </div>
+    </template>
     <template #loading>
       <q-list class="q-gutter-md">
         <q-item v-for="_ in 24" class="q-py-none">
