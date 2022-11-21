@@ -19,6 +19,7 @@ import {
   CognitoIdentityServiceProvider,
   Comprehend,
   DynamoDB,
+  S3,
   Translate,
 } from 'aws-sdk';
 
@@ -35,6 +36,11 @@ const comprehend = new Comprehend({
 // AWS SDK - DynamoDB
 const dynamodb = new DynamoDB.DocumentClient({
   apiVersion: '2012-08-10',
+});
+
+// AWS SDK - S3
+const s3 = new S3({
+  apiVersion: '2006-03-01',
 });
 
 // AWS SDK - Translate
@@ -293,6 +299,33 @@ const routes = new Map([
 
       // Get a title, a description and a midi key.
       const { title, description, midiKey } = params;
+
+      // Get a midi file.
+      const midiFile = await (async () => {
+        try {
+          const { Body: midiFile } = await s3.getObject({
+            Bucket: process.env.APP_STORAGE_BUCKET_NAME!,
+            Key: `protected/${identityId}/${midiKey}`,
+            Range: 'bytes=0-3',
+          }).promise();
+
+          return midiFile;
+        } catch {
+          //
+        }
+      })();
+
+      // Validate a midi file.
+      if (!(midiFile instanceof Buffer) || !(midiFile[0] === 0x4D && midiFile[1] === 0x54 && midiFile[2] === 0x68 && midiFile[3] === 0x64)) {
+        return response({
+          message: 'Unprocessable entity',
+          errors: {
+            midiKey: [
+              'does NOT indicate a valid MIDI file',
+            ],
+          },
+        }, 422);
+      }
 
       while (true) {
         try {

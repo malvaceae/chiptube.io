@@ -197,6 +197,12 @@ class ChipTubeStack extends Stack {
     // Add permissions to access App Table.
     appTable.grantReadWriteData(api.handler);
 
+    // Add environment variable for access App Storage.
+    api.handler.addEnvironment('APP_STORAGE_BUCKET_NAME', appStorage.bucketName);
+
+    // Add permissions to access App Storage.
+    appStorage.grantRead(api.handler);
+
     // If the domain name exists, create a alias record to Api.
     const apiEndpoint = (() => {
       if (zone && certificate) {
