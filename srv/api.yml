@@ -360,12 +360,12 @@ components:
       type: object
       required:
         - id
-        - name
+        - nickname
         - picture
       properties:
         id:
           type: string
-        name:
+        nickname:
           type: string
         picture:
           type: string
