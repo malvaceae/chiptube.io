@@ -697,6 +697,264 @@ const routes = new Map([
   ],
   [
     {
+      resource: '/tunes/{id}/comments',
+      httpMethod: 'GET',
+    },
+    async ({ pathParameters, queryStringParameters }: APIGatewayProxyEvent) => {
+      // Get the tune id.
+      const { id } = pathParameters ?? {};
+
+      if (!id) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
+      const exclusiveStartKey = (({ after }) => {
+        if (after) {
+          try {
+            return JSON.parse(Buffer.from(after, 'base64').toString());
+          } catch {
+            //
+          }
+        }
+      })(queryStringParameters ?? {});
+
+      const { comments, lastEvaluatedKey } = await (async () => {
+        // Get comments and the last evaluated key.
+        const { Items: comments, LastEvaluatedKey: lastEvaluatedKey } = await dynamodb.query({
+          TableName: process.env.APP_TABLE_NAME!,
+          IndexName: 'LSI-PublishedAt',
+          Limit: 24,
+          ScanIndexForward: false,
+          ExclusiveStartKey: exclusiveStartKey,
+          KeyConditionExpression: 'pk = :pk',
+          ExpressionAttributeValues: {
+            ':pk': `tuneId#${id}#comments`,
+          },
+        }).promise();
+
+        return {
+          comments,
+          lastEvaluatedKey,
+        };
+      })();
+
+      if (!comments?.length) {
+        return response({
+          comments: [],
+        });
+      }
+
+      const after = ((lastEvaluatedKey) => {
+        if (lastEvaluatedKey) {
+          try {
+            return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString('base64');
+          } catch {
+            //
+          }
+        }
+      })(lastEvaluatedKey);
+
+      // Get unique user ids.
+      const userIds = [...new Set(comments.map(({ userId }) => userId))];
+
+      // Get raw responses.
+      const { Responses: responses } = await dynamodb.batchGet({
+        RequestItems: {
+          [process.env.APP_TABLE_NAME!]: {
+            Keys: userIds.map((userId) => ({
+              pk: `userId#${userId}`,
+              sk: `userId#${userId}`,
+            })),
+            AttributesToGet: [
+              'id',
+              'nickname',
+              'picture',
+            ],
+          },
+        },
+      }).promise();
+
+      // Get users.
+      const users = responses?.[process.env.APP_TABLE_NAME!];
+
+      if (users === undefined) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
+      // Get users by id.
+      const usersById = Object.fromEntries(users.map((user) => {
+        return [user.id, user];
+      }));
+
+      // Add user to comment.
+      comments.forEach((comment) => Object.assign(comment, {
+        user: usersById[comment.userId],
+      }));
+
+      return response({
+        comments,
+        after,
+      });
+    },
+  ],
+  [
+    {
+      resource: '/tunes/{id}/comments',
+      httpMethod: 'POST',
+    },
+    async ({ body, pathParameters, requestContext: { identity: { cognitoAuthenticationProvider } } }: APIGatewayProxyEvent) => {
+      if (!cognitoAuthenticationProvider) {
+        return response({
+          message: 'Unauthorized',
+        }, 401);
+      }
+
+      // Get the user id from cognito authentication provider.
+      const userId = getUserId(cognitoAuthenticationProvider);
+
+      // Get the tune id.
+      const { id: tuneId } = pathParameters ?? {};
+
+      if (!tuneId) {
+        return response({
+          message: 'Not found',
+        }, 404);
+      }
+
+      // Parse the JSON of request body.
+      const params = JSON.parse(body ?? '{}');
+
+      // Compile the parameter schema.
+      const validate = ajv.compile({
+        type: 'object',
+        properties: {
+          text: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 1023,
+            pattern: '\\S',
+          },
+        },
+        required: [
+          'text',
+        ],
+      });
+
+      // Validate request parameters.
+      if (!validate(params)) {
+        return response({
+          message: 'Unprocessable entity',
+          errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
+            return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
+          }, {} as Record<string, string[]>),
+        }, 422);
+      }
+
+      // Get a text.
+      const { text } = params;
+
+      while (true) {
+        try {
+          const id = [...randomFillSync(new Uint32Array(22))].map((i) => i % 64).map((i) => {
+            return '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz'[i];
+          }).join('');
+
+          await dynamodb.transactWrite({
+            TransactItems: [
+              {
+                Put: {
+                  TableName: process.env.APP_TABLE_NAME!,
+                  Item: {
+                    pk: `tuneId#${tuneId}#comments`,
+                    sk: `commentId#${id}`,
+                    id,
+                    userId,
+                    text,
+                    publishedAt: Date.now(),
+                    likes: 0,
+                  },
+                  ConditionExpression: [
+                    'attribute_not_exists(pk)',
+                    'attribute_not_exists(sk)',
+                  ].join(' AND '),
+                },
+              },
+              {
+                Update: {
+                  TableName: process.env.APP_TABLE_NAME!,
+                  Key: {
+                    pk: 'tunes',
+                    sk: `tuneId#${tuneId}`,
+                  },
+                  UpdateExpression: 'ADD comments :additionalValue',
+                  ConditionExpression: [
+                    'attribute_exists(pk)',
+                    'attribute_exists(sk)',
+                  ].join(' AND '),
+                  ExpressionAttributeValues: {
+                    ':additionalValue': 1,
+                  },
+                },
+              },
+            ],
+          }).promise();
+
+          const { Item: comment } = await dynamodb.get({
+            TableName: process.env.APP_TABLE_NAME!,
+            Key: {
+              pk: `tuneId#${tuneId}#comments`,
+              sk: `commentId#${id}`,
+            },
+          }).promise();
+
+          if (comment === undefined) {
+            return response({
+              message: 'Not found',
+            }, 404);
+          }
+
+          const { Item: user } = await dynamodb.get({
+            TableName: process.env.APP_TABLE_NAME!,
+            Key: {
+              pk: `userId#${comment.userId}`,
+              sk: `userId#${comment.userId}`,
+            },
+            AttributesToGet: [
+              'id',
+              'nickname',
+              'picture',
+            ],
+          }).promise();
+
+          if (user === undefined) {
+            return response({
+              message: 'Not found',
+            }, 404);
+          }
+
+          Object.assign(comment, {
+            user,
+          });
+
+          return response(comment);
+        } catch (e: any) {
+          if (e.code === 'TransactionCanceledException') {
+            await new Promise((resolve) => {
+              setTimeout(resolve, 1000);
+            });
+          } else {
+            throw e;
+          }
+        }
+      }
+    },
+  ],
+  [
+    {
       resource: '/tunes/{id}/tunes',
       httpMethod: 'GET',
     },

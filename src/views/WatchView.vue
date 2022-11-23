@@ -20,6 +20,9 @@ import MidiPlayer from '@/components/MidiPlayer.vue';
 // Related Tunes
 import RelatedTunes from '@/components/RelatedTunes.vue';
 
+// Tune Comments
+import TuneComments from '@/components/TuneComments.vue';
+
 // properties
 const props = defineProps<{ id: string }>();
 
@@ -218,13 +221,19 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
           </q-item>
           <q-separator spaced />
           <q-item>
-            <q-item-section class="items-center">
-              <q-item-label>
-                Comments are turned off.
+            <q-item-section>
+              <q-item-label class="text-subtitle1">
+                <template v-if="tune">
+                  {{ tune.comments.toLocaleString() }} Comments
+                </template>
+                <template v-else>
+                  <q-skeleton animation="none" type="text" width="35%" />
+                </template>
               </q-item-label>
             </q-item-section>
           </q-item>
         </q-list>
+        <tune-comments :id="id" @update="tune && tune.comments++" />
       </div>
       <div class="col-12 col-md-4">
         <related-tunes :id="id" />

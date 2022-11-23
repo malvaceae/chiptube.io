@@ -134,6 +134,78 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /tunes/{id}/comments:
+    get:
+      tags:
+        - Tunes
+      operationId: getTuneComments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/TuneId"
+        - name: after
+          in: query
+          schema:
+            type: string
+            format: byte
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - comments
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TuneComment"
+                  after:
+                    type: string
+                    format: byte
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      tags:
+        - Tunes
+      operationId: postTuneComment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/TuneId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TuneComment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /tunes/{id}/tunes:
     get:
       tags:
@@ -257,6 +329,33 @@ components:
           format: int64
         isLiked:
           type: boolean
+    TuneCommentId:
+      type: string
+      pattern: ^[\w-]{22}$
+    TuneComment:
+      type: object
+      required:
+        - id
+        - userId
+        - user
+        - text
+        - publishedAt
+        - likes
+      properties:
+        id:
+          $ref: "#/components/schemas/TuneCommentId"
+        userId:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        text:
+          type: string
+        publishedAt:
+          type: integer
+          format: int64
+        likes:
+          type: integer
+          format: int64
     User:
       type: object
       required:
