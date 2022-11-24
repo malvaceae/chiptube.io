@@ -161,7 +161,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
             <q-item-section avatar>
               <q-avatar>
                 <template v-if="tune">
-                  <img :src="tune.user.picture">
+                  <img :src="tune.user.picture" referrerpolicy="no-referrer">
                 </template>
                 <template v-else>
                   <q-skeleton animation="none" type="QAvatar" />

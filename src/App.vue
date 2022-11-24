@@ -119,7 +119,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
             <q-btn flat round>
               <template v-if="auth.user">
                 <q-avatar>
-                  <img :src="auth.user.picture">
+                  <img :src="auth.user.picture" referrerpolicy="no-referrer">
                 </q-avatar>
               </template>
               <template v-else>
@@ -131,7 +131,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                     <q-item>
                       <q-item-section avatar>
                         <q-avatar>
-                          <img :src="auth.user.picture">
+                          <img :src="auth.user.picture" referrerpolicy="no-referrer">
                         </q-avatar>
                       </q-item-section>
                       <q-item-section>

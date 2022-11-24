@@ -117,7 +117,7 @@ const registerComment = async () => {
         <q-item-section avatar top>
           <q-avatar>
             <template v-if="auth.user">
-              <img :src="auth.user.picture">
+              <img :src="auth.user.picture" referrerpolicy="no-referrer">
             </template>
             <template v-else>
               <q-icon name="mdi-account-circle" size="40px" />
@@ -141,7 +141,7 @@ const registerComment = async () => {
       <q-item v-for="comment in comments">
         <q-item-section avatar top>
           <q-avatar>
-            <img :src="comment.user.picture">
+            <img :src="comment.user.picture" referrerpolicy="no-referrer">
           </q-avatar>
         </q-item-section>
         <q-item-section>

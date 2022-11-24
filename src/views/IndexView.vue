@@ -62,7 +62,7 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
               <q-item class="col-grow">
                 <q-item-section avatar top>
                   <q-avatar>
-                    <img :src="tune.user.picture">
+                    <img :src="tune.user.picture" referrerpolicy="no-referrer">
                   </q-avatar>
                 </q-item-section>
                 <q-item-section>

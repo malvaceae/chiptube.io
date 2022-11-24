@@ -84,7 +84,7 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
             </q-item-label>
             <q-item-label class="q-py-sm" caption>
               <q-avatar class="q-mr-xs" size="sm">
-                <img :src="tune.user.picture">
+                <img :src="tune.user.picture" referrerpolicy="no-referrer">
               </q-avatar>
               {{ tune.user.nickname }}
             </q-item-label>
