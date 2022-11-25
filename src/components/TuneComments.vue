@@ -28,9 +28,6 @@ const auth = useAuthStore();
 // get the $q object
 const $q = useQuasar();
 
-// the scroll target
-const scrollTarget = ref<HTMLElement>();
-
 // is loading
 const isLoading = ref(true);
 
@@ -136,8 +133,8 @@ const registerComment = async () => {
       </q-item>
     </q-list>
   </template>
-  <q-infinite-scroll :offset="250" :scroll-target="scrollTarget" @load="getComments">
-    <q-list ref="scrollTarget" class="q-gutter-sm">
+  <q-infinite-scroll :offset="250" @load="getComments">
+    <q-list class="q-gutter-sm">
       <q-item v-for="comment in comments">
         <q-item-section avatar top>
           <q-avatar>
@@ -171,23 +168,9 @@ const registerComment = async () => {
       </q-item>
     </q-list>
     <template #loading>
-      <q-list class="q-gutter-sm">
-        <q-item v-for="_ in 24">
-          <q-item-section avatar top>
-            <q-avatar>
-              <q-skeleton animation="none" type="QAvatar" />
-            </q-avatar>
-          </q-item-section>
-          <q-item-section>
-            <q-item-label>
-              <q-skeleton animation="none" type="text" width="35%" />
-            </q-item-label>
-            <q-item-label>
-              <q-skeleton animation="none" type="text" />
-            </q-item-label>
-          </q-item-section>
-        </q-item>
-      </q-list>
+      <div class="row justify-center q-my-md">
+        <q-spinner-dots size="lg" />
+      </div>
     </template>
   </q-infinite-scroll>
 </template>

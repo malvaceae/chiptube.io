@@ -19,9 +19,6 @@ useMeta({
   },
 });
 
-// the scroll target
-const scrollTarget = ref<HTMLElement>();
-
 // tunes
 const tunes = ref<Record<string, any>[]>([]);
 
@@ -49,8 +46,8 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
 
 <template>
   <q-page padding>
-    <q-infinite-scroll :offset="250" :scroll-target="scrollTarget" @load="getTunes">
-      <div ref="scrollTarget" class="row q-col-gutter-md">
+    <q-infinite-scroll :offset="250" @load="getTunes">
+      <div class="row q-col-gutter-md">
         <div v-for="tune in tunes" class="col-12 col-sm-6 col-md-4 col-lg-3">
           <router-link :to="{ name: 'watch', query: { v: tune.id } }">
             <q-card class="column full-height" flat square>
@@ -84,34 +81,8 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
         </div>
       </div>
       <template #loading>
-        <div class="row q-col-gutter-md q-mt-none">
-          <div v-for="_ in 24" class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <q-card flat square>
-              <q-responsive :ratio="16 / 9">
-                <q-skeleton animation="none" square />
-              </q-responsive>
-              <q-item>
-                <q-item-section avatar top>
-                  <q-avatar>
-                    <q-skeleton animation="none" type="QAvatar" />
-                  </q-avatar>
-                </q-item-section>
-                <q-item-section>
-                  <q-space />
-                  <q-item-label>
-                    <q-skeleton class="text-subtitle2" animation="none" type="text" />
-                  </q-item-label>
-                  <q-space />
-                  <q-item-label>
-                    <q-skeleton animation="none" type="text" width="35%" />
-                  </q-item-label>
-                  <q-item-label>
-                    <q-skeleton animation="none" type="text" width="65%" />
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-card>
-          </div>
+        <div class="row justify-center q-my-md">
+          <q-spinner-dots size="lg" />
         </div>
       </template>
     </q-infinite-scroll>

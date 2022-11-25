@@ -226,9 +226,6 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
                 <template v-if="tune">
                   {{ tune.comments.toLocaleString() }} Comments
                 </template>
-                <template v-else>
-                  <q-skeleton animation="none" type="text" width="35%" />
-                </template>
               </q-item-label>
             </q-item-section>
           </q-item>

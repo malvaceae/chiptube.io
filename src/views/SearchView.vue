@@ -27,9 +27,6 @@ useMeta(() => ({
 // get the $q object
 const $q = useQuasar();
 
-// the scroll target
-const scrollTarget = ref<HTMLElement>();
-
 // tunes
 const tunes = ref<Record<string, any>[]>([]);
 
@@ -65,8 +62,8 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
 
 <template>
   <q-page padding>
-    <q-infinite-scroll :offset="250" :scroll-target="scrollTarget" @load="getTunes">
-      <q-list ref="scrollTarget" class="q-gutter-md">
+    <q-infinite-scroll :offset="250" @load="getTunes">
+      <q-list class="q-gutter-md">
         <q-item v-for="tune in tunes" :to="{ name: 'watch', query: { v: tune.id } }">
           <q-item-section side>
             <q-img src="@/assets/thumbnail.png">
@@ -95,37 +92,9 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
         </q-item>
       </q-list>
       <template #loading>
-        <q-list class="q-gutter-md">
-          <q-item v-for="_ in 24">
-            <q-item-section side>
-              <q-responsive :ratio="16 / 9" :style="{ width: '100%' }">
-                <q-skeleton animation="none" square />
-              </q-responsive>
-            </q-item-section>
-            <q-item-section top>
-              <q-item-label>
-                <q-skeleton class="text-subtitle2" animation="none" type="text" />
-              </q-item-label>
-              <q-item-label>
-                <q-skeleton animation="none" type="text" width="65%" />
-              </q-item-label>
-              <q-item-label class="q-py-sm">
-                <div class="row items-center q-gutter-sm">
-                  <div>
-                    <q-skeleton animation="none" size="24px" type="QAvatar" />
-                  </div>
-                  <div class="col-grow">
-                    <q-skeleton animation="none" type="text" width="35%" />
-                  </div>
-                </div>
-              </q-item-label>
-              <q-item-label>
-                <q-skeleton animation="none" type="text" />
-                <q-skeleton animation="none" type="text" />
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
+        <div class="row justify-center q-my-md">
+          <q-spinner-dots size="lg" />
+        </div>
       </template>
     </q-infinite-scroll>
     <template v-if="!$q.loading.isActive && tunes.length === 0">
