@@ -268,16 +268,19 @@ const routes = new Map([
             type: 'string',
             minLength: 1,
             maxLength: 255,
+            pattern: '\\S',
           },
           description: {
             type: 'string',
             minLength: 1,
             maxLength: 1023,
+            pattern: '\\S',
           },
           midiKey: {
             type: 'string',
             minLength: 1,
             maxLength: 255,
+            pattern: '\\S',
           },
         },
         required: [
@@ -1153,6 +1156,7 @@ const routes = new Map([
             type: 'string',
             minLength: 1,
             maxLength: 255,
+            pattern: '\\S',
           },
         },
       });
