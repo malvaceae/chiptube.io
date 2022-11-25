@@ -25,6 +25,8 @@ import {
   aws_s3 as s3,
   aws_s3_assets as assets,
   aws_s3_deployment as s3deploy,
+  aws_sns as sns,
+  aws_sns_subscriptions as subscriptions,
   custom_resources as cr,
 } from 'aws-cdk-lib';
 
@@ -51,9 +53,10 @@ class ChipTubeStack extends Stack {
     super(scope, id, props);
 
     // Context Values
-    const [googleClientId, googleClientSecret, domainName] = [
+    const [googleClientId, googleClientSecret, feedbackEmail, domainName] = [
       this.node.tryGetContext('googleClientId'),
       this.node.tryGetContext('googleClientSecret'),
+      this.node.tryGetContext('feedbackEmail'),
       this.node.tryGetContext('domainName'),
     ];
 
@@ -646,6 +649,21 @@ class ChipTubeStack extends Stack {
         return [role.node.id.replace(/^.*?((un)?authenticated).*?$/i, (_, s) => s.toLowerCase()), role.roleArn];
       })),
     });
+
+    // If the feedback email exists, create the SNS topic.
+    if (feedbackEmail) {
+      // Feedback Topic
+      const feedbackTopic = new sns.Topic(this, 'FeedbackTopic');
+
+      // Add the email subscription.
+      feedbackTopic.addSubscription(new subscriptions.EmailSubscription(feedbackEmail));
+
+      // Add environment variable for access Feedback Topic.
+      api.handler.addEnvironment('FEEDBACK_TOPIC_ARN', feedbackTopic.topicArn);
+
+      // Add permissions to access Feedback Topic.
+      feedbackTopic.grantPublish(api.handler);
+    }
 
     // App Asset
     const appAsset = new assets.Asset(this, 'AppAsset', {

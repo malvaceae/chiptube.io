@@ -15,6 +15,9 @@ import { Auth, Hub } from 'aws-amplify';
 // Quasar
 import { useMeta, useQuasar } from 'quasar';
 
+// Feedback Dialog
+import FeedbackDialog from '@/components/FeedbackDialog.vue';
+
 // Google Sign In
 import GoogleSignIn from '@/components/GoogleSignIn.vue';
 
@@ -126,7 +129,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                 <q-icon name="mdi-dots-vertical" />
               </template>
               <q-menu class="full-width" anchor="bottom right" max-width="300px" self="top right" square>
-                <q-list padding>
+                <q-list dense padding>
                   <template v-if="auth.user">
                     <q-item>
                       <q-item-section avatar>
@@ -144,7 +147,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                       </q-item-section>
                     </q-item>
                     <q-separator spaced />
-                    <q-item class="q-py-sm" clickable dense v-close-popup @click="Auth.signOut()">
+                    <q-item clickable v-close-popup @click="Auth.signOut()">
                       <q-item-section side>
                         <q-icon name="mdi-logout" />
                       </q-item-section>
@@ -154,7 +157,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                     </q-item>
                     <q-separator spaced />
                   </template>
-                  <q-item class="q-py-sm" clickable dense>
+                  <q-item clickable>
                     <q-item-section side>
                       <q-icon name="mdi-theme-light-dark" />
                     </q-item-section>
@@ -173,15 +176,11 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                       <q-icon name="mdi-chevron-right" />
                     </q-item-section>
                     <q-menu anchor="top right" :offset="[1.33125, 9]" self="top right" square>
-                      <q-list padding>
-                        <q-item class="q-pb-sm" dense>
-                          <q-item-section>
-                            <q-item-label caption>
-                              Setting applies to this browser only
-                            </q-item-label>
-                          </q-item-section>
-                        </q-item>
-                        <q-item class="q-py-sm" clickable dense v-close-popup @click="$q.dark.set('auto')">
+                      <q-list dense padding>
+                        <q-item-label caption header>
+                          Setting applies to this browser only
+                        </q-item-label>
+                        <q-item clickable v-close-popup @click="$q.dark.set('auto')">
                           <q-item-section side>
                             <q-icon :class="{ invisible: !(page.dark === 'auto') }" name="mdi-check" />
                           </q-item-section>
@@ -189,7 +188,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                             Use device theme
                           </q-item-section>
                         </q-item>
-                        <q-item class="q-py-sm" clickable dense v-close-popup @click="$q.dark.set(true)">
+                        <q-item clickable v-close-popup @click="$q.dark.set(true)">
                           <q-item-section side>
                             <q-icon :class="{ invisible: !(page.dark === true) }" name="mdi-check" />
                           </q-item-section>
@@ -197,7 +196,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                             Dark theme
                           </q-item-section>
                         </q-item>
-                        <q-item class="q-py-sm" clickable dense v-close-popup @click="$q.dark.set(false)">
+                        <q-item clickable v-close-popup @click="$q.dark.set(false)">
                           <q-item-section side>
                             <q-icon :class="{ invisible: !(page.dark === false) }" name="mdi-check" />
                           </q-item-section>
@@ -209,7 +208,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                     </q-menu>
                   </q-item>
                   <q-separator spaced />
-                  <q-item class="q-py-sm" active-class="" dense :to="{ name: 'settings' }">
+                  <q-item active-class="" :to="{ name: 'settings' }">
                     <q-item-section side>
                       <q-icon name="mdi-cog-outline" />
                     </q-item-section>
@@ -218,7 +217,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                     </q-item-section>
                   </q-item>
                   <q-separator spaced />
-                  <q-item class="q-py-sm" disable dense>
+                  <q-item disable>
                     <q-item-section side>
                       <q-icon name="mdi-help-circle-outline" />
                     </q-item-section>
@@ -226,7 +225,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                       Help
                     </q-item-section>
                   </q-item>
-                  <q-item class="q-py-sm" disable dense>
+                  <q-item clickable v-close-popup @click="$q.dialog({ component: FeedbackDialog })">
                     <q-item-section side>
                       <q-icon name="mdi-message-alert-outline" />
                     </q-item-section>
@@ -356,7 +355,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                 Help
               </q-item-section>
             </q-item>
-            <q-item disable v-ripple>
+            <q-item clickable v-ripple @click="$q.dialog({ component: FeedbackDialog })">
               <q-item-section side>
                 <q-icon name="mdi-message-alert-outline" />
               </q-item-section>
@@ -410,6 +409,14 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
   .q-header {
     background-color: $dark;
   }
+}
+
+.q-menu .q-list .q-item {
+  padding: 8px 16px;
+}
+
+.q-menu .q-list .q-item__label--header {
+  padding: 5px 16px 13px;
 }
 
 .q-drawer .q-list .q-item {

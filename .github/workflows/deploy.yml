@@ -18,4 +18,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         run: |
-          yarn cdk deploy -c googleClientId=${{ secrets.GOOGLE_CLIENT_ID }} -c googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }} -c domainName=${{ secrets.DOMAIN_NAME }} --require-approval never
+          yarn cdk deploy -c googleClientId=${{ secrets.GOOGLE_CLIENT_ID }} -c googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }} -c feedbackEmail=${{ secrets.FEEDBACK_EMAIL }} -c domainName=${{ secrets.DOMAIN_NAME }} --require-approval never
