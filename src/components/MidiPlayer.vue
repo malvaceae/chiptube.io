@@ -18,7 +18,7 @@ import { dom, format } from 'quasar';
 import * as Tone from 'tone';
 
 // Tone.js - MIDI
-import { Midi } from '@tonejs/midi';
+import { Midi, Track } from '@tonejs/midi';
 
 // p5.js
 import p5 from 'p5';
@@ -251,7 +251,7 @@ const play = async () => {
   midi.value = await Midi.fromUrl(url);
 
   // samples
-  const samples = [...new Set(midi.value.tracks.map((track) => track.instrument.number))].reduce((samples, number) => {
+  const samples = [...new Set(tracks.value.map(({ instrument: { number } }) => number))].reduce((samples, number) => {
     if (samples[number]) {
       return samples;
     }
@@ -367,16 +367,29 @@ const play = async () => {
   }, {} as Record<number, Tone.PolySynth | Tone.Sampler | Promise<Tone.PolySynth | Tone.Sampler>>);
 
   // instruments
-  instruments.value = await Promise.all(midi.value.tracks.map((track) => {
+  instruments.value = await Promise.all(tracks.value.map((track) => {
     return samples[track.instrument.number];
   }));
 
+  // sustains
+  const sustains = tracks.value.reduce((sustains, { instrument: { number }, controlChanges: { sustain } }) => {
+    return sustain ? { ...sustains, [number]: sustain } : sustains;
+  }, {} as Record<number, Track['controlChanges']['sustain']>);
+
   // parts
-  midi.value.tracks.forEach(({ notes }, i) => {
+  tracks.value.forEach(({ instrument: { number }, notes }, i) => {
     const instrument = instruments.value[i];
 
     const part = new Tone.Part((time, { name, duration, velocity }) => {
-      instrument.triggerAttackRelease(name, duration, time, velocity);
+      const currentSustain = sustains[number]?.filter?.(({ time }) => {
+        return time <= Tone.Transport.seconds;
+      })?.pop?.();
+
+      if (currentSustain && currentSustain.value) {
+        instrument.triggerAttackRelease(name, duration * 2, time, velocity);
+      } else {
+        instrument.triggerAttackRelease(name, duration * 1, time, velocity);
+      }
     }, notes);
 
     part.start();
