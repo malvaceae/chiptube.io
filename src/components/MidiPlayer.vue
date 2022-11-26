@@ -380,16 +380,26 @@ const play = async () => {
   tracks.value.forEach(({ instrument: { number }, notes }, i) => {
     const instrument = instruments.value[i];
 
-    const part = new Tone.Part((time, { name, duration, velocity }) => {
+    const part = new Tone.Part((time, { midi, name, duration, velocity }) => {
       const currentSustain = sustains[number]?.filter?.(({ time }) => {
         return time <= Tone.Transport.seconds;
       })?.pop?.();
 
-      if (currentSustain && currentSustain.value) {
-        instrument.triggerAttackRelease(name, duration * 2, time, velocity);
-      } else {
-        instrument.triggerAttackRelease(name, duration * 1, time, velocity);
+      if (currentSustain?.value) {
+        duration *= 4;
       }
+
+      // the next note
+      const nextNote = notesByKey.value[midi]?.find?.(({ time }) => {
+        return time > Tone.Transport.seconds;
+      });
+
+      if (nextNote) {
+        duration = Math.min(duration, nextNote.time - Tone.Transport.seconds);
+      }
+
+      // attack and release the note
+      instrument.triggerAttackRelease(name, duration, time, velocity);
     }, notes);
 
     part.start();
