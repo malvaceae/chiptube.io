@@ -14,14 +14,14 @@ import { date, exportFile, useMeta } from 'quasar';
 // Google Sign In
 import GoogleSignIn from '@/components/GoogleSignIn.vue';
 
-// MIDI Player
-import MidiPlayer from '@/components/MidiPlayer.vue';
-
 // Related Tunes
 import RelatedTunes from '@/components/RelatedTunes.vue';
 
 // Tune Comments
 import TuneComments from '@/components/TuneComments.vue';
+
+// Tune Player
+import TunePlayer from '@/components/TunePlayer.vue';
 
 // properties
 const props = defineProps<{ id: string }>();
@@ -85,7 +85,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
       <div class="col-12 col-md-8">
         <q-responsive :ratio="16 / 9">
           <template v-if="tune">
-            <midi-player :identity-id="tune.identityId" :midi-key="tune.midiKey" />
+            <tune-player :identity-id="tune.identityId" :midi-key="tune.midiKey" />
           </template>
           <template v-else>
             <q-skeleton animation="none" square />

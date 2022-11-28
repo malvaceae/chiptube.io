@@ -5,8 +5,8 @@ import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
 // Pinia
 import { storeToRefs } from 'pinia';
 
-// MIDI Store
-import { useMidiStore } from '@/stores/midi';
+// Tune Store
+import { useTuneStore } from '@/stores/tune';
 
 // Amplify
 import { Storage } from 'aws-amplify';
@@ -27,7 +27,7 @@ import p5 from 'p5';
 const props = defineProps<{ identityId: string, midiKey: string }>();
 
 // volume and mute
-const { volume, mute } = storeToRefs(useMidiStore());
+const { volume, mute } = storeToRefs(useTuneStore());
 
 // 88 keys in A0 (21) to C8 (108)
 const keys = [...Array(88).keys()].map((i) => i + 21).map((id) => {
@@ -687,7 +687,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="el" class="midi-player relative-position fit text-white non-selectable" @click="toggle">
+  <div ref="el" class="tune-player relative-position fit text-white non-selectable" @click="toggle">
     <template v-if="currentState === 'stopped'">
       <div class="absolute-full cursor-pointer">
         <div class="absolute-center">
@@ -744,8 +744,8 @@ onUnmounted(() => {
   transition: opacity .25s cubic-bezier(0, 0, .2, 1);
 }
 
-body:not(.no-pointer-events--children) .midi-player:not(:hover) .backdrop,
-body:not(.no-pointer-events--children) .midi-player:not(:hover) .controls {
+body:not(.no-pointer-events--children) .tune-player:not(:hover) .backdrop,
+body:not(.no-pointer-events--children) .tune-player:not(:hover) .controls {
   opacity: 0;
 }
 
