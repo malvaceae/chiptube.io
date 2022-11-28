@@ -381,12 +381,22 @@ const play = async () => {
     const instrument = instruments.value[i];
 
     const part = new Tone.Part((time, { midi, name, duration, velocity }) => {
+      // the current sustain
       const currentSustain = sustains[number]?.filter?.(({ time }) => {
         return time <= Tone.Transport.seconds;
       })?.pop?.();
 
       if (currentSustain?.value) {
-        duration *= 4;
+        // the next sustain
+        const nextSustain = sustains[number]?.find?.(({ time }) => {
+          return time > Tone.Transport.seconds;
+        });
+
+        if (nextSustain?.value === 0) {
+          duration = format.between(duration * 4, duration, nextSustain.time - Tone.Transport.seconds);
+        } else {
+          duration = duration * 4;
+        }
       }
 
       // the next note
