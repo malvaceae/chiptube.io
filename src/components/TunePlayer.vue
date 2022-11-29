@@ -55,8 +55,33 @@ const whiteKeys = keys.filter(({ color }) => color === 'white');
 // 36 black keys
 const blackKeys = keys.filter(({ color }) => color === 'black');
 
+// keys by id
+const keysById = Object.fromEntries(keys.map((key) => {
+  return [key.id, key];
+}));
+
 // minor second lines
 const minorSecondLines = whiteKeys.filter(({ id }) => id % 12 === 0 || id % 12 === 5).map(({ pos }) => pos);
+
+// channel colors
+const channelColors = [
+  '#ef7272',
+  '#81ef72',
+  '#7291ef',
+  '#efa272',
+  '#72ef91',
+  '#8372ef',
+  '#efd072',
+  '#72efc1',
+  '#b072ef',
+  '#deef72',
+  '#72efef',
+  '#e072ef',
+  '#b0ef72',
+  '#72bfef',
+  '#ef72d0',
+  '#ef72a0',
+];
 
 // root element
 const el = ref<HTMLElement>();
@@ -146,13 +171,15 @@ const barLineSeconds = computed(() => timeSignatures.value.flatMap(({ ticks, tim
 }));
 
 // notes in A0 (21) to C8 (108)
-const notes = computed(() => tracks.value.flatMap(({ notes }) => {
-  return notes.filter(({ midi }) => midi >= 21 && midi <= 108);
+const notes = computed(() => tracks.value.flatMap(({ notes, channel }) => {
+  return notes.map(({ midi, name, duration, time, velocity }) => {
+    return { midi, name, duration, time, velocity, channel };
+  }).filter(({ midi }) => midi >= 21 && midi <= 108);
 }));
 
 // notes with a key
-const notesWithKey = computed(() => notes.value.map(({ midi, name, duration, time, velocity }) => {
-  return { midi, name, duration, time, velocity, key: keys.find(({ id }) => id === midi)! };
+const notesWithKey = computed(() => notes.value.map((note) => {
+  return { ...note, key: keysById[note.midi] };
 }));
 
 // notes on a white key
@@ -567,22 +594,22 @@ onMounted(() => {
 
     drawKeys() {
       [...whiteKeys, ...blackKeys].forEach(({ id, pos, color }) => {
-        // set active state to true if current time is inside a pressed interval
-        const active = (notesByKey.value[id] ?? []).some(({ time, duration }) => {
+        // get active channel that current time is inside a pressed interval
+        const { channel } = notesByKey.value[id]?.filter?.(({ time, duration }) => {
           return time < currentTime.value && time + duration > currentTime.value;
-        });
+        })?.pop?.() ?? {};
 
         // draw the key
-        this.drawKey(pos, color, active);
+        this.drawKey(pos, color, channel);
       });
     }
 
-    drawKey(pos: number, color: string, active: boolean) {
+    drawKey(pos: number, color: string, channel?: number) {
       this.fill(color);
       this.stroke(128);
 
-      if (active) {
-        this.fill(0, 128, 255);
+      if (typeof channel === 'number' && channelColors[channel]) {
+        this.fill(channelColors[channel]);
       }
 
       // draw the white key
@@ -597,7 +624,7 @@ onMounted(() => {
     }
 
     drawNotes() {
-      [...whiteNotes.value, ...blackNotes.value].forEach(({ time, duration, key: { pos, color } }) => {
+      [...whiteNotes.value, ...blackNotes.value].forEach(({ time, duration, channel, key: { pos, color } }) => {
         // y-coordinate of the note
         const y = ((currentTime.value + 4) - (time + duration)) * (keyY.value / 4) - 4;
 
@@ -613,12 +640,12 @@ onMounted(() => {
         }
 
         // draw the note
-        this.drawNote(pos, color, y, height);
+        this.drawNote(pos, color, channel, y, height);
       });
     }
 
-    drawNote(pos: number, color: string, y: number, height: number) {
-      this.fill(0, 128, 255);
+    drawNote(pos: number, color: string, channel: number, y: number, height: number) {
+      this.fill(channelColors[channel]);
       this.stroke(32);
 
       // draw the note of white key
