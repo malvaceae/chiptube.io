@@ -417,34 +417,38 @@ const play = async () => {
   tracks.value.forEach(({ instrument: { number }, notes }, i) => {
     const instrument = instruments.value[i];
 
-    const part = new Tone.Part((time, { midi, name, duration, velocity }) => {
+    notes.forEach((note) => (note.duration = ((duration) => {
       // the current sustain
       const currentSustain = sustains[number]?.filter?.(({ time }) => {
-        return time <= Tone.Transport.seconds;
+        return time <= note.time + note.duration;
       })?.pop?.();
 
       if (currentSustain?.value) {
-        // the next sustain
-        const nextSustain = sustains[number]?.find?.(({ time }) => {
-          return time > Tone.Transport.seconds;
-        });
+        duration = Infinity;
+      }
 
-        if (nextSustain?.value === 0) {
-          duration = format.between(duration * 4, duration, nextSustain.time - Tone.Transport.seconds);
-        } else {
-          duration = duration * 4;
-        }
+      // the next sustain
+      const nextSustain = sustains[number]?.find?.(({ time }) => {
+        return time > note.time + note.duration;
+      });
+
+      if (nextSustain?.value === 0) {
+        duration = Math.max(note.duration, nextSustain.time - note.time);
       }
 
       // the next note
-      const nextNote = notesByKey.value[midi]?.find?.(({ time }) => {
-        return time > Tone.Transport.seconds;
+      const nextNote = notesByKey.value[note.midi]?.find?.(({ time }) => {
+        return time > note.time;
       });
 
       if (nextNote) {
-        duration = Math.min(duration, nextNote.time - Tone.Transport.seconds);
+        duration = Math.min(duration, nextNote.time - note.time);
       }
 
+      return duration;
+    })(note.duration)));
+
+    const part = new Tone.Part((time, { name, duration, velocity }) => {
       // attack and release the note
       if (instrument instanceof Tone.PolySynth || instrument instanceof Tone.Sampler) {
         instrument.triggerAttackRelease(name, duration, time, velocity);
