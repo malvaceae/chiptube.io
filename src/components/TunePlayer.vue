@@ -285,32 +285,26 @@ const play = async () => {
 
     // acoustic grand piano
     if (number === 0) {
-      samples[number] = new Promise<Tone.Sampler>((resolve, reject) => {
-        const sampler = new Tone.Sampler({
-          urls: {
-            'A7': 'A7.mp3',
-            'A6': 'A6.mp3',
-            'A#5': 'As5.mp3',
-            'B4': 'B4.mp3',
-            'C3': 'C3.mp3',
-            'C#2': 'Cs2.mp3',
-            'D1': 'D1.mp3',
-            'D#7': 'Ds7.mp3',
-            'D#6': 'Ds6.mp3',
-            'E5': 'E5.mp3',
-            'F4': 'F4.mp3',
-            'F#3': 'Fs3.mp3',
-            'G2': 'G2.mp3',
-            'G#1': 'Gs1.mp3',
-          },
-          baseUrl: '/samples/piano/',
-          release: 2,
-          onload() {
-            resolve(sampler);
-          },
-          onerror: reject,
-        }).toDestination();
-      });
+      samples[number] = new Tone.Sampler({
+        urls: {
+          'A7': 'A7.mp3',
+          'A6': 'A6.mp3',
+          'A#5': 'As5.mp3',
+          'B4': 'B4.mp3',
+          'C3': 'C3.mp3',
+          'C#2': 'Cs2.mp3',
+          'D1': 'D1.mp3',
+          'D#7': 'Ds7.mp3',
+          'D#6': 'Ds6.mp3',
+          'E5': 'E5.mp3',
+          'F4': 'F4.mp3',
+          'F#3': 'Fs3.mp3',
+          'G2': 'G2.mp3',
+          'G#1': 'Gs1.mp3',
+        },
+        baseUrl: '/samples/piano/',
+        release: 2,
+      }).toDestination();
       return samples;
     }
 
@@ -391,12 +385,15 @@ const play = async () => {
       },
     }).toDestination();
     return samples;
-  }, {} as Record<number, Tone.PolySynth | Tone.Sampler | Promise<Tone.PolySynth | Tone.Sampler>>);
+  }, {} as Record<number, Tone.PolySynth | Tone.Sampler>);
 
   // instruments
-  instruments.value = await Promise.all(tracks.value.map((track) => {
-    return samples[track.instrument.number];
-  }));
+  instruments.value = tracks.value.map(({ instrument: { number } }) => {
+    return samples[number];
+  });
+
+  // wait for samplers to load
+  await Tone.loaded();
 
   // sustains
   const sustains = tracks.value.reduce((sustains, { instrument: { number }, controlChanges: { sustain } }) => {
