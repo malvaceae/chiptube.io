@@ -138,7 +138,7 @@ const ppq = computed(() => midi.value?.header?.ppq ?? 480);
 const tracks = computed(() => midi.value?.tracks ?? []);
 
 // instruments
-const instruments = shallowRef<(Tone.PolySynth | Tone.Sampler)[]>([]);
+const instruments = shallowRef<(Tone.NoiseSynth | Tone.PolySynth | Tone.Sampler)[]>([]);
 
 // current time in seconds
 const currentTime = ref(0);
@@ -277,15 +277,15 @@ const play = async () => {
   // download and parse the midi file
   midi.value = await Midi.fromUrl(url);
 
-  // samples
-  const samples = [...new Set(tracks.value.map(({ instrument: { number } }) => number))].reduce((samples, number) => {
-    if (samples[number]) {
-      return samples;
+  // samplers
+  const samplers = tracks.value.reduce((samplers, { instrument: { number, percussion } }) => {
+    if (samplers[number] || percussion) {
+      return samplers;
     }
 
     // acoustic grand piano
     if (number === 0) {
-      samples[number] = new Tone.Sampler({
+      samplers[number] = new Tone.Sampler({
         urls: {
           'A7': 'A7.mp3',
           'A6': 'A6.mp3',
@@ -305,12 +305,35 @@ const play = async () => {
         baseUrl: '/samples/piano/',
         release: 2,
       }).toDestination();
-      return samples;
+    }
+
+    return samplers;
+  }, {} as Record<number, Tone.Sampler>);
+
+  // instruments
+  instruments.value = tracks.value.map(({ instrument: { number, percussion } }) => {
+    if (samplers[number] && !percussion) {
+      return samplers[number];
+    }
+
+    // percussion instruments
+    if (percussion) {
+      return new Tone.NoiseSynth({
+        noise: {
+          type: 'white',
+        },
+        envelope: {
+          attack: .001,
+          decay: .2,
+          sustain: .1,
+          release: .03,
+        },
+      }).toDestination();
     }
 
     // square synths (guitars)
     if (number >= 24 && number <= 31) {
-      samples[number] = new Tone.PolySynth(Tone.Synth, {
+      return new Tone.PolySynth(Tone.Synth, {
         oscillator: {
           type: 'square',
         },
@@ -321,12 +344,11 @@ const play = async () => {
           release: .7,
         },
       }).toDestination();
-      return samples;
     }
 
     // triangle synths (bass instruments)
     if (number >= 32 && number <= 39) {
-      samples[number] = new Tone.PolySynth(Tone.Synth, {
+      return new Tone.PolySynth(Tone.Synth, {
         oscillator: {
           type: 'triangle',
         },
@@ -337,12 +359,11 @@ const play = async () => {
           release: .7,
         },
       }).toDestination();
-      return samples;
     }
 
     // sawtooth synths (stringed instruments)
     if (number >= 40 && number <= 55 || number === 81) {
-      samples[number] = new Tone.PolySynth(Tone.Synth, {
+      return new Tone.PolySynth(Tone.Synth, {
         oscillator: {
           type: 'sawtooth',
         },
@@ -353,12 +374,11 @@ const play = async () => {
           release: .7,
         },
       }).toDestination();
-      return samples;
     }
 
     // square synths (wind instruments)
     if (number >= 56 && number <= 80) {
-      samples[number] = new Tone.PolySynth(Tone.Synth, {
+      return new Tone.PolySynth(Tone.Synth, {
         oscillator: {
           type: 'square',
         },
@@ -369,11 +389,10 @@ const play = async () => {
           release: .7,
         },
       }).toDestination();
-      return samples;
     }
 
     // pulse synths for all else
-    samples[number] = new Tone.PolySynth(Tone.Synth, {
+    return new Tone.PolySynth(Tone.Synth, {
       oscillator: {
         type: 'pulse',
       },
@@ -384,12 +403,6 @@ const play = async () => {
         release: .7,
       },
     }).toDestination();
-    return samples;
-  }, {} as Record<number, Tone.PolySynth | Tone.Sampler>);
-
-  // instruments
-  instruments.value = tracks.value.map(({ instrument: { number } }) => {
-    return samples[number];
   });
 
   // wait for samplers to load
@@ -433,7 +446,11 @@ const play = async () => {
       }
 
       // attack and release the note
-      instrument.triggerAttackRelease(name, duration, time, velocity);
+      if (instrument instanceof Tone.PolySynth || instrument instanceof Tone.Sampler) {
+        instrument.triggerAttackRelease(name, duration, time, velocity);
+      } else {
+        instrument.triggerAttackRelease(duration, time, velocity);
+      }
     }, notes);
 
     part.start();
@@ -464,11 +481,6 @@ const pause = () => {
   // pause
   Tone.Transport.pause();
 
-  // release all instruments
-  instruments.value.forEach((instrument) => {
-    instrument.releaseAll();
-  });
-
   // set current state to paused
   currentState.value = 'paused';
 };
@@ -480,11 +492,6 @@ const stop = () => {
 
   // cancel
   Tone.Transport.cancel();
-
-  // release all instruments
-  instruments.value.forEach((instrument) => {
-    instrument.releaseAll();
-  });
 
   // set current state to stopped
   currentState.value = 'stopped';
@@ -508,11 +515,6 @@ const toggle = () => {
 // seek
 const seek = (seconds: number) => {
   Tone.Transport.seconds = seconds;
-
-  // release all instruments
-  instruments.value.forEach((instrument) => {
-    instrument.releaseAll();
-  });
 };
 
 // seekbar value
