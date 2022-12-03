@@ -364,6 +364,26 @@ const play = async () => {
       return samplers;
     }
 
+    // electric guitar
+    if (number >= 26 && number <= 31) {
+      samplers[number] = new Tone.Sampler({
+        urls: {
+          'C#2': 'Cs2.mp3',
+          'F#2': 'Fs2.mp3',
+          'A2': 'A2.mp3',
+          'C3': 'C3.mp3',
+          'D#3': 'Ds3.mp3',
+          'F#4': 'Fs4.mp3',
+          'A4': 'A4.mp3',
+          'C5': 'C5.mp3',
+          'D#5': 'Ds5.mp3',
+        },
+        baseUrl: '/samples/guitar-electric/',
+        release: 2,
+      }).toDestination();
+      return samplers;
+    }
+
     // electric bass
     if (number >= 33 && number <= 34) {
       samplers[number] = new Tone.Sampler({
@@ -401,7 +421,7 @@ const play = async () => {
     }
 
     // square synths (guitars)
-    if (number >= 24 && number <= 31) {
+    if (number >= 24 && number <= 25) {
       return new Tone.PolySynth(Tone.Synth, {
         oscillator: {
           type: 'square',
