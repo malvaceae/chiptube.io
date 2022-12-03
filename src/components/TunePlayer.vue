@@ -278,8 +278,8 @@ const play = async () => {
   midi.value = await Midi.fromUrl(url);
 
   // samplers
-  const samplers = tracks.value.reduce((samplers, { instrument: { number, percussion } }) => {
-    if (samplers[number] && !percussion || percussion && samplers[128]) {
+  const samplers = tracks.value.reduce((samplers, { instrument: { number, percussion }, notes }) => {
+    if (samplers[number] && !percussion || percussion && samplers[128] || notes.length === 0) {
       return samplers;
     }
 
