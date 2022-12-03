@@ -195,7 +195,7 @@ const notesByKey = computed(() => notesWithKey.value.reduce((notes, note) => {
 
 // set the volume
 const setVolume = (volume: number) => {
-  Tone.Destination.volume.value = Math.log10(volume) * 20 - 40 - 10;
+  Tone.Destination.volume.value = Math.log10(volume) * 30 - 60 - 15;
 };
 
 // set the mute
@@ -423,7 +423,7 @@ const play = async () => {
     // square synths (guitars)
     if (number >= 24 && number <= 25) {
       return new Tone.PolySynth(Tone.Synth, {
-        volume: -10,
+        volume: -5,
         oscillator: {
           type: 'square',
         },
@@ -439,7 +439,7 @@ const play = async () => {
     // triangle synths (bass instruments)
     if (number === 32 || number >= 35 && number <= 39) {
       return new Tone.PolySynth(Tone.Synth, {
-        volume: -10,
+        volume: -5,
         oscillator: {
           type: 'triangle',
         },
@@ -455,7 +455,7 @@ const play = async () => {
     // sawtooth synths (stringed instruments)
     if (number >= 40 && number <= 55 || number === 81) {
       return new Tone.PolySynth(Tone.Synth, {
-        volume: -10,
+        volume: -5,
         oscillator: {
           type: 'sawtooth',
         },
@@ -471,7 +471,7 @@ const play = async () => {
     // square synths (wind instruments)
     if (number >= 56 && number <= 80) {
       return new Tone.PolySynth(Tone.Synth, {
-        volume: -10,
+        volume: -5,
         oscillator: {
           type: 'square',
         },
@@ -486,7 +486,7 @@ const play = async () => {
 
     // pulse synths for all else
     return new Tone.PolySynth(Tone.Synth, {
-      volume: -10,
+      volume: -5,
       oscillator: {
         type: 'pulse',
       },
