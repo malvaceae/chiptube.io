@@ -364,6 +364,33 @@ const play = async () => {
       return samplers;
     }
 
+    // electric bass
+    if (number >= 33 && number <= 34) {
+      samplers[number] = new Tone.Sampler({
+        urls: {
+          'C#1': 'Cs1.mp3',
+          'E1': 'E1.mp3',
+          'G1': 'G1.mp3',
+          'A#1': 'As1.mp3',
+          'C#2': 'Cs2.mp3',
+          'E2': 'E2.mp3',
+          'G2': 'G2.mp3',
+          'A#2': 'As2.mp3',
+          'C#3': 'Cs3.mp3',
+          'E3': 'E3.mp3',
+          'G3': 'G3.mp3',
+          'A#3': 'As3.mp3',
+          'C#4': 'Cs4.mp3',
+          'E4': 'E4.mp3',
+          'G4': 'G4.mp3',
+          'A#4': 'As4.mp3',
+        },
+        baseUrl: '/samples/bass-electric/',
+        release: 2,
+      }).toDestination();
+      return samplers;
+    }
+
     return samplers;
   }, {} as Record<number, Tone.Sampler>);
 
@@ -389,7 +416,7 @@ const play = async () => {
     }
 
     // triangle synths (bass instruments)
-    if (number >= 32 && number <= 39) {
+    if (number === 32 || number >= 35 && number <= 39) {
       return new Tone.PolySynth(Tone.Synth, {
         oscillator: {
           type: 'triangle',
