@@ -339,8 +339,8 @@ const play = async () => {
       return samplers;
     }
 
-    // acoustic grand piano
-    if (number === 0) {
+    // piano
+    if (number >= 0 && number <= 7) {
       samplers[number] = new Tone.Sampler({
         urls: {
           'D1': 'D1.mp3',
