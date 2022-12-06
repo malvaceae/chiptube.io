@@ -1,0 +1,282 @@
+// Tone.js
+import * as Tone from 'tone';
+
+export const useInstrument = () => {
+  // get instrument
+  const getInstrument = (number: number, percussion: boolean) => {
+    // percussion instruments
+    if (percussion) {
+      return getSampler('percussion');
+    }
+
+    // piano
+    if (number >= 0 && number <= 7) {
+      return getSampler('piano');
+    }
+
+    // square synths (guitars)
+    if (number >= 24 && number <= 25) {
+      return getSynth('guitar');
+    }
+
+    // electric guitar
+    if (number >= 26 && number <= 31) {
+      return getSampler('guitar-electric');
+    }
+
+    // triangle synths (bass instruments)
+    if (number === 32) {
+      return getSynth('bass');
+    }
+
+    // electric bass
+    if (number === 33 || number === 34) {
+      return getSampler('bass-electric');
+    }
+
+    // triangle synths (bass instruments)
+    if (number >= 35 && number <= 39) {
+      return getSynth('bass');
+    }
+
+    // sawtooth synths (stringed instruments)
+    if (number >= 40 && number <= 55) {
+      return getSynth('stringed');
+    }
+
+    // square synths (wind instruments)
+    if (number >= 56 && number <= 80) {
+      return getSynth('wind');
+    }
+
+    // sawtooth synths (stringed instruments)
+    if (number === 81) {
+      return getSynth('stringed');
+    }
+
+    // pulse synths for all else
+    return getSynth('pulse');
+  };
+
+  // get sampler
+  const getSampler = ((cache: Record<string, Tone.Sampler> = {}) => (name: string) => {
+    // percussion instruments
+    if (name === 'percussion') {
+      return cache[name] ??= new Tone.Sampler({
+        urls: {
+          'D#1': 'Ds1.mp3',
+          'E1': 'E1.mp3',
+          'F1': 'F1.mp3',
+          'F#1': 'Fs1.mp3',
+          'G1': 'G1.mp3',
+          'A#1': 'As1.mp3',
+          'B1': 'B1.mp3',
+          'C2': 'C2.mp3',
+          'C#2': 'Cs2.mp3',
+          'D2': 'D2.mp3',
+          'D#2': 'Ds2.mp3',
+          'E2': 'E2.mp3',
+          'F2': 'F2.mp3',
+          'F#2': 'Fs2.mp3',
+          'G2': 'G2.mp3',
+          'G#2': 'Gs2.mp3',
+          'A2': 'A2.mp3',
+          'A#2': 'As2.mp3',
+          'B2': 'B2.mp3',
+          'C3': 'C3.mp3',
+          'C#3': 'Cs3.mp3',
+          'D3': 'D3.mp3',
+          'D#3': 'Ds3.mp3',
+          'E3': 'E3.mp3',
+          'F3': 'F3.mp3',
+          'F#3': 'Fs3.mp3',
+          'G3': 'G3.mp3',
+          'G#3': 'Gs3.mp3',
+          'A3': 'A3.mp3',
+          'A#3': 'As3.mp3',
+          'B3': 'B3.mp3',
+          'C4': 'C4.mp3',
+          'C#4': 'Cs4.mp3',
+          'D#4': 'Ds4.mp3',
+          'E4': 'E4.mp3',
+          'F4': 'F4.mp3',
+          'F#4': 'Fs4.mp3',
+          'G4': 'G4.mp3',
+          'G#4': 'Gs4.mp3',
+          'A4': 'A4.mp3',
+          'A#4': 'As4.mp3',
+          'B4': 'B4.mp3',
+          'C5': 'C5.mp3',
+          'D5': 'D5.mp3',
+          'D#5': 'Ds5.mp3',
+        },
+        baseUrl: `/samples/${name}/`,
+        release: 2,
+      });
+    }
+
+    // piano
+    if (name === 'piano') {
+      return cache[name] ??= new Tone.Sampler({
+        urls: {
+          'D1': 'D1.mp3',
+          'G#1': 'Gs1.mp3',
+          'C#2': 'Cs2.mp3',
+          'G2': 'G2.mp3',
+          'C3': 'C3.mp3',
+          'F#3': 'Fs3.mp3',
+          'F4': 'F4.mp3',
+          'B4': 'B4.mp3',
+          'E5': 'E5.mp3',
+          'A#5': 'As5.mp3',
+          'D#6': 'Ds6.mp3',
+          'A6': 'A6.mp3',
+          'D#7': 'Ds7.mp3',
+          'A7': 'A7.mp3',
+        },
+        baseUrl: `/samples/${name}/`,
+        release: 2,
+      });
+    }
+
+    // electric guitar
+    if (name === 'guitar-electric') {
+      return cache[name] ??= new Tone.Sampler({
+        urls: {
+          'C#2': 'Cs2.mp3',
+          'F#2': 'Fs2.mp3',
+          'A2': 'A2.mp3',
+          'C3': 'C3.mp3',
+          'D#3': 'Ds3.mp3',
+          'F#4': 'Fs4.mp3',
+          'A4': 'A4.mp3',
+          'C5': 'C5.mp3',
+          'D#5': 'Ds5.mp3',
+        },
+        baseUrl: `/samples/${name}/`,
+        release: 2,
+      });
+    }
+
+    // electric bass
+    if (name === 'bass-electric') {
+      return cache[name] ??= new Tone.Sampler({
+        urls: {
+          'C#1': 'Cs1.mp3',
+          'E1': 'E1.mp3',
+          'G1': 'G1.mp3',
+          'A#1': 'As1.mp3',
+          'C#2': 'Cs2.mp3',
+          'E2': 'E2.mp3',
+          'G2': 'G2.mp3',
+          'A#2': 'As2.mp3',
+          'C#3': 'Cs3.mp3',
+          'E3': 'E3.mp3',
+          'G3': 'G3.mp3',
+          'A#3': 'As3.mp3',
+          'C#4': 'Cs4.mp3',
+          'E4': 'E4.mp3',
+          'G4': 'G4.mp3',
+          'A#4': 'As4.mp3',
+        },
+        baseUrl: `/samples/${name}/`,
+        release: 2,
+      });
+    }
+
+    // throw error for all else
+    throw Error(`The ${name} not found.`);
+  })();
+
+  // get synth
+  const getSynth = (name: string) => {
+    // square synths (guitars)
+    if (name === 'guitar') {
+      return new Tone.PolySynth(Tone.Synth, {
+        volume: -5,
+        oscillator: {
+          type: 'square',
+        },
+        envelope: {
+          attack: .001,
+          decay: .3,
+          sustain: .3,
+          release: .7,
+        },
+      });
+    }
+
+    // triangle synths (bass instruments)
+    if (name === 'bass') {
+      return new Tone.PolySynth(Tone.Synth, {
+        volume: -5,
+        oscillator: {
+          type: 'triangle',
+        },
+        envelope: {
+          attack: .01,
+          decay: .5,
+          sustain: .5,
+          release: .7,
+        },
+      });
+    }
+
+    // sawtooth synths (stringed instruments)
+    if (name === 'stringed') {
+      return new Tone.PolySynth(Tone.Synth, {
+        volume: -5,
+        oscillator: {
+          type: 'sawtooth',
+        },
+        envelope: {
+          attack: .05,
+          decay: .5,
+          sustain: .5,
+          release: .7,
+        },
+      });
+    }
+
+    // square synths (wind instruments)
+    if (name === 'wind') {
+      return new Tone.PolySynth(Tone.Synth, {
+        volume: -5,
+        oscillator: {
+          type: 'square',
+        },
+        envelope: {
+          attack: .001,
+          decay: .3,
+          sustain: .3,
+          release: .7,
+        },
+      });
+    }
+
+    // pulse synths
+    if (name === 'pulse') {
+      return new Tone.PolySynth(Tone.Synth, {
+        volume: -5,
+        oscillator: {
+          type: 'pulse',
+        },
+        envelope: {
+          attack: .001,
+          decay: .1,
+          sustain: .3,
+          release: .7,
+        },
+      });
+    }
+
+    // throw error for all else
+    throw Error(`The ${name} not found.`);
+  };
+
+  return {
+    getInstrument,
+    getSampler,
+    getSynth,
+  };
+};
