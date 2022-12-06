@@ -13,7 +13,6 @@ export type SamplerName =
 // Synth Name
 export type SynthName =
   | 'bass'
-  | 'guitar'
   | 'pulse'
   | 'stringed'
   | 'wind';
@@ -259,20 +258,6 @@ export const useInstrument = () => {
             attack: .01,
             decay: .5,
             sustain: .5,
-            release: .7,
-          },
-        });
-      case 'guitar':
-        // square synths (guitars)
-        return new Tone.PolySynth(Tone.Synth, {
-          volume,
-          oscillator: {
-            type: 'square',
-          },
-          envelope: {
-            attack: .001,
-            decay: .3,
-            sustain: .3,
             release: .7,
           },
         });
