@@ -8,6 +8,7 @@ export type SamplerName =
   | 'guitar-electric'
   | 'guitar-nylon'
   | 'harp'
+  | 'oboe'
   | 'percussion'
   | 'piano'
   | 'trumpet';
@@ -83,7 +84,17 @@ export const useInstrument = () => {
     }
 
     // square synths (wind instruments)
-    if (number >= 57 && number <= 80) {
+    if (number >= 57 && number <= 67) {
+      return getSynth('wind');
+    }
+
+    // oboe
+    if (number === 68) {
+      return getSampler('oboe');
+    }
+
+    // square synths (wind instruments)
+    if (number >= 69 && number <= 80) {
       return getSynth('wind');
     }
 
@@ -198,6 +209,25 @@ export const useInstrument = () => {
               'B5': 'B5.mp3',
               'F6': 'F6.mp3',
               'D7': 'D7.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'oboe':
+          // oboe
+          return new Tone.Sampler({
+            urls: {
+              'F3': 'F3.mp3',
+              'A3': 'A3.mp3',
+              'C4': 'C4.mp3',
+              'D#4': 'Ds4.mp3',
+              'F4': 'F4.mp3',
+              'G4': 'G4.mp3',
+              'A#4': 'As4.mp3',
+              'D5': 'D5.mp3',
+              'F5': 'F5.mp3',
+              'A5': 'A5.mp3',
+              'C6': 'C6.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
