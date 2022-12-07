@@ -7,6 +7,7 @@ export type SamplerName =
   | 'guitar-acoustic'
   | 'guitar-electric'
   | 'guitar-nylon'
+  | 'harp'
   | 'percussion'
   | 'piano'
   | 'trumpet';
@@ -62,7 +63,17 @@ export const useInstrument = () => {
     }
 
     // sawtooth synths (stringed instruments)
-    if (number >= 40 && number <= 55) {
+    if (number >= 40 && number <= 45) {
+      return getSynth('stringed');
+    }
+
+    // harp
+    if (number === 46) {
+      return getSampler('harp');
+    }
+
+    // sawtooth synths (stringed instruments)
+    if (number >= 47 && number <= 55) {
       return getSynth('stringed');
     }
 
@@ -167,6 +178,26 @@ export const useInstrument = () => {
               'E5': 'E5.mp3',
               'G#5': 'Gs5.mp3',
               'A5': 'A5.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'harp':
+          // harp
+          return new Tone.Sampler({
+            urls: {
+              'G1': 'G1.mp3',
+              'B1': 'B1.mp3',
+              'F2': 'F2.mp3',
+              'C3': 'C3.mp3',
+              'E3': 'E3.mp3',
+              'D4': 'D4.mp3',
+              'A4': 'A4.mp3',
+              'C5': 'C5.mp3',
+              'G5': 'G5.mp3',
+              'B5': 'B5.mp3',
+              'F6': 'F6.mp3',
+              'D7': 'D7.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
