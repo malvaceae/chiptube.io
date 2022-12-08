@@ -288,9 +288,6 @@ const play = async () => {
     return getInstrument(notes.length > 0 ? number : 128, percussion).toDestination();
   });
 
-  // wait for samplers to load
-  await Tone.loaded();
-
   // sustains
   const sustains = tracks.value.reduce((sustains, { instrument: { number }, controlChanges: { sustain } }) => {
     return sustain ? { ...sustains, [number]: sustain } : sustains;
@@ -337,6 +334,9 @@ const play = async () => {
 
     part.start();
   });
+
+  // wait for instruments to load
+  await Tone.loaded();
 
   // start
   start();
@@ -602,7 +602,7 @@ onMounted(() => {
 // finalize
 onUnmounted(() => {
   // remove the canvas
-  canvas.value?.remove();
+  canvas.value?.remove?.();
 
   // stop
   stop();
