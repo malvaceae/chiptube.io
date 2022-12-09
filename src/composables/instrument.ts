@@ -15,6 +15,7 @@ export type SamplerName =
   | 'percussion'
   | 'piano'
   | 'strings'
+  | 'trombone'
   | 'trumpet';
 
 // Synth Name
@@ -97,8 +98,13 @@ export const useInstrument = () => {
       return getSampler('trumpet');
     }
 
+    // trombone
+    if (number === 57) {
+      return getSampler('trombone');
+    }
+
     // square synths (wind instruments)
-    if (number >= 57 && number <= 59) {
+    if (number >= 58 && number <= 59) {
       return getSynth('wind');
     }
 
@@ -419,6 +425,23 @@ export const useInstrument = () => {
               'B5': 'B5.mp3',
               'F6': 'F6.mp3',
               'D7': 'D7.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'trombone':
+          // trombone
+          return new Tone.Sampler({
+            urls: {
+              'F2': 'F2.mp3',
+              'A#2': 'As2.mp3',
+              'D#3': 'Ds3.mp3',
+              'G#3': 'Gs3.mp3',
+              'A#3': 'As3.mp3',
+              'C#4': 'Cs4.mp3',
+              'C4': 'C4.mp3',
+              'D4': 'D4.mp3',
+              'F4': 'F4.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
