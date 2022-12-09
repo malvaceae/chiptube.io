@@ -11,6 +11,7 @@ export type SamplerName =
   | 'oboe'
   | 'percussion'
   | 'piano'
+  | 'strings'
   | 'trumpet';
 
 // Synth Name
@@ -74,7 +75,17 @@ export const useInstrument = () => {
     }
 
     // sawtooth synths (stringed instruments)
-    if (number >= 47 && number <= 55) {
+    if (number === 47) {
+      return getSynth('stringed');
+    }
+
+    // strings
+    if (number >= 48 && number <= 51) {
+      return getSampler('strings');
+    }
+
+    // sawtooth synths (stringed instruments)
+    if (number >= 52 && number <= 55) {
       return getSynth('stringed');
     }
 
@@ -305,6 +316,25 @@ export const useInstrument = () => {
               'A6': 'A6.mp3',
               'D#7': 'Ds7.mp3',
               'A7': 'A7.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'strings':
+          // strings
+          return new Tone.Sampler({
+            urls: {
+              'F3': 'F3.mp3',
+              'A3': 'A3.mp3',
+              'C4': 'C4.mp3',
+              'D#4': 'Ds4.mp3',
+              'F4': 'F4.mp3',
+              'G4': 'G4.mp3',
+              'A#4': 'As4.mp3',
+              'D5': 'D5.mp3',
+              'F5': 'F5.mp3',
+              'A5': 'A5.mp3',
+              'C6': 'C6.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
