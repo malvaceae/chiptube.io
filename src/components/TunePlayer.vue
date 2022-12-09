@@ -297,10 +297,10 @@ const play = async () => {
   tracks.value.forEach(({ instrument: { number }, notes }, i) => {
     const instrument = instruments.value[i];
 
-    notes.forEach((note) => (note.duration = ((duration) => {
+    const value = notes.map(({ midi, name, duration: originalDuration, time, velocity }) => ((duration) => {
       // the current sustain
-      const currentSustain = sustains[number]?.filter?.(({ time }) => {
-        return time <= note.time + note.duration;
+      const currentSustain = sustains[number]?.filter?.((sustain) => {
+        return sustain.time <= time + originalDuration;
       })?.pop?.();
 
       if (currentSustain?.value) {
@@ -308,29 +308,29 @@ const play = async () => {
       }
 
       // the next sustain
-      const nextSustain = sustains[number]?.find?.(({ time }) => {
-        return time > note.time + note.duration;
+      const nextSustain = sustains[number]?.find?.((sustain) => {
+        return sustain.time > time + originalDuration;
       });
 
       if (nextSustain?.value === 0) {
-        duration = Math.max(note.duration, nextSustain.time - note.time);
+        duration = Math.max(originalDuration, nextSustain.time - time);
       }
 
       // the next note
-      const nextNote = notesByKey.value[note.midi]?.find?.(({ time }) => {
-        return time > note.time;
+      const nextNote = notes.filter((note) => note.midi === midi).find((note) => {
+        return note.time > time;
       });
 
       if (nextNote) {
-        duration = Math.min(duration, nextNote.time - note.time);
+        duration = Math.min(duration, nextNote.time - time);
       }
 
-      return duration;
-    })(note.duration)));
+      return { name, duration, time, velocity };
+    })(originalDuration));
 
     const part = new Tone.Part((time, { name, duration, velocity }) => {
       instrument.triggerAttackRelease(name, duration, time, velocity);
-    }, notes);
+    }, value);
 
     part.start();
   });
