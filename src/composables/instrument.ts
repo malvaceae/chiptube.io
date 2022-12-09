@@ -4,6 +4,7 @@ import * as Tone from 'tone';
 // Sampler Name
 export type SamplerName =
   | 'bass-electric'
+  | 'bassoon'
   | 'guitar-acoustic'
   | 'guitar-electric'
   | 'guitar-nylon'
@@ -105,7 +106,17 @@ export const useInstrument = () => {
     }
 
     // square synths (wind instruments)
-    if (number >= 69 && number <= 80) {
+    if (number === 69) {
+      return getSynth('wind');
+    }
+
+    // bassoon
+    if (number === 70) {
+      return getSampler('bassoon');
+    }
+
+    // square synths (wind instruments)
+    if (number >= 71 && number <= 80) {
       return getSynth('wind');
     }
 
@@ -142,6 +153,24 @@ export const useInstrument = () => {
               'E4': 'E4.mp3',
               'G4': 'G4.mp3',
               'A#4': 'As4.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'bassoon':
+          // bassoon
+          return new Tone.Sampler({
+            urls: {
+              'G2': 'G2.mp3',
+              'A2': 'A2.mp3',
+              'C3': 'C3.mp3',
+              'G3': 'G3.mp3',
+              'A3': 'A3.mp3',
+              'C4': 'C4.mp3',
+              'E4': 'E4.mp3',
+              'G4': 'G4.mp3',
+              'A4': 'A4.mp3',
+              'C5': 'C5.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
