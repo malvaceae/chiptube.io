@@ -15,6 +15,7 @@ export type SamplerName =
   | 'percussion'
   | 'piano'
   | 'strings'
+  | 'timpani'
   | 'trombone'
   | 'trumpet'
   | 'tuba';
@@ -79,9 +80,9 @@ export const useInstrument = () => {
       return getSampler('harp');
     }
 
-    // sawtooth synths (stringed instruments)
+    // timpani
     if (number === 47) {
-      return getSynth('stringed');
+      return getSampler('timpani');
     }
 
     // strings
@@ -301,6 +302,26 @@ export const useInstrument = () => {
           });
         case 'harp':
           // harp
+          return new Tone.Sampler({
+            urls: {
+              'G1': 'G1.mp3',
+              'B1': 'B1.mp3',
+              'F2': 'F2.mp3',
+              'C3': 'C3.mp3',
+              'E3': 'E3.mp3',
+              'D4': 'D4.mp3',
+              'A4': 'A4.mp3',
+              'C5': 'C5.mp3',
+              'G5': 'G5.mp3',
+              'B5': 'B5.mp3',
+              'F6': 'F6.mp3',
+              'D7': 'D7.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'timpani':
+          // timpani
           return new Tone.Sampler({
             urls: {
               'G1': 'G1.mp3',
