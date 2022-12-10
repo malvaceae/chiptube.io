@@ -18,6 +18,7 @@ export type SamplerName =
   | 'piano'
   | 'piccolo'
   | 'pizzicato'
+  | 'saxophone'
   | 'seashore'
   | 'strings'
   | 'timpani'
@@ -136,8 +137,13 @@ export const useInstrument = () => {
     }
 
     // square synths (wind instruments)
-    if (number >= 61 && number <= 67) {
+    if (number >= 61 && number <= 63) {
       return getSynth('wind');
+    }
+
+    // saxophone
+    if (number >= 64 && number <= 67) {
+      return getSampler('saxophone');
     }
 
     // oboe
@@ -528,6 +534,30 @@ export const useInstrument = () => {
               'B5': 'B5.mp3',
               'F6': 'F6.mp3',
               'D7': 'D7.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'saxophone':
+          // saxophone
+          return new Tone.Sampler({
+            urls: {
+              'C#3': 'Cs3.mp3',
+              'D#3': 'Ds3.mp3',
+              'F3': 'F3.mp3',
+              'G3': 'G3.mp3',
+              'A#3': 'As3.mp3',
+              'B3': 'B3.mp3',
+              'C4': 'C4.mp3',
+              'D4': 'D4.mp3',
+              'E4': 'E4.mp3',
+              'F#4': 'Fs4.mp3',
+              'G#4': 'Gs4.mp3',
+              'A4': 'A4.mp3',
+              'C#5': 'Cs5.mp3',
+              'D#5': 'Ds5.mp3',
+              'F5': 'F5.mp3',
+              'G5': 'G5.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
