@@ -16,6 +16,7 @@ export type SamplerName =
   | 'oboe'
   | 'percussion'
   | 'piano'
+  | 'piccolo'
   | 'strings'
   | 'timpani'
   | 'trombone'
@@ -152,8 +153,13 @@ export const useInstrument = () => {
       return getSampler('clarinet');
     }
 
+    // piccolo
+    if (number === 72) {
+      return getSampler('piccolo');
+    }
+
     // square synths (wind instruments)
-    if (number >= 72 && number <= 80) {
+    if (number >= 73 && number <= 80) {
       return getSynth('wind');
     }
 
@@ -473,6 +479,24 @@ export const useInstrument = () => {
               'A6': 'A6.mp3',
               'D#7': 'Ds7.mp3',
               'A7': 'A7.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'piccolo':
+          // piccolo
+          return new Tone.Sampler({
+            urls: {
+              'C4': 'C4.mp3',
+              'E4': 'E4.mp3',
+              'A4': 'A4.mp3',
+              'C5': 'C5.mp3',
+              'E5': 'E5.mp3',
+              'A5': 'A5.mp3',
+              'C6': 'C6.mp3',
+              'E6': 'E6.mp3',
+              'A6': 'A6.mp3',
+              'C7': 'C7.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
