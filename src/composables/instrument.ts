@@ -17,6 +17,7 @@ export type SamplerName =
   | 'percussion'
   | 'piano'
   | 'piccolo'
+  | 'seashore'
   | 'strings'
   | 'timpani'
   | 'trombone'
@@ -166,6 +167,11 @@ export const useInstrument = () => {
     // sawtooth synths (stringed instruments)
     if (number === 81) {
       return getSynth('stringed');
+    }
+
+    // seashore
+    if (number === 122) {
+      return getSampler('seashore');
     }
 
     // pulse synths for all else
@@ -497,6 +503,26 @@ export const useInstrument = () => {
               'E6': 'E6.mp3',
               'A6': 'A6.mp3',
               'C7': 'C7.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'seashore':
+          // seashore
+          return new Tone.Sampler({
+            urls: {
+              'G1': 'G1.mp3',
+              'B1': 'B1.mp3',
+              'F2': 'F2.mp3',
+              'C3': 'C3.mp3',
+              'E3': 'E3.mp3',
+              'D4': 'D4.mp3',
+              'A4': 'A4.mp3',
+              'C5': 'C5.mp3',
+              'G5': 'G5.mp3',
+              'B5': 'B5.mp3',
+              'F6': 'F6.mp3',
+              'D7': 'D7.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
