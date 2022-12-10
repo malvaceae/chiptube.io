@@ -6,6 +6,7 @@ export type SamplerName =
   | 'bass-electric'
   | 'bassoon'
   | 'clarinet'
+  | 'english-horn'
   | 'french-horn'
   | 'glockenspiel'
   | 'guitar-acoustic'
@@ -136,9 +137,9 @@ export const useInstrument = () => {
       return getSampler('oboe');
     }
 
-    // square synths (wind instruments)
+    // english horn
     if (number === 69) {
-      return getSynth('wind');
+      return getSampler('english-horn');
     }
 
     // bassoon
@@ -226,6 +227,24 @@ export const useInstrument = () => {
               'A#5': 'As5.mp3',
               'D6': 'D6.mp3',
               'F#6': 'Fs6.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'english-horn':
+          // english horn
+          return new Tone.Sampler({
+            urls: {
+              'A1': 'A1.mp3',
+              'C2': 'C2.mp3',
+              'D#2': 'Ds2.mp3',
+              'G2': 'G2.mp3',
+              'D3': 'D3.mp3',
+              'F3': 'F3.mp3',
+              'A3': 'A3.mp3',
+              'C4': 'C4.mp3',
+              'D5': 'D5.mp3',
+              'F5': 'F5.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
