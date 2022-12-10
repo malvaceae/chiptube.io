@@ -7,6 +7,7 @@ export type SamplerName =
   | 'bassoon'
   | 'clarinet'
   | 'french-horn'
+  | 'glockenspiel'
   | 'guitar-acoustic'
   | 'guitar-electric'
   | 'guitar-nylon'
@@ -38,6 +39,11 @@ export const useInstrument = () => {
     // piano
     if (number >= 0 && number <= 7) {
       return getSampler('piano');
+    }
+
+    // glockenspiel
+    if (number === 9) {
+      return getSampler('glockenspiel');
     }
 
     // acoustic guitar (nylon)
@@ -238,6 +244,22 @@ export const useInstrument = () => {
               'C4': 'C4.mp3',
               'D5': 'D5.mp3',
               'F5': 'F5.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
+        case 'glockenspiel':
+          // glockenspiel
+          return new Tone.Sampler({
+            urls: {
+              'G4': 'G4.mp3',
+              'C5': 'C5.mp3',
+              'G5': 'G5.mp3',
+              'C6': 'C6.mp3',
+              'G6': 'G6.mp3',
+              'C7': 'C7.mp3',
+              'G7': 'G7.mp3',
+              'C8': 'C8.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
