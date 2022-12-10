@@ -394,7 +394,6 @@ export const useInstrument = () => {
               'G5': 'G5.mp3',
               'B5': 'B5.mp3',
               'F6': 'F6.mp3',
-              'D7': 'D7.mp3',
             },
             baseUrl: `/samples/${name}/`,
             release: 2,
