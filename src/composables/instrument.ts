@@ -3,6 +3,7 @@ import * as Tone from 'tone';
 
 // Sampler Name
 export type SamplerName =
+  | 'bass-acoustic'
   | 'bass-electric'
   | 'bassoon'
   | 'clarinet'
@@ -66,9 +67,9 @@ export const useInstrument = () => {
       return getSampler('guitar-electric');
     }
 
-    // triangle synths (bass instruments)
+    // acoustic bass
     if (number === 32) {
-      return getSynth('bass');
+      return getSampler('bass-acoustic');
     }
 
     // electric bass
@@ -194,6 +195,30 @@ export const useInstrument = () => {
   const getSampler = ((cache: { [name in SamplerName]?: Tone.Sampler } = {}) => (name: SamplerName) => {
     return cache[name] ??= (() => {
       switch (name) {
+        case 'bass-acoustic':
+          // acoustic bass
+          return new Tone.Sampler({
+            urls: {
+              'C#1': 'Cs1.mp3',
+              'E1': 'E1.mp3',
+              'G1': 'G1.mp3',
+              'A#1': 'As1.mp3',
+              'C#2': 'Cs2.mp3',
+              'E2': 'E2.mp3',
+              'G2': 'G2.mp3',
+              'A#2': 'As2.mp3',
+              'C#3': 'Cs3.mp3',
+              'E3': 'E3.mp3',
+              'G3': 'G3.mp3',
+              'A#3': 'As3.mp3',
+              'C#4': 'Cs4.mp3',
+              'E4': 'E4.mp3',
+              'G4': 'G4.mp3',
+              'A#4': 'As4.mp3',
+            },
+            baseUrl: `/samples/${name}/`,
+            release: 2,
+          });
         case 'bass-electric':
           // electric bass
           return new Tone.Sampler({
