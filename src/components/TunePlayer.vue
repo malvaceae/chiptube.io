@@ -8,8 +8,8 @@ import { storeToRefs } from 'pinia';
 // Tune Store
 import { useTuneStore } from '@/stores/tune';
 
-// Instrument
-import { useInstrument } from '@/composables/instrument';
+// Sampler
+import { getSampler, Sampler } from '@/composables/sampler';
 
 // Amplify
 import { Storage } from 'aws-amplify';
@@ -31,9 +31,6 @@ const props = defineProps<{ identityId: string, midiKey: string }>();
 
 // volume and mute
 const { volume, mute } = storeToRefs(useTuneStore());
-
-// get instrument
-const { getInstrument } = useInstrument();
 
 // 88 keys in A0 (21) to C8 (108)
 const keys = [...Array(88).keys()].map((i) => i + 21).map((id) => {
@@ -143,8 +140,8 @@ const ppq = computed(() => midi.value?.header?.ppq ?? 480);
 // midi tracks
 const tracks = computed(() => midi.value?.tracks ?? []);
 
-// instruments
-const instruments = shallowRef<(Tone.PolySynth | Tone.Sampler)[]>([]);
+// samplers
+const samplers = shallowRef<(Sampler | null)[]>([]);
 
 // current time in seconds
 const currentTime = ref(0);
@@ -201,7 +198,7 @@ const notesByKey = computed(() => notesWithKey.value.reduce((notes, note) => {
 
 // set the volume
 const setVolume = (volume: number) => {
-  Tone.Destination.volume.value = Math.log10(volume) * 30 - 60 - 15;
+  Tone.Destination.volume.value = Tone.gainToDb(volume / 100) - 10;
 };
 
 // set the mute
@@ -283,32 +280,37 @@ const play = async () => {
   // download and parse the midi file
   midi.value = await Midi.fromUrl(url);
 
-  // instruments
-  instruments.value = tracks.value.map(({ instrument: { number, percussion }, notes }) => {
-    return getInstrument(notes.length > 0 ? number : 128, percussion).toDestination();
+  // samplers
+  samplers.value = tracks.value.map(({ instrument: { number, percussion }, notes }) => {
+    return notes.length ? getSampler(!percussion ? number : 128).toDestination() : null;
   });
 
   // sustains
-  const sustains = tracks.value.reduce((sustains, { instrument: { number }, controlChanges: { sustain } }) => {
-    return sustain ? { ...sustains, [number]: sustain } : sustains;
+  const sustains = tracks.value.reduce((sustains, { channel, controlChanges: { sustain } }) => {
+    return { ...sustains, [channel]: [...(sustains[channel] ?? []), ...(sustain ?? [])] };
   }, {} as Record<number, Track['controlChanges']['sustain']>);
 
-  // parts
-  tracks.value.forEach(({ instrument: { number }, notes }, i) => {
-    const instrument = instruments.value[i];
+  // volumes
+  const volumes = tracks.value.reduce((volumes, { channel, controlChanges: { volume } }) => {
+    return { ...volumes, [channel]: [...(volumes[channel] ?? []), ...(volume ?? [])] };
+  }, {} as Record<number, Track['controlChanges']['volume']>);
 
-    const value = notes.map(({ midi, name, duration: originalDuration, time, velocity }) => ((duration) => {
+  // parts
+  tracks.value.forEach(({ notes, channel }, i) => {
+    const sampler = samplers.value[i];
+
+    const value = notes.map(({ midi, name, duration: originalDuration, time, velocity }) => ((duration = originalDuration, volume = 100 / 127) => {
       // the current sustain
-      const currentSustain = sustains[number]?.filter?.((sustain) => {
+      const currentSustain = sustains[channel].filter((sustain) => {
         return sustain.time <= time + originalDuration;
-      })?.pop?.();
+      }).pop();
 
       if (currentSustain?.value) {
         duration = Infinity;
       }
 
       // the next sustain
-      const nextSustain = sustains[number]?.find?.((sustain) => {
+      const nextSustain = sustains[channel].find((sustain) => {
         return sustain.time > time + originalDuration;
       });
 
@@ -325,17 +327,26 @@ const play = async () => {
         duration = Math.min(duration, nextNote.time - time);
       }
 
-      return { name, duration, time, velocity };
-    })(originalDuration));
+      // the current volume
+      const currentVolume = volumes[channel].filter((volume) => {
+        return volume.time <= time;
+      }).pop();
 
-    const part = new Tone.Part((time, { name, duration, velocity }) => {
-      instrument.triggerAttackRelease(name, duration, time, velocity);
+      if (currentVolume) {
+        volume = currentVolume.value;
+      }
+
+      return { name, duration, time, velocity, volume };
+    })());
+
+    const part = new Tone.Part((time, { name, duration, velocity, volume }) => {
+      sampler?.triggerAttackRelease(name, duration, time, velocity, volume);
     }, value);
 
     part.start();
   });
 
-  // wait for instruments to load
+  // wait for samplers to load
   await Tone.loaded();
 
   // start
@@ -363,9 +374,9 @@ const pause = () => {
   // pause
   Tone.Transport.pause();
 
-  // release all instruments
-  instruments.value.forEach((instrument) => {
-    instrument.releaseAll();
+  // release all samplers
+  samplers.value.forEach((sampler) => {
+    sampler?.releaseAll();
   });
 
   // set current state to paused
@@ -380,9 +391,9 @@ const stop = () => {
   // cancel
   Tone.Transport.cancel();
 
-  // release all instruments
-  instruments.value.forEach((instrument) => {
-    instrument.releaseAll();
+  // release all samplers
+  samplers.value.forEach((sampler) => {
+    sampler?.releaseAll();
   });
 
   // set current state to stopped
@@ -408,9 +419,9 @@ const toggle = () => {
 const seek = (seconds: number) => {
   Tone.Transport.seconds = seconds;
 
-  // release all instruments
-  instruments.value.forEach((instrument) => {
-    instrument.releaseAll();
+  // release all samplers
+  samplers.value.forEach((sampler) => {
+    sampler?.releaseAll();
   });
 };
 
