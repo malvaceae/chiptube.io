@@ -106,7 +106,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
         <q-space />
         <q-input v-model="query" class="col-grow gt-xs" dense outlined placeholder="Search" square @keyup="search">
           <template #after>
-            <q-btn flat round @click="search">
+            <q-btn flat round @click="search($event as KeyboardEvent)">
               <q-icon name="mdi-magnify" />
             </q-btn>
           </template>
