@@ -802,6 +802,16 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   output: Tone.OutputNode;
 
   /**
+   * The chorus effects.
+   */
+  private _chorus: Tone.Chorus;
+
+  /**
+   * The reverb effects.
+   */
+  private _reverb: Tone.Reverb;
+
+  /**
    * The generators.
    */
   private _generators: Generator[];
@@ -840,6 +850,20 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       context,
       volume,
     });
+
+    // chorus effects
+    this._chorus = new Tone.Chorus({
+      context,
+    });
+
+    // reverb effects
+    this._reverb = new Tone.Reverb({
+      context,
+    });
+
+    // connect the effects
+    this._chorus.connect(this.output);
+    this._reverb.connect(this.output);
 
     // generators
     this._generators = generators.map((generator) => ({
@@ -976,6 +1000,22 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       throw Error('The buffer not found.');
     }
 
+    // chorus
+    const chorus = new Tone.Gain({
+      context: this.context,
+    });
+
+    // chorus - default value
+    chorus.gain.setValueAtTime(generator[15] / 1000, this.toSeconds(time));
+
+    // reverb
+    const reverb = new Tone.Gain({
+      context: this.context,
+    });
+
+    // reverb - default value
+    reverb.gain.setValueAtTime(generator[16] / 1000, this.toSeconds(time));
+
     // output - base gain and peak gain
     const outputBaseGain = 0;
     const outputPeakGain = volume * velocity * toDecayRate(generator[48]);
@@ -1105,7 +1145,11 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     source.playbackRate.linearRampToValueAtTime(playbackRateSustainFreq, playbackRateDecay);
 
     // connect
+    chorus.connect(this._chorus);
+    reverb.connect(this._reverb);
     output.connect(this.output);
+    output.connect(chorus);
+    output.connect(reverb);
     panner.connect(output);
     filter.connect(panner);
     source.connect(filter);
@@ -1119,6 +1163,8 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       filter.disconnect();
       panner.disconnect();
       output.disconnect();
+      reverb.disconnect();
+      chorus.disconnect();
     };
 
     // add note to active notes
@@ -1198,6 +1244,15 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
         note.source.stop(time);
       });
     });
+  }
+
+  /**
+   * Dispose and disconnect.
+   */
+  dispose() {
+    this._reverb.disconnect();
+    this._chorus.disconnect();
+    return super.dispose();
   }
 };
 
