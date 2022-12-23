@@ -1001,20 +1001,24 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     }
 
     // chorus
-    const chorus = new Tone.Gain({
-      context: this.context,
-    });
-
-    // chorus - default value
-    chorus.gain.setValueAtTime(generator[15] / 1000, this.toSeconds(time));
+    const chorus = (({ context }, gain) => {
+      if (gain) {
+        return new Tone.Gain({
+          context,
+          gain,
+        });
+      }
+    })(this, generator[15] / 1000);
 
     // reverb
-    const reverb = new Tone.Gain({
-      context: this.context,
-    });
-
-    // reverb - default value
-    reverb.gain.setValueAtTime(generator[16] / 1000, this.toSeconds(time));
+    const reverb = (({ context }, gain) => {
+      if (gain) {
+        return new Tone.Gain({
+          context,
+          gain,
+        });
+      }
+    })(this, generator[16] / 1000);
 
     // output - base gain and peak gain
     const outputBaseGain = 0;
@@ -1144,12 +1148,18 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // playback rate - decay
     source.playbackRate.linearRampToValueAtTime(playbackRateSustainFreq, playbackRateDecay);
 
+    // connect chorus
+    if (chorus) {
+      output.chain(chorus, this._chorus);
+    }
+
+    // connect reverb
+    if (reverb) {
+      output.chain(reverb, this._reverb);
+    }
+
     // connect
-    chorus.connect(this._chorus);
-    reverb.connect(this._reverb);
     output.connect(this.output);
-    output.connect(chorus);
-    output.connect(reverb);
     panner.connect(output);
     filter.connect(panner);
     source.connect(filter);
@@ -1159,12 +1169,17 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // invoke after the source is done playing
     source.onended = () => {
+      // disconnect
       source.disconnect();
       filter.disconnect();
       panner.disconnect();
       output.disconnect();
-      reverb.disconnect();
-      chorus.disconnect();
+
+      // disconnect reverb
+      reverb?.disconnect();
+
+      // disconnect chorus
+      chorus?.disconnect();
     };
 
     // add note to active notes
