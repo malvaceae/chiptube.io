@@ -9,7 +9,7 @@ import { storeToRefs } from 'pinia';
 import { useTuneStore } from '@/stores/tune';
 
 // Sampler
-import { getSampler, Sampler } from '@/composables/sampler';
+import { getSampler, Sampler } from '@/classes/sampler';
 
 // Amplify
 import { Storage } from 'aws-amplify';

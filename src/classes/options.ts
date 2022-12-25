@@ -1,5 +1,5 @@
 // Sampler
-import { Generator, Sample } from '@/composables/sampler';
+import { Generator, Sample } from '@/classes/sampler';
 
 // Generators
 export const generators: Partial<Generator>[][] = [

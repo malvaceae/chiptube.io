@@ -2,7 +2,7 @@
 import * as Tone from 'tone';
 
 // Options
-import { generators, samples } from '@/composables/options';
+import { generators, samples } from '@/classes/options';
 
 /**
  * Generator
