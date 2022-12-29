@@ -455,8 +455,14 @@ const updateTime = () => {
     currentTime.value = Tone.Transport.seconds;
   } else {
     if (currentState.value === 'started') {
-      pause();
-      seek(0);
+      // pause
+      Tone.Transport.pause();
+
+      // set current state to paused
+      currentState.value = 'paused';
+
+      // seek to first
+      Tone.Transport.seconds = 0;
     }
   }
 };
