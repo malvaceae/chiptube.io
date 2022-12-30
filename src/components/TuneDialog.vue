@@ -99,7 +99,8 @@ const uploadTune = async ({ title, description, midi }: typeof tune) => {
       <q-card-section class="text-h6">
         Upload tune
       </q-card-section>
-      <q-card-section class="q-pt-none">
+      <q-separator />
+      <q-card-section>
         <div class="column q-gutter-md">
           <q-input v-model="tune.title" label-slot outlined square>
             <template #label>
@@ -127,7 +128,7 @@ const uploadTune = async ({ title, description, midi }: typeof tune) => {
           <span class="block">Cancel</span>
         </q-btn>
         <q-btn color="primary" :disable="!Object.values(tune).every(Boolean)" flat square @click="uploadTune(tune)">
-          <span class="block">Upload tune</span>
+          <span class="block">Upload</span>
         </q-btn>
       </q-card-actions>
     </q-card>
