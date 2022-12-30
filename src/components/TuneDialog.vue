@@ -95,7 +95,7 @@ const uploadTune = async ({ title, description, midi }: typeof tune) => {
 
 <template>
   <q-dialog ref="dialogRef" persistent @hide="onDialogHide">
-    <q-card class="full-width" square>
+    <q-card class="full-width" bordered flat square>
       <q-card-section class="text-h6">
         Upload tune
       </q-card-section>

@@ -126,29 +126,31 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
                 <span class="block">
                   {{ tune.likes.toLocaleString() }}
                 </span>
-                <q-menu v-if="auth.user === null" anchor="bottom right" :offset="[0, 4]" self="top right" square>
-                  <q-list bordered padding>
-                    <q-item dense>
-                      <q-item-section>
-                        <q-item-label class="text-subtitle1 text-weight-medium">
-                          Like this tune?
-                        </q-item-label>
-                      </q-item-section>
-                    </q-item>
-                    <q-item dense>
-                      <q-item-section>
-                        <q-item-label>
-                          Sign in to make your opinion count.
-                        </q-item-label>
-                      </q-item-section>
-                    </q-item>
-                    <q-item>
-                      <q-item-section side>
-                        <google-sign-in />
-                      </q-item-section>
-                    </q-item>
-                  </q-list>
-                </q-menu>
+                <template v-if="auth.user === null">
+                  <q-menu class="no-shadow" anchor="bottom right" :offset="[0, 4]" self="top right" square>
+                    <q-list bordered padding>
+                      <q-item dense>
+                        <q-item-section>
+                          <q-item-label class="text-subtitle1 text-weight-medium">
+                            Like this tune?
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item dense>
+                        <q-item-section>
+                          <q-item-label>
+                            Sign in to make your opinion count.
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item>
+                        <q-item-section side>
+                          <google-sign-in />
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-menu>
+                </template>
               </q-btn>
               <q-btn flat square @click="downloadTune">
                 <q-icon class="q-mr-sm" name="mdi-download-outline" />

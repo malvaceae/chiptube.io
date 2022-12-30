@@ -128,8 +128,8 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
               <template v-else>
                 <q-icon name="mdi-dots-vertical" />
               </template>
-              <q-menu class="full-width" anchor="bottom right" max-width="300px" self="top right" square>
-                <q-list dense padding>
+              <q-menu class="full-width no-shadow" anchor="bottom right" max-width="300px" self="top right" square>
+                <q-list bordered dense padding>
                   <template v-if="auth.user">
                     <q-item>
                       <q-item-section avatar>
@@ -175,8 +175,8 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                     <q-item-section side>
                       <q-icon name="mdi-chevron-right" />
                     </q-item-section>
-                    <q-menu anchor="top right" :offset="[1.33125, 9]" self="top right" square>
-                      <q-list dense padding>
+                    <q-menu class="no-shadow" anchor="top right" :offset="[1.33125, 9]" self="top right" square>
+                      <q-list bordered dense padding>
                         <q-item-label caption header>
                           Setting applies to this browser only
                         </q-item-label>
