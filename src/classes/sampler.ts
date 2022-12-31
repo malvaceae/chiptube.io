@@ -295,7 +295,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // chorus
     const chorus = (({ context }, gain) => {
-      if (gain) {
+      if (gain >= .001) {
         return new Tone.Gain({
           context,
           gain,
@@ -305,7 +305,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // reverb
     const reverb = (({ context }, gain) => {
-      if (gain) {
+      if (gain >= .001) {
         return new Tone.Gain({
           context,
           gain,
