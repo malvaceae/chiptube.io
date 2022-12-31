@@ -81,9 +81,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   private _samples: Map<number, Sample> = new Map();
 
   /**
-   * The stored and loaded buffers.
+   * The buffers.
    */
-  private _buffers: Tone.ToneAudioBuffers;
+  private _buffers: Map<number, Tone.ToneAudioBuffer> = new Map();
 
   /**
    * The object of all currently playing voices.
@@ -193,16 +193,8 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // samples
     samples.forEach((sample) => this._samples.set(sample.id, sample));
 
-    // sample urls
-    const urls = Object.fromEntries(samples.map((sample) => {
-      return [sample.id, `${sample.id}.wav`];
-    }));
-
     // buffers
-    this._buffers = new Tone.ToneAudioBuffers({
-      urls,
-      baseUrl,
-    });
+    samples.forEach((sample) => this._buffers.set(sample.id, buffers.get(sample.id) ?? ((buffer) => (buffers.set(sample.id, buffer), buffer))(new Tone.ToneAudioBuffer(`${baseUrl}${sample.id}.wav`))));
   }
 
   /**
@@ -601,11 +593,16 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    * Dispose and disconnect.
    */
   dispose() {
-    this._reverb.disconnect();
-    this._chorus.disconnect();
+    this._reverb.dispose();
+    this._chorus.dispose();
     return super.dispose();
   }
 };
+
+/**
+ * The stored and loaded buffers.
+ */
+const buffers: Map<number, Tone.ToneAudioBuffer> = new Map();
 
 /**
  * Convert generator value to seconds.
@@ -660,10 +657,23 @@ const toPriority = ({ output: { gain }, status }: Voice) => {
 /**
  * Get a sampler.
  */
-export const getSampler = ((cache: Record<number, Sampler> = {}) => (number: number) => {
-  return cache[number] ??= new Sampler({
+export const getSampler = (number: number) => {
+  return new Sampler({
     generators: generators[number],
     samples: samples[number],
     baseUrl: '/samples/',
   });
-})();
+};
+
+/**
+ * Clear buffers.
+ */
+export const clearBuffers = () => {
+  // dispose
+  buffers.forEach((buffer) => {
+    buffer.dispose();
+  });
+
+  // clear
+  buffers.clear();
+};

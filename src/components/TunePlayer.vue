@@ -9,7 +9,7 @@ import { storeToRefs } from 'pinia';
 import { useTuneStore } from '@/stores/tune';
 
 // Sampler
-import { getSampler, Sampler } from '@/classes/sampler';
+import { clearBuffers, getSampler, Sampler } from '@/classes/sampler';
 
 // Amplify
 import { Storage } from 'aws-amplify';
@@ -391,9 +391,9 @@ const stop = () => {
   // cancel
   Tone.Transport.cancel();
 
-  // release all samplers
+  // dispose samplers
   samplers.value.forEach((sampler) => {
-    sampler?.releaseAll();
+    sampler?.dispose();
   });
 
   // set current state to stopped
@@ -623,6 +623,9 @@ onUnmounted(() => {
 
   // stop
   stop();
+
+  // clear buffers
+  clearBuffers();
 });
 </script>
 
