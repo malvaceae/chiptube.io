@@ -214,6 +214,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    * Trigger the attack.
    */
   triggerAttack(note: Tone.Unit.Frequency, time?: Tone.Unit.Time, velocity: Tone.Unit.NormalRange = 1, volume: Tone.Unit.NormalRange = 1) {
+    // computed time
+    const computedTime = this.toSeconds(time);
+
     // key
     const key = Tone.Frequency(note).toMidi();
 
@@ -319,10 +322,10 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // output - times
     const [outputDelay, outputAttack, outputHold, outputDecay] = [
-      this.toSeconds(time) + toSeconds(generator[33]),
-      this.toSeconds(time) + toSeconds(generator[33]) + toSeconds(generator[34]),
-      this.toSeconds(time) + toSeconds(generator[33]) + toSeconds(generator[34]) + toSeconds(generator[35]) * toSeconds((60 - key) * generator[39]),
-      this.toSeconds(time) + toSeconds(generator[33]) + toSeconds(generator[34]) + toSeconds(generator[35]) * toSeconds((60 - key) * generator[39]) + toSeconds(generator[36]) * toSeconds((60 - key) * generator[40]),
+      computedTime + toSeconds(generator[33]),
+      computedTime + toSeconds(generator[33]) + toSeconds(generator[34]),
+      computedTime + toSeconds(generator[33]) + toSeconds(generator[34]) + toSeconds(generator[35]) * toSeconds((60 - key) * generator[39]),
+      computedTime + toSeconds(generator[33]) + toSeconds(generator[34]) + toSeconds(generator[35]) * toSeconds((60 - key) * generator[39]) + toSeconds(generator[36]) * toSeconds((60 - key) * generator[40]),
     ];
 
     // output
@@ -331,7 +334,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     });
 
     // output - default value
-    output.gain.setValueAtTime(outputBaseGain, this.toSeconds(time));
+    output.gain.setValueAtTime(outputBaseGain, computedTime);
 
     // output - delay
     output.gain.setValueAtTime(outputBaseGain, outputDelay);
@@ -351,7 +354,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     });
 
     // panner - default value
-    panner.pan.setValueAtTime(generator[17] / 500, this.toSeconds(time));
+    panner.pan.setValueAtTime(generator[17] / 500, computedTime);
 
     // filter - base frequency and peak frequency
     const filterBaseFreq = toFrequency(generator[8]);
@@ -362,10 +365,10 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // filter - times
     const [filterDelay, filterAttack, filterHold, filterDecay] = [
-      this.toSeconds(time) + toSeconds(generator[25]),
-      this.toSeconds(time) + toSeconds(generator[25]) + toSeconds(generator[26]),
-      this.toSeconds(time) + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]),
-      this.toSeconds(time) + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]) + toSeconds(generator[28]) * toSeconds((60 - key) * generator[32]),
+      computedTime + toSeconds(generator[25]),
+      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]),
+      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]),
+      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]) + toSeconds(generator[28]) * toSeconds((60 - key) * generator[32]),
     ];
 
     // filter
@@ -374,7 +377,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     });
 
     // filter - default value
-    filter.frequency.setValueAtTime(filterBaseFreq, this.toSeconds(time));
+    filter.frequency.setValueAtTime(filterBaseFreq, computedTime);
 
     // filter - delay
     filter.frequency.setValueAtTime(filterBaseFreq, filterDelay);
@@ -417,14 +420,14 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // playback rate - times
     const [playbackRateDelay, playbackRateAttack, playbackRateHold, playbackRateDecay] = [
-      this.toSeconds(time) + toSeconds(generator[25]),
-      this.toSeconds(time) + toSeconds(generator[25]) + toSeconds(generator[26]),
-      this.toSeconds(time) + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]),
-      this.toSeconds(time) + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]) + toSeconds(generator[28]) * toSeconds((60 - key) * generator[32]),
+      computedTime + toSeconds(generator[25]),
+      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]),
+      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]),
+      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]) + toSeconds(generator[28]) * toSeconds((60 - key) * generator[32]),
     ];
 
     // playback rate - default value
-    source.playbackRate.setValueAtTime(playbackRateBaseFreq, this.toSeconds(time));
+    source.playbackRate.setValueAtTime(playbackRateBaseFreq, computedTime);
 
     // playback rate - delay
     source.playbackRate.setValueAtTime(playbackRateBaseFreq, playbackRateDelay);
@@ -444,7 +447,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     });
 
     // status - default value
-    status.setValueAtTime(4, this.toSeconds(time));
+    status.setValueAtTime(4, computedTime);
 
     // status - delay
     status.setValueAtTime(3, outputDelay);
@@ -481,7 +484,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const voice: Voice = {
       sampler: this,
       key,
-      time: this.toSeconds(time),
+      time: computedTime,
       generator,
       sample,
       output,
@@ -522,6 +525,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    * Trigger the release.
    */
   triggerRelease(note: Tone.Unit.Frequency, time?: Tone.Unit.Time) {
+    // computed time
+    const computedTime = this.toSeconds(time);
+
     // key
     const key = Tone.Frequency(note).toMidi();
 
@@ -529,11 +535,11 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.key === key).forEach(({ generator, sample, output, filter, source }) => {
       // set ramp point to release time
       [output.gain, filter.frequency, source.playbackRate].forEach((parameter) => {
-        parameter.setRampPoint(this.toSeconds(time));
+        parameter.setRampPoint(computedTime);
       });
 
       // output - release time
-      const outputRelease = this.toSeconds(time) + toSeconds(generator[38]) * output.gain.getValueAtTime(this.toSeconds(time));
+      const outputRelease = computedTime + toSeconds(generator[38]) * output.gain.getValueAtTime(computedTime);
 
       // output - release
       output.gain.linearRampToValueAtTime(0, outputRelease);
@@ -543,7 +549,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       const filterPeakFreq = toFrequency(generator[8] + generator[11]);
 
       // filter - release time
-      const filterRelease = this.toSeconds(time) + toSeconds(generator[30]) * (filterBaseFreq === filterPeakFreq ? 1 : (this.toFrequency(filter.frequency.getValueAtTime(this.toSeconds(time))) - filterBaseFreq) / (filterPeakFreq - filterBaseFreq));
+      const filterRelease = computedTime + toSeconds(generator[30]) * (filterBaseFreq === filterPeakFreq ? 1 : (this.toFrequency(filter.frequency.getValueAtTime(computedTime)) - filterBaseFreq) / (filterPeakFreq - filterBaseFreq));
 
       // filter - release
       filter.frequency.linearRampToValueAtTime(filterBaseFreq, filterRelease);
