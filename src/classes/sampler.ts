@@ -649,22 +649,23 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     Sampler._activeVoices.filter((voice) => voice.sampler === this).forEach((voice) => {
       const { end, output, filter, source } = voice;
 
-      if (computedTime >= this.toSeconds(end)) {
-        // release
-        if (sustain === 0) {
-          this._release(voice, computedTime);
-        }
-      } else {
-        // cancel
-        if (sustain === 1) {
-          // cancel parameters
-          [output.gain, filter.frequency, source.playbackRate].forEach((parameter) => {
-            parameter.cancelScheduledValues(this.toSeconds(end));
-          });
+      // computed end time
+      const computedEnd = this.toSeconds(end);
 
-          // cancel stop
-          source.cancelStop();
-        }
+      // release
+      if (sustain === 0) {
+        this._release(voice, Math.max(computedTime, computedEnd));
+      }
+
+      // cancel
+      if (sustain === 1 && computedTime < computedEnd) {
+        // cancel parameters
+        [output.gain, filter.frequency, source.playbackRate].forEach((parameter) => {
+          parameter.cancelScheduledValues(computedEnd);
+        });
+
+        // cancel stop
+        source.cancelStop();
       }
     });
   }
