@@ -25,9 +25,14 @@ export interface Voice {
   key: Tone.Unit.MidiNote;
 
   /**
-   * The time.
+   * The start time.
    */
-  time: Tone.Unit.Seconds;
+  start: Tone.Unit.Seconds;
+
+  /**
+   * The end time.
+   */
+  end?: Tone.Unit.Seconds;
 
   /**
    * The generator.
@@ -43,6 +48,11 @@ export interface Voice {
    * The output.
    */
   output: Tone.Gain;
+
+  /**
+   * The volume.
+   */
+  volume: Tone.Gain;
 
   /**
    * The panner.

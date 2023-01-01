@@ -285,65 +285,55 @@ const play = async () => {
     return notes.length ? getSampler(!percussion ? number : 128).toDestination() : null;
   });
 
-  // sustains
-  const sustains = tracks.value.reduce((sustains, { channel, controlChanges: { sustain } }) => {
-    return { ...sustains, [channel]: [...(sustains[channel] ?? []), ...(sustain ?? [])] };
-  }, {} as Record<number, Track['controlChanges']['sustain']>);
+  // control changes
+  const controlChanges = tracks.value.reduce((values, { channel, controlChanges }) => {
+    values[channel] = Object.entries(controlChanges).flatMap(([key, values]) => {
+      if (['7', '10', '11', '64'].includes(key)) {
+        return values;
+      } else {
+        return [];
+      }
+    }).concat(values[channel] ?? []);
 
-  // volumes
-  const volumes = tracks.value.reduce((volumes, { channel, controlChanges: { volume } }) => {
-    return { ...volumes, [channel]: [...(volumes[channel] ?? []), ...(volume ?? [])] };
-  }, {} as Record<number, Track['controlChanges']['volume']>);
+    return values;
+  }, {} as Record<number, Track['controlChanges'][number]>);
 
   // parts
   tracks.value.forEach(({ notes, channel }, i) => {
     const sampler = samplers.value[i];
 
-    const value = notes.map(({ midi, name, duration: originalDuration, time, velocity }) => ((duration = originalDuration, volume = 100 / 127) => {
-      // the current sustain
-      const currentSustain = sustains[channel].filter((sustain) => {
-        return sustain.time <= time + originalDuration;
-      }).pop();
+    if (sampler === null) {
+      return;
+    }
 
-      if (currentSustain?.value) {
-        duration = Infinity;
+    // notes part
+    const notesPart = new Tone.Part((time, { name, duration, velocity }) => {
+      sampler.triggerAttackRelease(name, duration, time, velocity);
+    }, notes);
+
+    // start
+    notesPart.start();
+
+    // control changes part
+    const controlChangesPart = new Tone.Part((time, { value, number }) => {
+      switch (number) {
+        case 7:
+          sampler.changeVolume(value, time);
+          break;
+        case 10:
+          sampler.changePan(value);
+          break;
+        case 11:
+          sampler.changeExpression(value, time);
+          break;
+        case 64:
+          sampler.changeSustain(value, time);
+          break;
       }
+    }, controlChanges[channel]);
 
-      // the next sustain
-      const nextSustain = sustains[channel].find((sustain) => {
-        return sustain.time > time + originalDuration;
-      });
-
-      if (nextSustain?.value === 0) {
-        duration = Math.max(originalDuration, nextSustain.time - time);
-      }
-
-      // the next note
-      const nextNote = notes.filter((note) => note.midi === midi).find((note) => {
-        return note.time > time;
-      });
-
-      if (nextNote) {
-        duration = Math.min(duration, nextNote.time - time);
-      }
-
-      // the current volume
-      const currentVolume = volumes[channel].filter((volume) => {
-        return volume.time <= time;
-      }).pop();
-
-      if (currentVolume) {
-        volume = currentVolume.value;
-      }
-
-      return { name, duration, time, velocity, volume };
-    })());
-
-    const part = new Tone.Part((time, { name, duration, velocity, volume }) => {
-      sampler?.triggerAttackRelease(name, duration, time, velocity, volume);
-    }, value);
-
-    part.start();
+    // start
+    controlChangesPart.start();
   });
 
   // wait for samplers to load
