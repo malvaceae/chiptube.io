@@ -13,6 +13,9 @@ import { Sample } from '@/classes/sample';
 // Samples
 import { samples } from '@/classes/samples';
 
+// Channel
+import { Channel } from '@/classes/channel';
+
 // Voice
 import { Voice } from '@/classes/voice';
 
@@ -86,24 +89,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   private _buffers: Map<number, Tone.ToneAudioBuffer> = new Map();
 
   /**
-   * The volume.
+   * The channel.
    */
-  private _volume: Tone.Unit.NormalRange = 100 / 127;
-
-  /**
-   * The pan.
-   */
-  private _pan?: Tone.Unit.NormalRange;
-
-  /**
-   * The expression.
-   */
-  private _expression: Tone.Unit.NormalRange = 1;
-
-  /**
-   * The sustain.
-   */
-  private _sustain: Tone.Unit.NormalRange = 0;
+  private _channel: Channel = new Channel();
 
   /**
    * The object of all currently playing voices.
@@ -374,7 +362,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     });
 
     // volume - default value
-    volume.gain.setValueAtTime(this._volume * this._expression, computedTime);
+    volume.gain.setValueAtTime(this._channel.volume * this._channel.expression, computedTime);
 
     // panner
     const panner = new Tone.Panner({
@@ -382,7 +370,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     });
 
     // panner - default value
-    panner.pan.setValueAtTime(typeof this._pan === 'number' ? (this._pan - .5) * 2 : generator[17] / 500, computedTime);
+    panner.pan.setValueAtTime(this._channel.pannerValue ?? generator[17] / 500, computedTime);
 
     // filter - base frequency and peak frequency
     const [filterBaseFreq, filterPeakFreq] = [
@@ -568,7 +556,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       voice.end = computedTime;
 
       // release
-      if (this._sustain === 0) {
+      if (this._channel.sustain === 0) {
         this._release(voice, computedTime);
       }
     });
@@ -606,13 +594,13 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    * Change the volume.
    */
   changeVolume(volume: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
-    this._volume = volume;
+    this._channel.volume = volume;
 
     // computed time
     const computedTime = this.toSeconds(time);
 
     Sampler._activeVoices.filter((voice) => voice.sampler === this && computedTime < this.toSeconds(voice.end)).forEach((voice) => {
-      voice.volume.gain.setValueAtTime(volume * this._expression, computedTime);
+      voice.volume.gain.setValueAtTime(volume * this._channel.expression, computedTime);
     });
   }
 
@@ -620,20 +608,20 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    * Change the pan.
    */
   changePan(pan: Tone.Unit.NormalRange) {
-    this._pan = pan;
+    this._channel.pan = pan;
   }
 
   /**
    * Change the expression.
    */
   changeExpression(expression: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
-    this._expression = expression;
+    this._channel.expression = expression;
 
     // computed time
     const computedTime = this.toSeconds(time);
 
     Sampler._activeVoices.filter((voice) => voice.sampler === this && computedTime < this.toSeconds(voice.end)).forEach((voice) => {
-      voice.volume.gain.setValueAtTime(this._volume * expression, computedTime);
+      voice.volume.gain.setValueAtTime(this._channel.volume * expression, computedTime);
     });
   }
 
@@ -641,7 +629,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    * Change the sustain.
    */
   changeSustain(sustain: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
-    this._sustain = sustain;
+    this._channel.sustain = sustain;
 
     // computed time
     const computedTime = this.toSeconds(time);
