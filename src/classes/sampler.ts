@@ -431,8 +431,8 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // playback rate - base frequency and peak frequency
     const [playbackRateBaseFreq, playbackRatePeakFreq] = [
-      toPlaybackRateBaseFrequency(key, generator, sample),
-      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
+      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]),
+      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
     ];
 
     // playback rate - sustain frequency
@@ -556,7 +556,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       voice.end = computedTime;
 
       // release
-      if (this._channel.sustain === 0) {
+      if (this._channel.damperPedal <= 63 / 127) {
         this._release(voice, computedTime);
       }
     });
@@ -588,6 +588,16 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     Sampler._activeVoices.filter((voice) => voice.sampler === this).forEach((voice) => {
       voice.source.stop(time);
     });
+  }
+
+  /**
+   * Change the data entry MSB.
+   */
+  changeDataEntryMsb(dataEntryMsb: Tone.Unit.NormalRange) {
+    // pitch bend sensitivity
+    if (this._channel.rpnMsb === 0 && this._channel.rpnLsb === 0) {
+      this._channel.pitchBendSensitivity = dataEntryMsb * 127;
+    }
   }
 
   /**
@@ -626,10 +636,20 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   }
 
   /**
-   * Change the sustain.
+   * Change the data entry LSB.
    */
-  changeSustain(sustain: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
-    this._channel.sustain = sustain;
+  changeDataEntryLsb(dataEntryLsb: Tone.Unit.NormalRange) {
+    // pitch bend sensitivity
+    if (this._channel.rpnMsb === 0 && this._channel.rpnLsb === 0) {
+      this._channel.pitchBendSensitivity += dataEntryLsb * 1.27;
+    }
+  }
+
+  /**
+   * Change the damper pedal.
+   */
+  changeDamperPedal(damperPedal: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
+    this._channel.damperPedal = damperPedal;
 
     // computed time
     const computedTime = this.toSeconds(time);
@@ -641,12 +661,12 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       const computedEnd = this.toSeconds(end);
 
       // release
-      if (sustain === 0) {
+      if (damperPedal <= 63 / 127) {
         this._release(voice, Math.max(computedTime, computedEnd));
       }
 
-      // cancel
-      if (sustain === 1 && computedTime < computedEnd) {
+      // sustain
+      if (damperPedal >= 64 / 127 && computedTime < computedEnd) {
         // cancel parameters
         [output.gain, filter.frequency, source.playbackRate].forEach((parameter) => {
           parameter.cancelScheduledValues(computedEnd);
@@ -655,6 +675,69 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
         // cancel stop
         source.cancelStop();
       }
+    });
+  }
+
+  /**
+   * Change the registered parameter number (RPN) LSB.
+   */
+  changeRpnLsb(rpnLsb: Tone.Unit.NormalRange) {
+    this._channel.rpnLsb = rpnLsb;
+  }
+
+  /**
+   * Change the registered parameter number (RPN) MSB.
+   */
+  changeRpnMsb(rpnMsb: Tone.Unit.NormalRange) {
+    this._channel.rpnMsb = rpnMsb;
+  }
+
+  /**
+   * Change the pitch bend.
+   */
+  changePitchBend(pitchBend: Tone.Unit.AudioRange, time?: Tone.Unit.Time) {
+    this._channel.pitchBend = pitchBend;
+
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    Sampler._activeVoices.filter((voice) => voice.sampler === this && computedTime < this.toSeconds(voice.end)).forEach((voice) => {
+      const { key, generator, sample, source } = voice;
+
+      // playback rate - base frequency and peak frequency
+      const [playbackRateBaseFreq, playbackRatePeakFreq] = [
+        toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(pitchBend * this._channel.pitchBendSensitivity, generator[56]),
+        toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(pitchBend * this._channel.pitchBendSensitivity, generator[56]) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
+      ];
+
+      // playback rate - sustain frequency
+      const playbackRateSustainFreq = playbackRateBaseFreq + (playbackRatePeakFreq - playbackRateBaseFreq) * toDecayRate(generator[29]);
+
+      // playback rate - times
+      const [playbackRateDelay, playbackRateAttack, playbackRateHold, playbackRateDecay] = [
+        computedTime + toSeconds(generator[25]),
+        computedTime + toSeconds(generator[25]) + toSeconds(generator[26]),
+        computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]),
+        computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]) + toSeconds(generator[28]) * toSeconds((60 - key) * generator[32]),
+      ];
+
+      // playback rate - cancel
+      source.playbackRate.cancelScheduledValues(computedTime);
+
+      // playback rate - default value
+      source.playbackRate.setValueAtTime(playbackRateBaseFreq, computedTime);
+
+      // playback rate - delay
+      source.playbackRate.setValueAtTime(playbackRateBaseFreq, playbackRateDelay);
+
+      // playback rate - attack
+      source.playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, playbackRateAttack);
+
+      // playback rate - hold
+      source.playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, playbackRateHold);
+
+      // playback rate - decay
+      source.playbackRate.linearRampToValueAtTime(playbackRateSustainFreq, playbackRateDecay);
     });
   }
 
@@ -699,7 +782,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const playbackRateRelease = filterRelease;
 
     // playback rate - release
-    source.playbackRate.linearRampToValueAtTime(toPlaybackRateBaseFrequency(key, generator, sample), playbackRateRelease);
+    source.playbackRate.linearRampToValueAtTime(toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]), playbackRateRelease);
 
     // stop
     source.stop(outputRelease);

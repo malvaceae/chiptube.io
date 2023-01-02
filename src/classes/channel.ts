@@ -21,9 +21,29 @@ export class Channel {
   expression: Tone.Unit.NormalRange = 1;
 
   /**
-   * The sustain.
+   * The damper pedal.
    */
-  sustain: Tone.Unit.NormalRange = 0;
+  damperPedal: Tone.Unit.NormalRange = 0;
+
+  /**
+   * The registered parameter number (RPN) LSB.
+   */
+  rpnLsb?: Tone.Unit.NormalRange;
+
+  /**
+   * The registered parameter number (RPN) MSB.
+   */
+  rpnMsb?: Tone.Unit.NormalRange;
+
+  /**
+   * The pitch bend.
+   */
+  pitchBend: Tone.Unit.AudioRange = 0;
+
+  /**
+   * The pitch bend sensitivity.
+   */
+  pitchBendSensitivity: number = 2;
 
   /**
    * Get the panner value.

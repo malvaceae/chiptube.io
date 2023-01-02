@@ -288,7 +288,7 @@ const play = async () => {
   // control changes
   const controlChanges = tracks.value.reduce((values, { channel, controlChanges }) => {
     values[channel] = Object.entries(controlChanges).flatMap(([key, values]) => {
-      if (['7', '10', '11', '64'].includes(key)) {
+      if (['6', '7', '10', '11', '38', '64', '100', '101'].includes(key)) {
         return values;
       } else {
         return [];
@@ -297,6 +297,11 @@ const play = async () => {
 
     return values;
   }, {} as Record<number, Track['controlChanges'][number]>);
+
+  // pitch bends
+  const pitchBends = tracks.value.reduce((values, { channel, pitchBends }) => {
+    return { ...values, [channel]: pitchBends.concat(values[channel] ?? []) };
+  }, {} as Record<number, Track['pitchBends']>);
 
   // parts
   tracks.value.forEach(({ notes, channel }, i) => {
@@ -317,6 +322,9 @@ const play = async () => {
     // control changes part
     const controlChangesPart = new Tone.Part((time, { value, number }) => {
       switch (number) {
+        case 6:
+          sampler.changeDataEntryMsb(value);
+          break;
         case 7:
           sampler.changeVolume(value, time);
           break;
@@ -326,14 +334,31 @@ const play = async () => {
         case 11:
           sampler.changeExpression(value, time);
           break;
+        case 38:
+          sampler.changeDataEntryLsb(value);
+          break;
         case 64:
-          sampler.changeSustain(value, time);
+          sampler.changeDamperPedal(value, time);
+          break;
+        case 100:
+          sampler.changeRpnLsb(value);
+          break;
+        case 101:
+          sampler.changeRpnMsb(value);
           break;
       }
     }, controlChanges[channel]);
 
     // start
     controlChangesPart.start();
+
+    // pitch bends part
+    const pitchBendsPart = new Tone.Part((time, { value }) => {
+      sampler.changePitchBend(value, time);
+    }, pitchBends[channel]);
+
+    // start
+    pitchBendsPart.start();
   });
 
   // wait for samplers to load
