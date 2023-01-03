@@ -64,16 +64,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   output: Tone.OutputNode;
 
   /**
-   * The chorus effects.
-   */
-  private _chorus: Tone.Chorus;
-
-  /**
-   * The reverb effects.
-   */
-  private _reverb: Tone.Reverb;
-
-  /**
    * The generators.
    */
   private _generators: Generator[];
@@ -117,20 +107,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       context,
       volume,
     });
-
-    // chorus effects
-    this._chorus = new Tone.Chorus({
-      context,
-    });
-
-    // reverb effects
-    this._reverb = new Tone.Reverb({
-      context,
-    });
-
-    // connect the effects
-    this._chorus.connect(this.output);
-    this._reverb.connect(this.output);
 
     // generators
     this._generators = generators.map((generator) => ({
@@ -301,26 +277,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       voice?.source?.onended?.(voice?.source);
     })();
 
-    // chorus
-    const chorus = (({ context }, gain) => {
-      if (gain >= .001) {
-        return new Tone.Gain({
-          context,
-          gain,
-        });
-      }
-    })(this, generator[15] / 1000);
-
-    // reverb
-    const reverb = (({ context }, gain) => {
-      if (gain >= .001) {
-        return new Tone.Gain({
-          context,
-          gain,
-        });
-      }
-    })(this, generator[16] / 1000);
-
     // output - base gain, peak gain and sustain gain
     const [outputBaseGain, outputPeakGain, outputSustainGain] = [
       0,
@@ -481,16 +437,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // status - decay
     status.setValueAtTime(0, outputDecay);
 
-    // connect chorus
-    if (chorus) {
-      output.chain(chorus, this._chorus);
-    }
-
-    // connect reverb
-    if (reverb) {
-      output.chain(reverb, this._reverb);
-    }
-
     // connect
     source.chain(filter, panner, volume, output, this.output);
 
@@ -524,12 +470,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       panner.dispose();
       volume.dispose();
       output.dispose();
-
-      // dispose reverb
-      reverb?.dispose();
-
-      // dispose chorus
-      chorus?.dispose();
 
       // delete voice
       ((i = Sampler._activeVoices.indexOf(voice)) => {
@@ -739,15 +679,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       // playback rate - decay
       source.playbackRate.linearRampToValueAtTime(playbackRateSustainFreq, playbackRateDecay);
     });
-  }
-
-  /**
-   * Dispose and disconnect.
-   */
-  dispose() {
-    this._reverb.dispose();
-    this._chorus.dispose();
-    return super.dispose();
   }
 
   /**
