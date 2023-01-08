@@ -635,6 +635,13 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   }
 
   /**
+   * Reset all controllers.
+   */
+  resetAllControllers() {
+    this._channel = new Channel();
+  }
+
+  /**
    * Change the pitch bend.
    */
   changePitchBend(pitchBend: Tone.Unit.AudioRange, time?: Tone.Unit.Time) {

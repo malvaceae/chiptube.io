@@ -288,10 +288,19 @@ const play = async () => {
   // control changes
   const controlChanges = tracks.value.reduce((values, { channel, controlChanges }) => {
     values[channel] = Object.entries(controlChanges).flatMap(([key, values]) => {
-      if (['6', '7', '10', '11', '38', '64', '100', '101'].includes(key)) {
-        return values;
-      } else {
-        return [];
+      switch (Number(key)) {
+        case 6:
+        case 7:
+        case 10:
+        case 11:
+        case 38:
+        case 64:
+        case 100:
+        case 101:
+        case 121:
+          return values;
+        default:
+          return [];
       }
     }).concat(values[channel] ?? []);
 
@@ -345,6 +354,9 @@ const play = async () => {
           break;
         case 101:
           sampler.changeRpnMsb(value);
+          break;
+        case 121:
+          sampler.resetAllControllers();
           break;
       }
     }, controlChanges[channel]);
