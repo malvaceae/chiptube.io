@@ -13,7 +13,7 @@ export class Channel {
   /**
    * The pan.
    */
-  pan?: Tone.Unit.NormalRange;
+  pan: Tone.Unit.NormalRange = 64 / 127;
 
   /**
    * The expression.
@@ -28,12 +28,12 @@ export class Channel {
   /**
    * The registered parameter number (RPN) LSB.
    */
-  rpnLsb?: Tone.Unit.NormalRange;
+  rpnLsb: Tone.Unit.NormalRange = 1;
 
   /**
    * The registered parameter number (RPN) MSB.
    */
-  rpnMsb?: Tone.Unit.NormalRange;
+  rpnMsb: Tone.Unit.NormalRange = 1;
 
   /**
    * The pitch bend.
@@ -43,12 +43,35 @@ export class Channel {
   /**
    * The pitch bend sensitivity.
    */
-  pitchBendSensitivity: number = 2;
+  private _pitchBendSensitivity = 256;
 
   /**
-   * Get the panner value.
+   * Set the data entry MSB.
    */
-  get pannerValue(): Tone.Unit.AudioRange | undefined {
-    return this.pan ? (this.pan - .5) * 2 : undefined;
+  set dataEntryMsb(dataEntryMsb: Tone.Unit.NormalRange) {
+    // pitch bend sensitivity
+    if (this.rpnMsb === 0 && this.rpnLsb === 0) {
+      this._pitchBendSensitivity = this._pitchBendSensitivity & 0x007F | dataEntryMsb * 127 << 7;
+    }
+  }
+
+  /**
+   * Set the data entry LSB.
+   */
+  set dataEntryLsb(dataEntryLsb: Tone.Unit.NormalRange) {
+    // pitch bend sensitivity
+    if (this.rpnMsb === 0 && this.rpnLsb === 0) {
+      this._pitchBendSensitivity = this._pitchBendSensitivity & 0x3F80 | dataEntryLsb * 127 << 0;
+    }
+  }
+
+  /**
+   * Get the pitch bend sensitivity.
+   */
+  get pitchBendSensitivity() {
+    return (
+      (this._pitchBendSensitivity & 0x3F80) / 128 +
+      (this._pitchBendSensitivity & 0x007F) / 100
+    );
   }
 }

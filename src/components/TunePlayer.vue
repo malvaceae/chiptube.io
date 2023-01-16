@@ -302,7 +302,7 @@ const play = async () => {
         default:
           return [];
       }
-    }).concat(values[channel] ?? []);
+    }).concat(values[channel] ?? []).sort((a, b) => b.number - a.number);
 
     return values;
   }, {} as Record<number, Track['controlChanges'][number]>);
