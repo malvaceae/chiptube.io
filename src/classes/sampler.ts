@@ -320,7 +320,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     output.gain.linearRampToValueAtTime(outputPeakGain, volEnvHold);
 
     // output - decay
-    output.gain.exponentialRampToValueAtTime(outputSustainGain, volEnvDecay);
+    output.gain.setValueCurveAtTime(calcExponentialCurve(32).map((value) => {
+      return Math.max(outputPeakGain * value, outputSustainGain);
+    }), volEnvHold, volEnvDecay - volEnvHold);
 
     // volume
     const volume = new Tone.Gain({
@@ -700,7 +702,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const outputRelease = computedTime + toSeconds(generator[38]);
 
     // output - release
-    output.gain.exponentialApproachValueAtTime(0, computedTime, outputRelease - computedTime);
+    output.gain.setValueCurveAtTime(calcExponentialCurve(32).map((value) => {
+      return value * output.gain.getValueAtTime(computedTime);
+    }), computedTime, outputRelease - computedTime);
 
     // filter - base frequency and peak frequency
     const [filterBaseFreq, filterPeakFreq] = [
@@ -787,6 +791,15 @@ const toPlaybackRateBaseFrequency = (key: number, { 51: coarseTune, 52: fineTune
  */
 const toPriority = ({ output: { gain }, status }: Voice) => {
   return gain.value >= .001 ? status.value + gain.value : 0;
+};
+
+/**
+ * Calculate exponential curve.
+ */
+const calcExponentialCurve = (length: number) => {
+  return [...Array(length).keys()].map((i) => {
+    return Math.exp(-9.226 * i / (length - 1));
+  });
 };
 
 /**
