@@ -732,7 +732,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // stop
     source.stop(outputRelease);
   }
-};
+}
 
 /**
  * The stored and loaded buffers.
@@ -744,7 +744,7 @@ const buffers: Map<number, Tone.ToneAudioBuffer> = new Map();
  */
 const toSeconds = (value: number) => {
   return Math.pow(2, value / 1200);
-}
+};
 
 /**
  * Convert generator value to frequency.
@@ -759,35 +759,35 @@ const toFrequency = (value: number) => {
   }
 
   return toSeconds(value - 6900) * 440;
-}
+};
 
 /**
  * Convert generator value to decay rate.
  */
 const toDecayRate = (value: number) => {
   return Math.max(1 - value / 1000, 0);
-}
+};
 
 /**
  * Convert generator value to playback rate frequency.
  */
 const toPlaybackRateFrequency = (value: number, scaleTuning: number) => {
   return Math.pow(Math.pow(2, 1 / 12), value * (scaleTuning / 100));
-}
+};
 
 /**
  * Convert generator value to playback rate base frequency.
  */
 const toPlaybackRateBaseFrequency = (key: number, { 51: coarseTune, 52: fineTune, 56: scaleTuning, 58: overridingRootKey }: Generator, { originalKey, correction }: Sample) => {
   return toPlaybackRateFrequency(key - (overridingRootKey === -1 ? originalKey : overridingRootKey) + (coarseTune + fineTune / 100) + (correction / 100), scaleTuning);
-}
+};
 
 /**
  * Convert voice value to priority.
  */
 const toPriority = ({ output: { gain }, status }: Voice) => {
   return gain.value >= .001 ? status.value + gain.value : 0;
-}
+};
 
 /**
  * Get a sampler.
