@@ -297,7 +297,9 @@ const play = async () => {
         case 64:
         case 100:
         case 101:
+        case 120:
         case 121:
+        case 123:
           return values;
         default:
           return [];
@@ -355,8 +357,14 @@ const play = async () => {
         case 101:
           sampler.changeRpnMsb(value);
           break;
+        case 120:
+          sampler.allSoundOff(time);
+          break;
         case 121:
           sampler.resetAllControllers();
+          break;
+        case 123:
+          sampler.allNotesOff(time);
           break;
       }
     }, controlChanges[channel]);
@@ -401,9 +409,9 @@ const pause = () => {
   // pause
   Tone.Transport.pause();
 
-  // release all samplers
+  // all sound off
   samplers.value.forEach((sampler) => {
-    sampler?.releaseAll();
+    sampler?.allSoundOff();
   });
 
   // set current state to paused
@@ -446,9 +454,9 @@ const toggle = () => {
 const seek = (seconds: number) => {
   Tone.Transport.seconds = seconds;
 
-  // release all samplers
+  // all sound off
   samplers.value.forEach((sampler) => {
-    sampler?.releaseAll();
+    sampler?.allSoundOff();
   });
 };
 

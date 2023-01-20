@@ -542,11 +542,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    * Release all currently active voices.
    */
   releaseAll(time?: Tone.Unit.Time) {
-    time = this.toSeconds(time);
-
-    Sampler._activeVoices.filter((voice) => voice.sampler === this).forEach((voice) => {
-      voice.source.stop(time);
-    });
+    this.allNotesOff(time);
   }
 
   /**
@@ -646,10 +642,36 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   }
 
   /**
+   * All sound off.
+   */
+  allSoundOff(time?: Tone.Unit.Time) {
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    Sampler._activeVoices.filter((voice) => voice.sampler === this).forEach((voice) => {
+      voice.source.stop(computedTime);
+    });
+  }
+
+  /**
    * Reset all controllers.
    */
   resetAllControllers() {
     this._channel = new Channel();
+  }
+
+  /**
+   * All notes off.
+   */
+  allNotesOff(time?: Tone.Unit.Time) {
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    Sampler._activeVoices.filter((voice) => voice.sampler === this).forEach((voice) => {
+      if (this._channel.damperPedal <= 63 / 127) {
+        this._release(voice, computedTime);
+      }
+    });
   }
 
   /**
@@ -664,6 +686,15 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach(({ generator, pitchBend }) => {
       pitchBend.setValueAtTime(toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]), computedTime);
     });
+  }
+
+  /**
+   * Dispose and disconnect.
+   */
+  dispose() {
+    this.allSoundOff();
+    super.dispose();
+    return this;
   }
 
   /**
