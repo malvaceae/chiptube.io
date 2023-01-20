@@ -70,6 +70,16 @@ export interface Voice {
   source: Tone.ToneBufferSource;
 
   /**
+   * The playback rate.
+   */
+  playbackRate: Tone.Multiply;
+
+  /**
+   * The pitch bend.
+   */
+  pitchBend: Tone.Signal;
+
+  /**
    * The status.
    */
   status: Tone.Signal;

@@ -308,7 +308,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     ];
 
     // output - default value
-    output.gain.setValueAtTime(outputBaseGain, computedTime);
+    output.gain.setValueAtTime(outputBaseGain, 0);
 
     // output - delay
     output.gain.setValueAtTime(outputBaseGain, volEnvDelay);
@@ -330,7 +330,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     });
 
     // volume - default value
-    volume.gain.setValueAtTime(Math.pow(this._channel.volume * this._channel.expression, 2), computedTime);
+    volume.gain.setValueAtTime(Math.pow(this._channel.volume * this._channel.expression, 2), 0);
 
     // panner
     const panner = new Tone.Panner({
@@ -338,7 +338,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     });
 
     // panner - default value
-    panner.pan.setValueAtTime(Math.min(Math.max((this._channel.pan - .5) * 2 + generator[17] / 500, -1), 1), computedTime);
+    panner.pan.setValueAtTime(Math.min(Math.max((this._channel.pan - .5) * 2 + generator[17] / 500, -1), 1), 0);
 
     // filter
     const filter = new Tone.BiquadFilter({
@@ -355,7 +355,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const filterSustainFreq = filterBaseFreq + (filterPeakFreq - filterBaseFreq) * toDecayRate(generator[29]);
 
     // filter - default value
-    filter.frequency.setValueAtTime(filterBaseFreq, computedTime);
+    filter.frequency.setValueAtTime(filterBaseFreq, 0);
 
     // filter - delay
     filter.frequency.setValueAtTime(filterBaseFreq, modEnvDelay);
@@ -370,7 +370,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     filter.frequency.linearRampToValueAtTime(filterSustainFreq, modEnvDecay);
 
     // filter - Q factor
-    filter.Q.setValueAtTime(Math.pow(10, generator[9] / 200), computedTime);
+    filter.Q.setValueAtTime(Math.pow(10, generator[9] / 200), 0);
 
     // source - parameters
     const [url, loopStart, loopEnd, loop] = [
@@ -389,29 +389,48 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       loop,
     });
 
+    // playback rate
+    const playbackRate = new Tone.Multiply({
+      context: this.context,
+    });
+
     // playback rate - base frequency and peak frequency
     const [playbackRateBaseFreq, playbackRatePeakFreq] = [
-      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]),
-      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
+      toPlaybackRateBaseFrequency(key, generator, sample),
+      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
     ];
 
     // playback rate - sustain frequency
     const playbackRateSustainFreq = playbackRateBaseFreq + (playbackRatePeakFreq - playbackRateBaseFreq) * toDecayRate(generator[29]);
 
     // playback rate - default value
-    source.playbackRate.setValueAtTime(playbackRateBaseFreq, computedTime);
+    playbackRate.setValueAtTime(playbackRateBaseFreq, 0);
 
     // playback rate - delay
-    source.playbackRate.setValueAtTime(playbackRateBaseFreq, modEnvDelay);
+    playbackRate.setValueAtTime(playbackRateBaseFreq, modEnvDelay);
 
     // playback rate - attack
-    source.playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvAttack);
+    playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvAttack);
 
     // playback rate - hold
-    source.playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvHold);
+    playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvHold);
 
     // playback rate - decay
-    source.playbackRate.linearRampToValueAtTime(playbackRateSustainFreq, modEnvDecay);
+    playbackRate.linearRampToValueAtTime(playbackRateSustainFreq, modEnvDecay);
+
+    // playback rate - connect
+    playbackRate.connect(source.playbackRate);
+
+    // pitch bend
+    const pitchBend = new Tone.Signal({
+      context: this.context,
+    });
+
+    // pitch bend - default value
+    pitchBend.setValueAtTime(toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]), 0);
+
+    // pitch bend - connect
+    pitchBend.connect(playbackRate);
 
     // status
     const status = new Tone.Signal({
@@ -419,7 +438,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     });
 
     // status - default value
-    status.setValueAtTime(5, computedTime);
+    status.setValueAtTime(5, 0);
 
     // status - delay
     status.setValueAtTime(4, volEnvDelay);
@@ -451,6 +470,8 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       panner,
       filter,
       source,
+      playbackRate,
+      pitchBend,
       status,
     };
 
@@ -461,6 +482,8 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     source.onended = () => {
       // dispose
       status.dispose();
+      pitchBend.dispose();
+      playbackRate.dispose();
       source.dispose();
       filter.dispose();
       panner.dispose();
@@ -585,7 +608,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const computedTime = this.toSeconds(time);
 
     Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
-      const { end, output, filter, source, status } = voice;
+      const { end, output, filter, source, playbackRate, status } = voice;
 
       // computed end time
       const computedEnd = this.toSeconds(end);
@@ -598,7 +621,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       // sustain
       if (damperPedal >= 64 / 127) {
         // cancel parameters
-        [output.gain, filter.frequency, source.playbackRate, status].forEach((parameter) => {
+        [output.gain, filter.frequency, playbackRate, status].forEach((parameter) => {
           parameter.cancelScheduledValues(computedEnd);
         });
 
@@ -638,63 +661,20 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // computed time
     const computedTime = this.toSeconds(time);
 
-    Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
-      const { key, end, generator, sample, source } = voice;
-
-      // mod env - times
-      const [modEnvDelay, modEnvAttack, modEnvHold, modEnvDecay] = [
-        computedTime + toSeconds(generator[25]),
-        computedTime + toSeconds(generator[25]) + toSeconds(generator[26]),
-        computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]),
-        computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]) + toSeconds(generator[28]) * toSeconds((60 - key) * generator[32]),
-      ];
-
-      // playback rate - base frequency and peak frequency
-      const [playbackRateBaseFreq, playbackRatePeakFreq] = [
-        toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(pitchBend * this._channel.pitchBendSensitivity, generator[56]),
-        toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(pitchBend * this._channel.pitchBendSensitivity, generator[56]) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
-      ];
-
-      // playback rate - sustain frequency
-      const playbackRateSustainFreq = playbackRateBaseFreq + (playbackRatePeakFreq - playbackRateBaseFreq) * toDecayRate(generator[29]);
-
-      // playback rate - cancel
-      source.playbackRate.cancelScheduledValues(computedTime);
-
-      // playback rate - default value
-      source.playbackRate.setValueAtTime(playbackRateBaseFreq, computedTime);
-
-      // playback rate - delay
-      source.playbackRate.setValueAtTime(playbackRateBaseFreq, modEnvDelay);
-
-      // playback rate - attack
-      source.playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvAttack);
-
-      // playback rate - hold
-      source.playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvHold);
-
-      // playback rate - decay
-      source.playbackRate.linearRampToValueAtTime(playbackRateSustainFreq, modEnvDecay);
-
-      // computed end time
-      const computedEnd = this.toSeconds(end);
-
-      // release
-      if (this._channel.damperPedal <= 63 / 127) {
-        this._release(voice, computedEnd);
-      }
+    Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach(({ generator, pitchBend }) => {
+      pitchBend.setValueAtTime(toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]), computedTime);
     });
   }
 
   /**
    * Release the voice.
    */
-  private _release({ key, generator, sample, output, filter, source, status }: Voice, time?: Tone.Unit.Time) {
+  private _release({ key, generator, sample, output, filter, source, playbackRate, status }: Voice, time?: Tone.Unit.Time) {
     // computed time
     const computedTime = this.toSeconds(time);
 
     // set ramp point to release time
-    [output.gain, filter.frequency, source.playbackRate, status].forEach((parameter) => {
+    [output.gain, filter.frequency, playbackRate, status].forEach((parameter) => {
       parameter.setRampPoint(computedTime);
     });
 
@@ -720,15 +700,15 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // playback rate - base frequency and peak frequency
     const [playbackRateBaseFreq, playbackRatePeakFreq] = [
-      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]),
-      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
+      toPlaybackRateBaseFrequency(key, generator, sample),
+      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
     ];
 
     // playback rate - release time
-    const playbackRateRelease = computedTime + toSeconds(generator[30]) * (playbackRateBaseFreq === playbackRatePeakFreq ? 1 : (source.playbackRate.getValueAtTime(computedTime) - playbackRateBaseFreq) / (playbackRatePeakFreq - playbackRateBaseFreq));
+    const playbackRateRelease = computedTime + toSeconds(generator[30]) * (playbackRateBaseFreq === playbackRatePeakFreq ? 1 : (playbackRate.getValueAtTime(computedTime) - playbackRateBaseFreq) / (playbackRatePeakFreq - playbackRateBaseFreq));
 
     // playback rate - release
-    source.playbackRate.linearRampToValueAtTime(playbackRateBaseFreq, playbackRateRelease);
+    playbackRate.linearRampToValueAtTime(playbackRateBaseFreq, playbackRateRelease);
 
     // status - release
     status.setValueAtTime(0, computedTime);
