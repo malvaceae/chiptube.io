@@ -340,7 +340,7 @@ const play = async () => {
           sampler.changeVolume(value, time);
           break;
         case 10:
-          sampler.changePan(value);
+          sampler.changePan(value, time);
           break;
         case 11:
           sampler.changeExpression(value, time);

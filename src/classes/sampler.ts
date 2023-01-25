@@ -569,8 +569,15 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * Change the pan.
    */
-  changePan(pan: Tone.Unit.NormalRange) {
+  changePan(pan: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
     this._channel.pan = pan;
+
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
+      voice.panner.pan.setValueAtTime(Math.min(Math.max((pan - .5) * 2 + voice.generator[17] / 500, -1), 1), 0);
+    });
   }
 
   /**
