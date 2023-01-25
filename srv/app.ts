@@ -8,6 +8,7 @@ import {
   CustomResource,
   Duration,
   IgnoreMode,
+  SecretValue,
   Stack,
   StackProps,
   aws_apigateway as apigateway,
@@ -439,7 +440,7 @@ class ChipTubeStack extends Stack {
     new cognito.UserPoolIdentityProviderGoogle(this, 'UserPoolIdentityProviderGoogle', {
       userPool,
       clientId: googleClientId,
-      clientSecret: googleClientSecret,
+      clientSecretValue: SecretValue.unsafePlainText(googleClientSecret),
       scopes: [
         'profile',
         'email',
