@@ -576,7 +576,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const computedTime = this.toSeconds(time);
 
     Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
-      voice.panner.pan.setValueAtTime(Math.min(Math.max((pan - .5) * 2 + voice.generator[17] / 500, -1), 1), 0);
+      voice.panner.pan.setValueAtTime(Math.min(Math.max((pan - .5) * 2 + voice.generator[17] / 500, -1), 1), computedTime);
     });
   }
 
