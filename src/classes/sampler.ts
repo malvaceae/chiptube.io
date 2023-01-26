@@ -86,7 +86,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * The object of all currently playing voices.
    */
-  private static _activeVoices: Voice[] = Array(64);
+  private static _activeVoices: Voice[] = Array(32);
 
   /**
    * @param options The options associated with the sampler.
@@ -253,15 +253,15 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
         // priorities
         const [priority, previousPriority] = [
-          toPriority(voice),
-          toPriority(activeVoices[candidate]),
+          toPriority(computedTime, voice),
+          toPriority(computedTime, activeVoices[candidate]),
         ];
 
         if (priority < previousPriority) {
           return i;
         }
 
-        if (priority - previousPriority === 0 && voice.start < activeVoices[candidate].start) {
+        if (priority - previousPriority < 1e-3 && previousPriority - priority < 1e-3 && voice.start < activeVoices[candidate].start) {
           return i;
         }
 
@@ -275,7 +275,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     ((voice = Sampler._activeVoices[candidate]) => {
       if (voice) {
-        voice.source.onended(voice.source);
+        voice.source.stop(computedTime);
       }
     })();
 
@@ -833,8 +833,8 @@ const toPlaybackRateBaseFrequency = (key: number, { 51: coarseTune, 52: fineTune
 /**
  * Convert voice value to priority.
  */
-const toPriority = ({ output: { gain }, status }: Voice) => {
-  return gain.value >= .001 ? status.value + gain.value : 0;
+const toPriority = (time: Tone.Unit.Time, { output, status }: Voice) => {
+  return status.getValueAtTime(time) + output.gain.getValueAtTime(time);
 };
 
 /**
