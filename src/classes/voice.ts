@@ -25,6 +25,11 @@ export interface Voice {
   key: Tone.Unit.MidiNote;
 
   /**
+   * The velocity.
+   */
+  velocity: Tone.Unit.NormalRange;
+
+  /**
    * The start time.
    */
   start: Tone.Unit.Seconds;

@@ -279,50 +279,13 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       }
     })();
 
-    // vol env - times
-    const [volEnvDelay, volEnvAttack, volEnvHold, volEnvDecay] = [
-      computedTime + toSeconds(generator[33]),
-      computedTime + toSeconds(generator[33]) + toSeconds(generator[34]),
-      computedTime + toSeconds(generator[33]) + toSeconds(generator[34]) + toSeconds(generator[35]) * toSeconds((60 - key) * generator[39]),
-      computedTime + toSeconds(generator[33]) + toSeconds(generator[34]) + toSeconds(generator[35]) * toSeconds((60 - key) * generator[39]) + toSeconds(generator[36]) * toSeconds((60 - key) * generator[40]),
-    ];
-
-    // mod env - times
-    const [modEnvDelay, modEnvAttack, modEnvHold, modEnvDecay] = [
-      computedTime + toSeconds(generator[25]),
-      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]),
-      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]),
-      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]) + toSeconds(generator[28]) * toSeconds((60 - key) * generator[32]),
-    ];
-
     // output
     const output = new Tone.Gain({
       context: this.context,
     });
 
-    // output - base gain, peak gain and sustain gain
-    const [outputBaseGain, outputPeakGain, outputSustainGain] = [
-      0,
-      Tone.dbToGain(2 * Tone.gainToDb(velocity) - .4 * (generator[48] / 10) - .5 * (generator[9] / 10)),
-      Tone.dbToGain(2 * Tone.gainToDb(velocity) - .4 * (generator[48] / 10) - .5 * (generator[9] / 10) - (generator[37] / 10)),
-    ];
-
-    // output - default value
-    output.gain.setValueAtTime(outputBaseGain, 0);
-
-    // output - delay
-    output.gain.setValueAtTime(outputBaseGain, volEnvDelay);
-
-    // output - attack
-    output.gain.linearRampToValueAtTime(outputPeakGain, volEnvAttack);
-
-    // output - hold
-    output.gain.linearRampToValueAtTime(outputPeakGain, volEnvHold);
-
-    // output - decay
-    output.gain.setValueCurveAtTime(calcExponentialCurve(32).map((value) => {
-      return Math.max(outputPeakGain * value, outputSustainGain);
-    }), volEnvHold, volEnvDecay - volEnvHold);
+    // output - connect
+    output.connect(this.output);
 
     // volume
     const volume = new Tone.Gain({
@@ -332,6 +295,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // volume - default value
     volume.gain.setValueAtTime(Math.pow(this._channel.volume * this._channel.expression, 2), 0);
 
+    // volume - connect
+    volume.connect(output);
+
     // panner
     const panner = new Tone.Panner({
       context: this.context,
@@ -340,37 +306,17 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // panner - default value
     panner.pan.setValueAtTime(Math.min(Math.max((this._channel.pan - .5) * 2 + generator[17] / 500, -1), 1), 0);
 
+    // panner - connect
+    panner.connect(volume);
+
     // filter
     const filter = new Tone.BiquadFilter({
       context: this.context,
+      Q: Math.pow(10, generator[9] / 200),
     });
 
-    // filter - base frequency and peak frequency
-    const [filterBaseFreq, filterPeakFreq] = [
-      toFrequency(generator[8]),
-      toFrequency(generator[8] + generator[11]),
-    ];
-
-    // filter - sustain frequency
-    const filterSustainFreq = filterBaseFreq + (filterPeakFreq - filterBaseFreq) * toDecayRate(generator[29]);
-
-    // filter - default value
-    filter.frequency.setValueAtTime(filterBaseFreq, 0);
-
-    // filter - delay
-    filter.frequency.setValueAtTime(filterBaseFreq, modEnvDelay);
-
-    // filter - attack
-    filter.frequency.linearRampToValueAtTime(filterPeakFreq, Math.max(modEnvAttack, modEnvDelay + this.blockTime * 8));
-
-    // filter - hold
-    filter.frequency.linearRampToValueAtTime(filterPeakFreq, modEnvHold);
-
-    // filter - decay
-    filter.frequency.linearRampToValueAtTime(filterSustainFreq, modEnvDecay);
-
-    // filter - Q factor
-    filter.Q.setValueAtTime(Math.pow(10, generator[9] / 200), 0);
+    // filter - connect
+    filter.connect(panner);
 
     // source - parameters
     const [url, loopStart, loopEnd, loop] = [
@@ -389,34 +335,13 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       loop,
     });
 
+    // source - connect
+    source.connect(filter);
+
     // playback rate
     const playbackRate = new Tone.Multiply({
       context: this.context,
     });
-
-    // playback rate - base frequency and peak frequency
-    const [playbackRateBaseFreq, playbackRatePeakFreq] = [
-      toPlaybackRateBaseFrequency(key, generator, sample),
-      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
-    ];
-
-    // playback rate - sustain frequency
-    const playbackRateSustainFreq = playbackRateBaseFreq + (playbackRatePeakFreq - playbackRateBaseFreq) * toDecayRate(generator[29]);
-
-    // playback rate - default value
-    playbackRate.setValueAtTime(playbackRateBaseFreq, 0);
-
-    // playback rate - delay
-    playbackRate.setValueAtTime(playbackRateBaseFreq, modEnvDelay);
-
-    // playback rate - attack
-    playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvAttack);
-
-    // playback rate - hold
-    playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvHold);
-
-    // playback rate - decay
-    playbackRate.linearRampToValueAtTime(playbackRateSustainFreq, modEnvDecay);
 
     // playback rate - connect
     playbackRate.connect(source.playbackRate);
@@ -437,31 +362,11 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       context: this.context,
     });
 
-    // status - default value
-    status.setValueAtTime(5, 0);
-
-    // status - delay
-    status.setValueAtTime(4, volEnvDelay);
-
-    // status - attack
-    status.setValueAtTime(3, volEnvAttack);
-
-    // status - hold
-    status.setValueAtTime(2, volEnvHold);
-
-    // status - decay
-    status.setValueAtTime(1, volEnvDecay);
-
-    // connect
-    source.chain(filter, panner, volume, output, this.output);
-
-    // start
-    source.start(computedTime, 0);
-
     // voice
     const voice: Voice = {
       sampler: this,
       key,
+      velocity,
       start: computedTime,
       generator,
       sample,
@@ -476,7 +381,13 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     };
 
     // set voice to active voices
-    Sampler._activeVoices.splice(candidate, 1, voice);
+    Sampler._activeVoices[candidate] = voice;
+
+    // attack
+    this._attack(voice, computedTime);
+
+    // start
+    source.start(computedTime, 0);
 
     // invoke after the source is done playing
     source.onended = () => {
@@ -611,7 +522,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const computedTime = this.toSeconds(time);
 
     Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
-      const { end, output, filter, source, playbackRate, status } = voice;
+      const { start, end } = voice;
 
       // computed end time
       const computedEnd = this.toSeconds(end);
@@ -623,13 +534,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
       // sustain
       if (damperPedal >= 64 / 127) {
-        // cancel parameters
-        [output.gain, filter.frequency, playbackRate, status].forEach((parameter) => {
-          parameter.cancelScheduledValues(computedEnd);
-        });
-
-        // cancel stop
-        source.cancelStop();
+        this._attack(voice, start);
       }
     });
   }
@@ -702,6 +607,127 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     this.allSoundOff();
     super.dispose();
     return this;
+  }
+
+  /**
+   * Attack the voice.
+   */
+  private _attack({ key, velocity, generator, sample, output, filter, source, playbackRate, status }: Voice, time?: Tone.Unit.Time) {
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    // cancel parameters
+    [output.gain, filter.frequency, playbackRate, status].forEach((parameter) => {
+      parameter.cancelScheduledValues(0);
+    });
+
+    // cancel stop
+    if (source.state === 'started') {
+      source.cancelStop();
+    }
+
+    // vol env - times
+    const [volEnvDelay, volEnvAttack, volEnvHold, volEnvDecay] = [
+      computedTime + toSeconds(generator[33]),
+      computedTime + toSeconds(generator[33]) + toSeconds(generator[34]),
+      computedTime + toSeconds(generator[33]) + toSeconds(generator[34]) + toSeconds(generator[35]) * toSeconds((60 - key) * generator[39]),
+      computedTime + toSeconds(generator[33]) + toSeconds(generator[34]) + toSeconds(generator[35]) * toSeconds((60 - key) * generator[39]) + toSeconds(generator[36]) * toSeconds((60 - key) * generator[40]),
+    ];
+
+    // mod env - times
+    const [modEnvDelay, modEnvAttack, modEnvHold, modEnvDecay] = [
+      computedTime + toSeconds(generator[25]),
+      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]),
+      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]),
+      computedTime + toSeconds(generator[25]) + toSeconds(generator[26]) + toSeconds(generator[27]) * toSeconds((60 - key) * generator[31]) + toSeconds(generator[28]) * toSeconds((60 - key) * generator[32]),
+    ];
+
+    // output - base gain, peak gain and sustain gain
+    const [outputBaseGain, outputPeakGain, outputSustainGain] = [
+      0,
+      Tone.dbToGain(2 * Tone.gainToDb(velocity) - .4 * (generator[48] / 10) - .5 * (generator[9] / 10)),
+      Tone.dbToGain(2 * Tone.gainToDb(velocity) - .4 * (generator[48] / 10) - .5 * (generator[9] / 10) - (generator[37] / 10)),
+    ];
+
+    // output - default value
+    output.gain.setValueAtTime(outputBaseGain, 0);
+
+    // output - delay
+    output.gain.setValueAtTime(outputBaseGain, volEnvDelay);
+
+    // output - attack
+    output.gain.linearRampToValueAtTime(outputPeakGain, volEnvAttack);
+
+    // output - hold
+    output.gain.linearRampToValueAtTime(outputPeakGain, volEnvHold);
+
+    // output - decay
+    output.gain.setValueCurveAtTime(calcExponentialCurve(32).map((value) => {
+      return Math.max(outputPeakGain * value, outputSustainGain);
+    }), volEnvHold, volEnvDecay - volEnvHold);
+
+    // filter - base frequency and peak frequency
+    const [filterBaseFreq, filterPeakFreq] = [
+      toFrequency(generator[8]),
+      toFrequency(generator[8] + generator[11]),
+    ];
+
+    // filter - sustain frequency
+    const filterSustainFreq = filterBaseFreq + (filterPeakFreq - filterBaseFreq) * toDecayRate(generator[29]);
+
+    // filter - default value
+    filter.frequency.setValueAtTime(filterBaseFreq, 0);
+
+    // filter - delay
+    filter.frequency.setValueAtTime(filterBaseFreq, modEnvDelay);
+
+    // filter - attack
+    filter.frequency.linearRampToValueAtTime(filterPeakFreq, modEnvAttack);
+
+    // filter - hold
+    filter.frequency.linearRampToValueAtTime(filterPeakFreq, modEnvHold);
+
+    // filter - decay
+    filter.frequency.linearRampToValueAtTime(filterSustainFreq, modEnvDecay);
+
+    // playback rate - base frequency and peak frequency
+    const [playbackRateBaseFreq, playbackRatePeakFreq] = [
+      toPlaybackRateBaseFrequency(key, generator, sample),
+      toPlaybackRateBaseFrequency(key, generator, sample) * toPlaybackRateFrequency(generator[7] / 100, generator[56]),
+    ];
+
+    // playback rate - sustain frequency
+    const playbackRateSustainFreq = playbackRateBaseFreq + (playbackRatePeakFreq - playbackRateBaseFreq) * toDecayRate(generator[29]);
+
+    // playback rate - default value
+    playbackRate.setValueAtTime(playbackRateBaseFreq, 0);
+
+    // playback rate - delay
+    playbackRate.setValueAtTime(playbackRateBaseFreq, modEnvDelay);
+
+    // playback rate - attack
+    playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvAttack);
+
+    // playback rate - hold
+    playbackRate.linearRampToValueAtTime(playbackRatePeakFreq, modEnvHold);
+
+    // playback rate - decay
+    playbackRate.linearRampToValueAtTime(playbackRateSustainFreq, modEnvDecay);
+
+    // status - default value
+    status.setValueAtTime(5, 0);
+
+    // status - delay
+    status.setValueAtTime(4, volEnvDelay);
+
+    // status - attack
+    status.setValueAtTime(3, volEnvAttack);
+
+    // status - hold
+    status.setValueAtTime(2, volEnvHold);
+
+    // status - decay
+    status.setValueAtTime(1, volEnvDecay);
   }
 
   /**
