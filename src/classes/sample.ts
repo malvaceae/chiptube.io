@@ -3,9 +3,14 @@
  */
 export interface Sample {
   /**
-   * The sample ID.
+   * The sample name.
    */
-  id: number;
+  name: string;
+
+  /**
+   * The data points.
+   */
+  dataPoints: [number, number];
 
   /**
    * The loop points.
@@ -26,4 +31,14 @@ export interface Sample {
    * The correction.
    */
   correction: number;
+
+  /**
+   * The sample link.
+   */
+  link: number;
+
+  /**
+   * The sample type.
+   */
+  type: number;
 }

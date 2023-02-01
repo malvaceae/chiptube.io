@@ -1,17 +1,14 @@
 // Tone.js
 import * as Tone from 'tone';
 
+// Sf2
+import { Sf2 } from '@/classes/sf2';
+
 // Generator
 import { Generator } from '@/classes/generator';
 
-// Generators
-import { generators } from '@/classes/generators';
-
 // Sample
 import { Sample } from '@/classes/sample';
-
-// Samples
-import { samples } from '@/classes/samples';
 
 // Channel
 import { Channel } from '@/classes/channel';
@@ -29,14 +26,9 @@ export interface SamplerOptions extends Tone.ToneAudioNodeOptions {
   volume: Tone.Unit.Decibels;
 
   /**
-   * The generators.
+   * The preset id.
    */
-  generators: Partial<Generator>[];
-
-  /**
-   * The samples.
-   */
-  samples: Sample[];
+  presetId: number;
 
   /**
    * The path which is prefixed before every url.
@@ -64,14 +56,19 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   output: Tone.OutputNode;
 
   /**
-   * The generators.
+   * The patch.
    */
-  private _generators: Generator[];
+  private _patch: number;
 
   /**
-   * The samples.
+   * The bank.
    */
-  private _samples: Map<number, Sample> = new Map();
+  private _bank: number;
+
+  /**
+   * The sf2.
+   */
+  private _sf2?: Sf2;
 
   /**
    * The buffers.
@@ -98,7 +95,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     ]));
 
     // options
-    const { context, volume, generators, samples, baseUrl } = Tone.optionsFromArguments(Sampler.getDefaults(), arguments, [
+    const { context, volume, presetId, baseUrl } = Tone.optionsFromArguments(Sampler.getDefaults(), arguments, [
       //
     ]);
 
@@ -108,77 +105,40 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       volume,
     });
 
-    // generators
-    this._generators = generators.map((generator) => ({
-      0: 0,
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-      6: 0,
-      7: 0,
-      8: 13500,
-      9: 0,
-      10: 0,
-      11: 0,
-      12: 0,
-      13: 0,
-      14: 0,
-      15: 0,
-      16: 0,
-      17: 0,
-      18: 0,
-      19: 0,
-      20: 0,
-      21: -12000,
-      22: 0,
-      23: -12000,
-      24: 0,
-      25: -12000,
-      26: -12000,
-      27: -12000,
-      28: -12000,
-      29: 0,
-      30: -12000,
-      31: 0,
-      32: 0,
-      33: -12000,
-      34: -12000,
-      35: -12000,
-      36: -12000,
-      37: 0,
-      38: -12000,
-      39: 0,
-      40: 0,
-      41: -1,
-      42: 0,
-      43: 32512,
-      44: 32512,
-      45: 0,
-      46: -1,
-      47: -1,
-      48: 0,
-      49: 0,
-      50: 0,
-      51: 0,
-      52: 0,
-      53: -1,
-      54: 0,
-      55: 0,
-      56: 100,
-      57: 0,
-      58: -1,
-      59: 0,
-      60: 0,
-      ...generator,
-    } as Generator));
+    // patch and bank
+    [this._patch, this._bank] = [
+      (presetId & 0x00FF) >> 0,
+      (presetId & 0xFF00) >> 8,
+    ];
 
-    // samples
-    samples.forEach((sample) => this._samples.set(sample.id, sample));
+    // sf2 file
+    const sf2File = `${baseUrl}${presetId.toString(16).padStart(4, '0')}.sf2`;
 
-    // buffers
-    samples.forEach((sample) => this._buffers.set(sample.id, buffers.get(sample.id) ?? ((buffer) => (buffers.set(sample.id, buffer), buffer))(new Tone.ToneAudioBuffer(`${baseUrl}${sample.id}.wav`))));
+    // download and parse sf2 file
+    const done = fetch(sf2File).then((response) => response.arrayBuffer()).then((buffer) => {
+      // sf2
+      const sf2 = this._sf2 = new Sf2(new Uint8Array(buffer));
+
+      // buffers
+      sf2.samples.forEach(({ dataPoints, sampleRate }, i) => {
+        // create buffer
+        const buffer = context.createBuffer(1, dataPoints[1] - dataPoints[0], sampleRate);
+
+        // set sample to buffer
+        buffer.copyToChannel(sf2.getSampleBuffer(...dataPoints), 0);
+
+        // set buffer to buffers
+        this._buffers.set(i, new Tone.ToneAudioBuffer(buffer));
+      });
+    });
+
+    // wait for sf2 file to download and parse
+    Tone.ToneAudioBuffer.downloads.push(done);
+
+    // delete resolved promise
+    done.finally((i = Tone.ToneAudioBuffer.downloads.indexOf(done)) => {
+      Tone.ToneAudioBuffer.downloads.splice(i, 1);
+    });
   }
 
   /**
@@ -188,8 +148,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const options = super.getDefaults();
     return Object.assign(options, {
       volume: 0,
-      generators: [],
-      samples: [],
+      presetId: 0,
       baseUrl: '',
     });
   }
@@ -207,25 +166,19 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // original velocity
     const vel = velocity * 127;
 
+    if (!this._sf2) {
+      throw Error('The sf2 file not loaded.');
+    }
+
     // generator
-    const generator = this._generators.find(({ 43: keyRange, 44: velRange }) => {
-      if ((keyRange & 0x00FF) > key || (keyRange >> 8) < key) {
-        return false;
-      }
-
-      if ((velRange & 0x00FF) > vel || (velRange >> 8) < vel) {
-        return false;
-      }
-
-      return true;
-    });
+    const generator = this._sf2.getGenerator(this._patch, this._bank, key, vel);
 
     if (!generator) {
       throw Error('The generator not found.');
     }
 
     // sample
-    const sample = this._samples.get(generator[53]);
+    const sample = this._sf2.samples[generator[53]];
 
     if (!sample) {
       throw Error('The sample not found.');
@@ -783,11 +736,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 }
 
 /**
- * The stored and loaded buffers.
- */
-const buffers: Map<number, Tone.ToneAudioBuffer> = new Map();
-
-/**
  * Convert generator value to seconds.
  */
 const toSeconds = (value: number) => {
@@ -849,23 +797,10 @@ const calcExponentialCurve = (length: number) => {
 /**
  * Get a sampler.
  */
-export const getSampler = (number: number) => {
+export const getSampler = (patch: number, bank: number, baseUrl = '/samples/') => {
+  const presetId = bank << 8 | patch;
   return new Sampler({
-    generators: generators[number],
-    samples: samples[number],
-    baseUrl: '/samples/',
+    presetId,
+    baseUrl,
   });
-};
-
-/**
- * Clear buffers.
- */
-export const clearBuffers = () => {
-  // dispose
-  buffers.forEach((buffer) => {
-    buffer.dispose();
-  });
-
-  // clear
-  buffers.clear();
 };

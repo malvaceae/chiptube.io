@@ -9,7 +9,7 @@ import { storeToRefs } from 'pinia';
 import { useTuneStore } from '@/stores/tune';
 
 // Sampler
-import { clearBuffers, getSampler, Sampler } from '@/classes/sampler';
+import { getSampler, Sampler } from '@/classes/sampler';
 
 // Amplify
 import { Storage } from 'aws-amplify';
@@ -282,7 +282,11 @@ const play = async () => {
 
   // samplers
   samplers.value = tracks.value.map(({ instrument: { number, percussion }, notes }) => {
-    return notes.length ? getSampler(!percussion ? number : 128).toDestination() : null;
+    if (notes.length) {
+      return (!percussion ? getSampler(number, 0) : getSampler(0, 128)).toDestination();
+    } else {
+      return null;
+    }
   });
 
   // control changes
@@ -658,9 +662,6 @@ onUnmounted(() => {
 
   // stop
   stop();
-
-  // clear buffers
-  clearBuffers();
 });
 </script>
 
