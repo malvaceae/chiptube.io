@@ -198,7 +198,7 @@ const notesByKey = computed(() => notesWithKey.value.reduce((notes, note) => {
 
 // set the volume
 const setVolume = (volume: number) => {
-  Tone.Destination.volume.value = Tone.gainToDb(volume / 100) - 10;
+  Tone.Destination.volume.value = Tone.gainToDb(volume / 100) - 5;
 };
 
 // set the mute
