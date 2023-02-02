@@ -585,7 +585,7 @@ onMounted(() => {
         }
 
         // height of the note
-        const height = this.min((duration) * (keyY.value / 4), keyY.value - 4 - y);
+        const height = format.between((duration) * (keyY.value / 4), 1, keyY.value - 4 - y);
 
         if (y + height < 0) {
           return;
