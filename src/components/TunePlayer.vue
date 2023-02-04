@@ -361,7 +361,7 @@ const play = async () => {
     }
 
     // load the sf2 file
-    return sampler.load(
+    return sampler.loadSf2(
       (number & 0x00FF) >> 0,
       (number & 0xFF00) >> 8,
     );

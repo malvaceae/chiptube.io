@@ -112,9 +112,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * Load the sf2 file.
    */
-  async load(patch: number, bank: number) {
+  async loadSf2(patch: number, bank: number) {
     // preset id
-    const presetId = bank << 8 | patch;
+    const presetId = getPresetId(patch, bank);
 
     // sf2 file name
     const filename = `${this.baseUrl}${presetId.toString(16).padStart(4, '0')}.sf2`;
@@ -164,7 +164,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const vel = velocity * 127;
 
     // preset id
-    const presetId = bank << 8 | patch;
+    const presetId = getPresetId(patch, bank);
 
     // sf2
     const sf2 = this._sf2List.get(presetId);
@@ -854,6 +854,13 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     pitchBend.setValueAtTime(toPlaybackRateFrequency(computedPitchBend, generator[56]), computedTime);
   }
 }
+
+/**
+ * Get the preset id.
+ */
+const getPresetId = (patch: number, bank: number) => {
+  return bank << 8 | patch;
+};
 
 /**
  * Convert generator value to seconds.

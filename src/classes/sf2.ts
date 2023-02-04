@@ -307,13 +307,8 @@ export class Sf2 {
    * Get the generator.
    */
   getGenerator(patch: number, bank: number, key: number, vel: number) {
-    // preset id
-    const presetId = bank << 8 | patch;
-
     // preset
-    const preset = this.presets.find(({ patch, bank }) => {
-      return (bank << 8 | patch) === presetId;
-    });
+    const preset = this.presets.find((preset) => preset.patch === patch && preset.bank === bank);
 
     if (!preset) {
       return null;
