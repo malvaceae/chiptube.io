@@ -84,33 +84,18 @@ export class Sf2 {
    */
   constructor(sf2: Uint8Array) {
     // chunks
-    const [smpl, phdr, pbag, pmod, pgen, inst, ibag, imod, igen, shdr] = (() => {
-      const chunks: Uint8Array[] = [];
-
-      for (let i = 0; i <= (sf2.length - 8); i += 8) {
-        switch (toString(sf2.subarray(i, i + 4))) {
-          case 'RIFF':
-          case 'LIST':
-            i += 4;
-            continue;
-          case 'smpl':
-          case 'phdr':
-          case 'pbag':
-          case 'pmod':
-          case 'pgen':
-          case 'inst':
-          case 'ibag':
-          case 'imod':
-          case 'igen':
-          case 'shdr':
-            chunks.push(sf2.subarray(i + 8, i + 8 + getDword(sf2, i + 4)));
-        }
-
-        i += getDword(sf2, i + 4);
-      }
-
-      return chunks;
-    })();
+    const {
+      smpl,
+      phdr,
+      pbag,
+      pmod,
+      pgen,
+      inst,
+      ibag,
+      imod,
+      igen,
+      shdr,
+    } = splitRiffToChunks(sf2);
 
     // smpl chunk
     this._smpl = new Float32Array(new Int16Array(smpl.buffer, smpl.byteOffset, smpl.length / 2)).map((smpl) => {
@@ -446,6 +431,35 @@ export class Sf2 {
     return this._smpl.subarray(start, end);
   }
 }
+
+/**
+ * Split riff file to chunks.
+ */
+const splitRiffToChunks = (riff: Uint8Array) => {
+  const chunks: Record<string, Uint8Array> = {};
+
+  for (let i = 0; i <= (riff.length - 8); i += 8) {
+    const id = toString(riff.subarray(i, i + 4));
+
+    if (id === 'RIFF') {
+      i += 4;
+      continue;
+    }
+
+    if (id === 'LIST') {
+      i += 4;
+      continue;
+    }
+
+    // get subchunk
+    chunks[id] = riff.subarray(i + 8, i + 8 + getDword(riff, i + 4));
+
+    // add subchunk length
+    i += chunks[id].length;
+  }
+
+  return chunks;
+};
 
 /**
  * Convert bytes to string.
