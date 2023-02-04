@@ -23,12 +23,7 @@ export interface SamplerOptions extends Tone.ToneAudioNodeOptions {
   /**
    * The volume.
    */
-  volume: Tone.Unit.Decibels;
-
-  /**
-   * The preset id.
-   */
-  presetId: number;
+  volume?: Tone.Unit.Decibels;
 
   /**
    * The path which is prefixed before every url.
@@ -56,34 +51,29 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   output: Tone.OutputNode;
 
   /**
-   * The patch.
+   * The base url.
    */
-  private _patch: number;
+  baseUrl: string;
 
   /**
-   * The bank.
+   * The sf2 list.
    */
-  private _bank: number;
-
-  /**
-   * The sf2.
-   */
-  private _sf2?: Sf2;
+  private _sf2List: Map<number, Sf2> = new Map();
 
   /**
    * The buffers.
    */
-  private _buffers: Map<number, Tone.ToneAudioBuffer> = new Map();
+  private _buffers: Map<number, Tone.ToneAudioBuffers> = new Map();
 
   /**
-   * The channel.
+   * The channels.
    */
-  private _channel: Channel = new Channel();
+  private _channels = [...Array(16)].map(() => new Channel());
 
   /**
    * The object of all currently playing voices.
    */
-  private static _activeVoices: Voice[] = Array(32);
+  private _activeVoices: Voice[] = Array(32);
 
   /**
    * @param options The options associated with the sampler.
@@ -95,7 +85,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     ]));
 
     // options
-    const { context, volume, presetId, baseUrl } = Tone.optionsFromArguments(Sampler.getDefaults(), arguments, [
+    const { context, volume, baseUrl } = Tone.optionsFromArguments(Sampler.getDefaults(), arguments, [
       //
     ]);
 
@@ -105,40 +95,8 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       volume,
     });
 
-    // patch and bank
-    [this._patch, this._bank] = [
-      (presetId & 0x00FF) >> 0,
-      (presetId & 0xFF00) >> 8,
-    ];
-
-    // sf2 file
-    const sf2File = `${baseUrl}${presetId.toString(16).padStart(4, '0')}.sf2`;
-
-    // download and parse sf2 file
-    const done = fetch(sf2File).then((response) => response.arrayBuffer()).then((buffer) => {
-      // sf2
-      const sf2 = this._sf2 = new Sf2(new Uint8Array(buffer));
-
-      // buffers
-      sf2.samples.forEach(({ dataPoints, sampleRate }, i) => {
-        // create buffer
-        const buffer = context.createBuffer(1, dataPoints[1] - dataPoints[0], sampleRate);
-
-        // set sample to buffer
-        buffer.copyToChannel(sf2.getSampleBuffer(...dataPoints), 0);
-
-        // set buffer to buffers
-        this._buffers.set(i, new Tone.ToneAudioBuffer(buffer));
-      });
-    });
-
-    // wait for sf2 file to download and parse
-    Tone.ToneAudioBuffer.downloads.push(done);
-
-    // delete resolved promise
-    done.finally((i = Tone.ToneAudioBuffer.downloads.indexOf(done)) => {
-      Tone.ToneAudioBuffer.downloads.splice(i, 1);
-    });
+    // base url
+    this.baseUrl = baseUrl;
   }
 
   /**
@@ -147,16 +105,55 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   static getDefaults(): SamplerOptions {
     const options = super.getDefaults();
     return Object.assign(options, {
-      volume: 0,
-      presetId: 0,
       baseUrl: '',
     });
   }
 
   /**
+   * Load the sf2 file.
+   */
+  async load(patch: number, bank: number) {
+    // preset id
+    const presetId = bank << 8 | patch;
+
+    // sf2 file name
+    const filename = `${this.baseUrl}${presetId.toString(16).padStart(4, '0')}.sf2`;
+
+    // sf2 buffer
+    const buffer = await fetch(filename).then((response) => response.arrayBuffer());
+
+    // sf2
+    const sf2 = new Sf2(new Uint8Array(buffer));
+
+    // set sf2
+    this._sf2List.set(presetId, sf2);
+
+    // buffers
+    const buffers = new Tone.ToneAudioBuffers();
+
+    // add audio buffers
+    sf2.samples.forEach(({ dataPoints, sampleRate }, i) => {
+      // buffer length
+      const length = dataPoints[1] - dataPoints[0];
+
+      // create buffer
+      const buffer = this.context.createBuffer(1, length, sampleRate);
+
+      // set sample to buffer
+      buffer.copyToChannel(sf2.getSampleBuffer(...dataPoints), 0);
+
+      // add buffer
+      buffers.add(i, buffer);
+    });
+
+    // set buffers
+    this._buffers.set(presetId, buffers);
+  }
+
+  /**
    * Trigger the attack.
    */
-  triggerAttack(note: Tone.Unit.Frequency, time?: Tone.Unit.Time, velocity: Tone.Unit.NormalRange = 1) {
+  triggerAttack(note: Tone.Unit.Frequency, time?: Tone.Unit.Time, velocity: Tone.Unit.NormalRange = 1, patch: number = 0, bank: number = 0, channel: number = 0) {
     // computed time
     const computedTime = this.toSeconds(time);
 
@@ -166,26 +163,39 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // original velocity
     const vel = velocity * 127;
 
-    if (!this._sf2) {
+    // preset id
+    const presetId = bank << 8 | patch;
+
+    // sf2
+    const sf2 = this._sf2List.get(presetId);
+
+    if (!sf2) {
       throw Error('The sf2 file not loaded.');
     }
 
     // generator
-    const generator = this._sf2.getGenerator(this._patch, this._bank, key, vel);
+    const generator = sf2.getGenerator(patch, bank, key, vel);
 
     if (!generator) {
       throw Error('The generator not found.');
     }
 
     // sample
-    const sample = this._sf2.samples[generator[53]];
+    const sample = sf2.samples[generator[53]];
 
     if (!sample) {
       throw Error('The sample not found.');
     }
 
+    // buffers
+    const buffers = this._buffers.get(presetId);
+
+    if (!buffers) {
+      throw Error('The buffers not found.');
+    }
+
     // buffer
-    const buffer = this._buffers.get(generator[53]);
+    const buffer = buffers.get(generator[53]);
 
     if (!buffer) {
       throw Error('The buffer not found.');
@@ -193,13 +203,13 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // candidate voice
     const candidate = (() => {
-      for (const candidate of Sampler._activeVoices.keys()) {
-        if (Sampler._activeVoices[candidate] === undefined) {
+      for (const candidate of this._activeVoices.keys()) {
+        if (this._activeVoices[candidate] === undefined) {
           return candidate;
         }
       }
 
-      return Sampler._activeVoices.reduce((candidate, voice, i, activeVoices) => {
+      return this._activeVoices.reduce((candidate, voice, i, activeVoices) => {
         if (candidate === -1) {
           return i;
         }
@@ -226,7 +236,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       throw Error('Too many voices.');
     }
 
-    ((voice = Sampler._activeVoices[candidate]) => {
+    ((voice = this._activeVoices[candidate]) => {
       if (voice) {
         voice.source.stop(computedTime);
       }
@@ -245,9 +255,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       context: this.context,
     });
 
-    // volume - default value
-    volume.gain.setValueAtTime(Math.pow(this._channel.volume * this._channel.expression, 2), 0);
-
     // volume - connect
     volume.connect(output);
 
@@ -255,9 +262,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const panner = new Tone.Panner({
       context: this.context,
     });
-
-    // panner - default value
-    panner.pan.setValueAtTime(Math.min(Math.max((this._channel.pan - .5) * 2 + generator[17] / 500, -1), 1), 0);
 
     // panner - connect
     panner.connect(volume);
@@ -304,9 +308,6 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       context: this.context,
     });
 
-    // pitch bend - default value
-    pitchBend.setValueAtTime(toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]), 0);
-
     // pitch bend - connect
     pitchBend.connect(playbackRate);
 
@@ -317,7 +318,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // voice
     const voice: Voice = {
-      sampler: this,
+      channel,
       key,
       velocity,
       start: computedTime,
@@ -334,7 +335,16 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     };
 
     // set voice to active voices
-    Sampler._activeVoices[candidate] = voice;
+    this._activeVoices[candidate] = voice;
+
+    // update volume to default value
+    this._updateVolumeAtTime(voice, 0, channel);
+
+    // update pan to default value
+    this._updatePanAtTime(voice, 0, channel);
+
+    // update pitch bend to default value
+    this._updatePitchBendAtTime(voice, 0, channel);
 
     // attack
     this._attack(voice, computedTime);
@@ -355,9 +365,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       output.dispose();
 
       // delete voice
-      ((i = Sampler._activeVoices.indexOf(voice)) => {
+      ((i = this._activeVoices.indexOf(voice)) => {
         if (i >= 0) {
-          delete Sampler._activeVoices[i];
+          delete this._activeVoices[i];
         }
       })();
     };
@@ -366,7 +376,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * Trigger the release.
    */
-  triggerRelease(note: Tone.Unit.Frequency, time?: Tone.Unit.Time) {
+  triggerRelease(note: Tone.Unit.Frequency, time?: Tone.Unit.Time, channel: number = 0) {
     // computed time
     const computedTime = this.toSeconds(time);
 
@@ -374,12 +384,12 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const key = Tone.Frequency(note).toMidi();
 
     // release
-    Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.key === key && !voice.end).forEach((voice) => {
+    this._activeVoices.filter((voice) => voice.channel === channel && voice.key === key && !voice.end).forEach((voice) => {
       // set end time
       voice.end = computedTime;
 
       // release
-      if (this._channel.damperPedal <= 63 / 127) {
+      if (this._channels[channel].damperPedal <= 63 / 127) {
         this._release(voice, computedTime);
       }
     });
@@ -388,93 +398,153 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * Trigger the attack and release.
    */
-  triggerAttackRelease(note: Tone.Unit.Frequency, duration: Tone.Unit.Time, time?: Tone.Unit.Time, velocity: Tone.Unit.NormalRange = 1) {
+  triggerAttackRelease(note: Tone.Unit.Frequency, duration: Tone.Unit.Time, time?: Tone.Unit.Time, velocity: Tone.Unit.NormalRange = 1, patch: number = 0, bank: number = 0, channel: number = 0) {
     // attack time
-    time = this.toSeconds(time);
+    const attackTime = this.toSeconds(time);
 
     // attack
-    this.triggerAttack(note, time, velocity);
+    this.triggerAttack(note, attackTime, velocity, patch, bank, channel);
 
     // release time
-    time = time + this.toSeconds(duration);
+    const releaseTime = attackTime + this.toSeconds(duration);
 
     // release
-    this.triggerRelease(note, time);
+    this.triggerRelease(note, releaseTime, channel);
   }
 
   /**
    * Release all currently active voices.
    */
   releaseAll(time?: Tone.Unit.Time) {
-    this.allNotesOff(time);
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    this._activeVoices.forEach((voice) => {
+      voice.source.stop(computedTime);
+    });
+  }
+
+  /**
+   * Set the control change.
+   */
+  setControlChange(number: number, value: Tone.Unit.NormalRange, time?: Tone.Unit.Time, channel: number = 0) {
+    switch (number) {
+      case 6:
+        this.changeDataEntryMsb(value, time, channel);
+        break;
+      case 7:
+        this.changeVolume(value, time, channel);
+        break;
+      case 10:
+        this.changePan(value, time, channel);
+        break;
+      case 11:
+        this.changeExpression(value, time, channel);
+        break;
+      case 38:
+        this.changeDataEntryLsb(value, time, channel);
+        break;
+      case 64:
+        this.changeDamperPedal(value, time, channel);
+        break;
+      case 100:
+        this.changeRpnLsb(value, channel);
+        break;
+      case 101:
+        this.changeRpnMsb(value, channel);
+        break;
+      case 120:
+        this.allSoundOff(time, channel);
+        break;
+      case 121:
+        this.resetAllControllers(channel);
+        break;
+      case 123:
+        this.allNotesOff(time, channel);
+        break;
+    }
   }
 
   /**
    * Change the data entry MSB.
    */
-  changeDataEntryMsb(dataEntryMsb: Tone.Unit.NormalRange) {
-    this._channel.dataEntryMsb = dataEntryMsb;
+  changeDataEntryMsb(dataEntryMsb: Tone.Unit.NormalRange, time?: Tone.Unit.Time, channel: number = 0) {
+    this._channels[channel].dataEntryMsb = dataEntryMsb;
+
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    this._activeVoices.filter((voice) => voice.channel === channel && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
+      this._updatePitchBendAtTime(voice, computedTime, channel);
+    });
   }
 
   /**
    * Change the volume.
    */
-  changeVolume(volume: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
-    this._channel.volume = volume;
+  changeVolume(volume: Tone.Unit.NormalRange, time?: Tone.Unit.Time, channel: number = 0) {
+    this._channels[channel].volume = volume;
 
     // computed time
     const computedTime = this.toSeconds(time);
 
-    Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
-      voice.volume.gain.setValueAtTime(Math.pow(volume * this._channel.expression, 2), computedTime);
+    this._activeVoices.filter((voice) => voice.channel === channel && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
+      this._updateVolumeAtTime(voice, computedTime, channel);
     });
   }
 
   /**
    * Change the pan.
    */
-  changePan(pan: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
-    this._channel.pan = pan;
+  changePan(pan: Tone.Unit.NormalRange, time?: Tone.Unit.Time, channel: number = 0) {
+    this._channels[channel].pan = pan;
 
     // computed time
     const computedTime = this.toSeconds(time);
 
-    Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
-      voice.panner.pan.setValueAtTime(Math.min(Math.max((pan - .5) * 2 + voice.generator[17] / 500, -1), 1), computedTime);
+    this._activeVoices.filter((voice) => voice.channel === channel && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
+      this._updatePanAtTime(voice, computedTime, channel);
     });
   }
 
   /**
    * Change the expression.
    */
-  changeExpression(expression: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
-    this._channel.expression = expression;
+  changeExpression(expression: Tone.Unit.NormalRange, time?: Tone.Unit.Time, channel: number = 0) {
+    this._channels[channel].expression = expression;
 
     // computed time
     const computedTime = this.toSeconds(time);
 
-    Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
-      voice.volume.gain.setValueAtTime(Math.pow(this._channel.volume * expression, 2), computedTime);
+    this._activeVoices.filter((voice) => voice.channel === channel && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
+      this._updateVolumeAtTime(voice, computedTime, channel);
     });
   }
 
   /**
    * Change the data entry LSB.
    */
-  changeDataEntryLsb(dataEntryLsb: Tone.Unit.NormalRange) {
-    this._channel.dataEntryLsb = dataEntryLsb;
+  changeDataEntryLsb(dataEntryLsb: Tone.Unit.NormalRange, time?: Tone.Unit.Time, channel: number = 0) {
+    this._channels[channel].dataEntryLsb = dataEntryLsb;
+
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    this._activeVoices.filter((voice) => voice.channel === channel && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
+      this._updatePitchBendAtTime(voice, computedTime, channel);
+    });
   }
 
   /**
    * Change the damper pedal.
    */
-  changeDamperPedal(damperPedal: Tone.Unit.NormalRange, time?: Tone.Unit.Time) {
-    this._channel.damperPedal = damperPedal;
+  changeDamperPedal(damperPedal: Tone.Unit.NormalRange, time?: Tone.Unit.Time, channel: number = 0) {
+    this._channels[channel].damperPedal = damperPedal;
 
     // computed time
     const computedTime = this.toSeconds(time);
 
-    Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
+    this._activeVoices.filter((voice) => voice.channel === channel && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
       const { start, end } = voice;
 
       // computed end time
@@ -495,25 +565,25 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * Change the registered parameter number (RPN) LSB.
    */
-  changeRpnLsb(rpnLsb: Tone.Unit.NormalRange) {
-    this._channel.rpnLsb = rpnLsb;
+  changeRpnLsb(rpnLsb: Tone.Unit.NormalRange, channel: number = 0) {
+    this._channels[channel].rpnLsb = rpnLsb;
   }
 
   /**
    * Change the registered parameter number (RPN) MSB.
    */
-  changeRpnMsb(rpnMsb: Tone.Unit.NormalRange) {
-    this._channel.rpnMsb = rpnMsb;
+  changeRpnMsb(rpnMsb: Tone.Unit.NormalRange, channel: number = 0) {
+    this._channels[channel].rpnMsb = rpnMsb;
   }
 
   /**
    * All sound off.
    */
-  allSoundOff(time?: Tone.Unit.Time) {
+  allSoundOff(time?: Tone.Unit.Time, channel: number = 0) {
     // computed time
     const computedTime = this.toSeconds(time);
 
-    Sampler._activeVoices.filter((voice) => voice.sampler === this).forEach((voice) => {
+    this._activeVoices.filter((voice) => voice.channel === channel).forEach((voice) => {
       voice.source.stop(computedTime);
     });
   }
@@ -521,19 +591,19 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * Reset all controllers.
    */
-  resetAllControllers() {
-    this._channel = new Channel();
+  resetAllControllers(channel: number = 0) {
+    this._channels[channel] = new Channel();
   }
 
   /**
    * All notes off.
    */
-  allNotesOff(time?: Tone.Unit.Time) {
+  allNotesOff(time?: Tone.Unit.Time, channel: number = 0) {
     // computed time
     const computedTime = this.toSeconds(time);
 
-    Sampler._activeVoices.filter((voice) => voice.sampler === this).forEach((voice) => {
-      if (this._channel.damperPedal <= 63 / 127) {
+    this._activeVoices.filter((voice) => voice.channel === channel).forEach((voice) => {
+      if (this._channels[channel].damperPedal <= 63 / 127) {
         this._release(voice, computedTime);
       }
     });
@@ -542,14 +612,14 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * Change the pitch bend.
    */
-  changePitchBend(pitchBend: Tone.Unit.AudioRange, time?: Tone.Unit.Time) {
-    this._channel.pitchBend = pitchBend;
+  changePitchBend(pitchBend: Tone.Unit.AudioRange, time?: Tone.Unit.Time, channel: number = 0) {
+    this._channels[channel].pitchBend = pitchBend;
 
     // computed time
     const computedTime = this.toSeconds(time);
 
-    Sampler._activeVoices.filter((voice) => voice.sampler === this && voice.status.getValueAtTime(computedTime)).forEach(({ generator, pitchBend }) => {
-      pitchBend.setValueAtTime(toPlaybackRateFrequency(this._channel.pitchBend * this._channel.pitchBendSensitivity, generator[56]), computedTime);
+    this._activeVoices.filter((voice) => voice.channel === channel && voice.status.getValueAtTime(computedTime)).forEach((voice) => {
+      this._updatePitchBendAtTime(voice, computedTime, channel);
     });
   }
 
@@ -557,7 +627,15 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    * Dispose and disconnect.
    */
   dispose() {
-    this.allSoundOff();
+    // release all voices
+    this.releaseAll();
+
+    // dispose buffers
+    this._buffers.forEach((buffers) => {
+      buffers.dispose();
+    });
+
+    // dispose
     super.dispose();
     return this;
   }
@@ -733,6 +811,48 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     // stop
     source.stop(outputRelease);
   }
+
+  /**
+   * Update the volume at time.
+   */
+  private _updateVolumeAtTime({ volume }: Voice, time?: Tone.Unit.Time, channel: number = 0) {
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    // computed volume
+    const computedVolume = this._channels[channel].volume * this._channels[channel].expression;
+
+    // update volume at time
+    volume.gain.setValueAtTime(Math.pow(computedVolume, 2), computedTime);
+  }
+
+  /**
+   * Update the pan at time.
+   */
+  private _updatePanAtTime({ generator, panner }: Voice, time?: Tone.Unit.Time, channel: number = 0) {
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    // computed pan
+    const computedPan = (this._channels[channel].pan - .5) * 2 + generator[17] / 500;
+
+    // update pan at time
+    panner.pan.setValueAtTime(Math.min(Math.max(computedPan, -1), 1), computedTime);
+  }
+
+  /**
+   * Update the pitch bend at time.
+   */
+  private _updatePitchBendAtTime({ generator, pitchBend }: Voice, time?: Tone.Unit.Time, channel: number = 0) {
+    // computed time
+    const computedTime = this.toSeconds(time);
+
+    // computed pitch bend
+    const computedPitchBend = this._channels[channel].pitchBend * this._channels[channel].pitchBendSensitivity;
+
+    // update pitch bend at time
+    pitchBend.setValueAtTime(toPlaybackRateFrequency(computedPitchBend, generator[56]), computedTime);
+  }
 }
 
 /**
@@ -791,16 +911,5 @@ const toPriority = (time: Tone.Unit.Time, { output, status }: Voice) => {
 const calcExponentialCurve = (length: number) => {
   return [...Array(length).keys()].map((i) => {
     return Math.exp(-9.226 * i / (length - 1));
-  });
-};
-
-/**
- * Get a sampler.
- */
-export const getSampler = (patch: number, bank: number, baseUrl = '/samples/') => {
-  const presetId = bank << 8 | patch;
-  return new Sampler({
-    presetId,
-    baseUrl,
   });
 };

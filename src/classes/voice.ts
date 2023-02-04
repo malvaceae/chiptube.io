@@ -1,9 +1,6 @@
 // Tone.js
 import * as Tone from 'tone';
 
-// Sampler
-import { Sampler } from '@/classes/sampler';
-
 // Generator
 import { Generator } from '@/classes/generator';
 
@@ -15,9 +12,9 @@ import { Sample } from '@/classes/sample';
  */
 export interface Voice {
   /**
-   * The sampler.
+   * The channel.
    */
-  sampler: Sampler;
+  channel: number;
 
   /**
    * The key.

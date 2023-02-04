@@ -9,7 +9,7 @@ import { storeToRefs } from 'pinia';
 import { useTuneStore } from '@/stores/tune';
 
 // Sampler
-import { getSampler, Sampler } from '@/classes/sampler';
+import { Sampler } from '@/classes/sampler';
 
 // Amplify
 import { Storage } from 'aws-amplify';
@@ -65,6 +65,11 @@ const keysById = Object.fromEntries(keys.map((key) => {
 
 // minor second lines
 const minorSecondLines = whiteKeys.filter(({ id }) => id % 12 === 0 || id % 12 === 5).map(({ pos }) => pos);
+
+// sampler
+const sampler = new Sampler({
+  baseUrl: '/samples/',
+}).toDestination();
 
 // channel colors
 const channelColors = [
@@ -139,9 +144,6 @@ const ppq = computed(() => midi.value?.header?.ppq ?? 480);
 
 // midi tracks
 const tracks = computed(() => midi.value?.tracks ?? []);
-
-// samplers
-const samplers = shallowRef<(Sampler | null)[]>([]);
 
 // current time in seconds
 const currentTime = ref(0);
@@ -280,18 +282,9 @@ const play = async () => {
   // download and parse the midi file
   midi.value = await Midi.fromUrl(url);
 
-  // samplers
-  samplers.value = tracks.value.map(({ instrument: { number, percussion }, notes }) => {
-    if (notes.length) {
-      return (!percussion ? getSampler(number, 0) : getSampler(0, 128)).toDestination();
-    } else {
-      return null;
-    }
-  });
-
   // control changes
   const controlChanges = tracks.value.reduce((values, { channel, controlChanges }) => {
-    values[channel] = Object.entries(controlChanges).flatMap(([key, values]) => {
+    values.set(channel, Object.entries(controlChanges).flatMap(([key, values]) => {
       switch (Number(key)) {
         case 6:
         case 7:
@@ -308,85 +301,71 @@ const play = async () => {
         default:
           return [];
       }
-    }).concat(values[channel] ?? []).sort((a, b) => b.number - a.number);
+    }).concat(values.get(channel) ?? []).sort((a, b) => b.number - a.number));
 
     return values;
-  }, {} as Record<number, Track['controlChanges'][number]>);
+  }, new Map<number, Track['controlChanges'][number]>());
 
   // pitch bends
   const pitchBends = tracks.value.reduce((values, { channel, pitchBends }) => {
-    return { ...values, [channel]: pitchBends.concat(values[channel] ?? []) };
-  }, {} as Record<number, Track['pitchBends']>);
+    return values.set(channel, pitchBends.concat(values.get(channel) ?? []));
+  }, new Map<number, Track['pitchBends']>());
 
-  // parts
-  tracks.value.forEach(({ notes, channel }, i) => {
-    const sampler = samplers.value[i];
-
-    if (sampler === null) {
-      return;
-    }
-
-    // notes part
-    const notesPart = new Tone.Part((time, { name, duration, velocity }) => {
-      sampler.triggerAttackRelease(name, duration, time, velocity);
-    }, notes);
+  // control changes parts
+  [...controlChanges.entries()].forEach(([channel, controlChanges]) => {
+    // part
+    const part = new Tone.Part((time, { value, number }) => {
+      sampler.setControlChange(number, value, time, channel);
+    }, controlChanges);
 
     // start
-    notesPart.start();
-
-    // control changes part
-    const controlChangesPart = new Tone.Part((time, { value, number }) => {
-      switch (number) {
-        case 6:
-          sampler.changeDataEntryMsb(value);
-          break;
-        case 7:
-          sampler.changeVolume(value, time);
-          break;
-        case 10:
-          sampler.changePan(value, time);
-          break;
-        case 11:
-          sampler.changeExpression(value, time);
-          break;
-        case 38:
-          sampler.changeDataEntryLsb(value);
-          break;
-        case 64:
-          sampler.changeDamperPedal(value, time);
-          break;
-        case 100:
-          sampler.changeRpnLsb(value);
-          break;
-        case 101:
-          sampler.changeRpnMsb(value);
-          break;
-        case 120:
-          sampler.allSoundOff(time);
-          break;
-        case 121:
-          sampler.resetAllControllers();
-          break;
-        case 123:
-          sampler.allNotesOff(time);
-          break;
-      }
-    }, controlChanges[channel]);
-
-    // start
-    controlChangesPart.start();
-
-    // pitch bends part
-    const pitchBendsPart = new Tone.Part((time, { value }) => {
-      sampler.changePitchBend(value, time);
-    }, pitchBends[channel]);
-
-    // start
-    pitchBendsPart.start();
+    part.start();
   });
 
-  // wait for samplers to load
-  await Tone.loaded();
+  // pitch bends parts
+  [...pitchBends.entries()].forEach(([channel, pitchBends]) => {
+    // part
+    const part = new Tone.Part((time, { value }) => {
+      sampler.changePitchBend(value, time, channel);
+    }, pitchBends);
+
+    // start
+    part.start();
+  });
+
+  // notes parts
+  tracks.value.filter(({ notes }) => notes.length).forEach(({ instrument: { number, percussion }, notes, channel }) => {
+    if (percussion) {
+      number = 32768;
+    }
+
+    // patch and bank
+    const [patch, bank] = [
+      (number & 0x00FF) >> 0,
+      (number & 0xFF00) >> 8,
+    ];
+
+    // part
+    const part = new Tone.Part((time, { name, duration, velocity, patch, bank, channel }) => {
+      sampler.triggerAttackRelease(name, duration, time, velocity, patch, bank, channel);
+    }, notes.map((note) => Object.assign(note, { patch, bank, channel })));
+
+    // start
+    part.start();
+  });
+
+  // wait for sf2 files to load
+  await Promise.all(tracks.value.filter(({ notes }) => notes.length).map(({ instrument: { number, percussion } }) => {
+    if (percussion) {
+      number = 32768;
+    }
+
+    // load the sf2 file
+    return sampler.load(
+      (number & 0x00FF) >> 0,
+      (number & 0xFF00) >> 8,
+    );
+  }));
 
   // start
   start();
@@ -413,10 +392,8 @@ const pause = () => {
   // pause
   Tone.Transport.pause();
 
-  // all sound off
-  samplers.value.forEach((sampler) => {
-    sampler?.allSoundOff();
-  });
+  // release all voices
+  sampler.releaseAll();
 
   // set current state to paused
   currentState.value = 'paused';
@@ -430,10 +407,8 @@ const stop = () => {
   // cancel
   Tone.Transport.cancel();
 
-  // dispose samplers
-  samplers.value.forEach((sampler) => {
-    sampler?.dispose();
-  });
+  // release all voices
+  sampler.releaseAll();
 
   // set current state to stopped
   currentState.value = 'stopped';
@@ -458,10 +433,8 @@ const toggle = () => {
 const seek = (seconds: number) => {
   Tone.Transport.seconds = seconds;
 
-  // all sound off
-  samplers.value.forEach((sampler) => {
-    sampler?.allSoundOff();
-  });
+  // release all voices
+  sampler.releaseAll();
 };
 
 // seekbar value
@@ -662,6 +635,9 @@ onUnmounted(() => {
 
   // stop
   stop();
+
+  // dispose sampler
+  sampler.dispose();
 });
 </script>
 
