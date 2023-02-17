@@ -11,6 +11,9 @@ import { useTuneStore } from '@/stores/tune';
 // Sampler
 import { Sampler } from '@/classes/sampler';
 
+// Utilities
+import { search } from '@/classes/utils';
+
 // Amplify
 import { Storage } from 'aws-amplify';
 
@@ -130,14 +133,13 @@ const duration = computed(() => midi.value?.duration ?? 0);
 // midi - total length of the file in ticks
 const durationTicks = computed(() => midi.value?.durationTicks ?? 0);
 
-// midi header
-const header = computed(() => midi.value?.header);
-
 // midi header - array of all the tempo events
 const tempos = computed(() => midi.value?.header?.tempos ?? []);
 
 // midi header - time signatures
-const timeSignatures = computed(() => midi.value?.header?.timeSignatures ?? []);
+const timeSignatures = computed(() => midi.value?.header?.timeSignatures?.map?.((timeSignature) => {
+  return { ...timeSignature, time: midi.value?.header?.ticksToSeconds?.(timeSignature.ticks) ?? 0 };
+}) ?? []);
 
 // midi header - ticks per quarter note
 const ppq = computed(() => midi.value?.header?.ppq ?? 480);
@@ -148,32 +150,27 @@ const tracks = computed(() => midi.value?.tracks ?? []);
 // current time in seconds
 const currentTime = ref(0);
 
-// current time in ticks
-const currentTimeTicks = computed(() => header.value?.secondsToTicks?.(currentTime.value) ?? 0);
-
 // current tempo
-const currentTempo = computed(() => tempos.value.filter(({ ticks }, i) => {
-  return ticks <= currentTimeTicks.value || i === 0;
-}).pop());
+const currentTempo = computed(() => search(tempos.value, 'time', currentTime.value) ?? tempos.value[0]);
 
 // current time signature
-const currentTimeSignature = computed(() => timeSignatures.value.filter(({ ticks }, i) => {
-  return ticks <= currentTimeTicks.value || i === 0;
-}).pop());
+const currentTimeSignature = computed(() => search(timeSignatures.value, 'time', currentTime.value) ?? timeSignatures.value[0]);
 
 // bar line seconds
-const barLineSeconds = computed(() => timeSignatures.value.flatMap(({ ticks, timeSignature }, i, timeSignatures) => {
+const barLineSeconds = computed(() => timeSignatures.value.reduce((barLineSeconds, timeSignature, i, timeSignatures) => {
   // ticks per bar
-  const ticksPerBar = ppq.value * (timeSignature[0] / (timeSignature[1] / 4));
+  const ticksPerBar = timeSignature.timeSignature[0] / (timeSignature.timeSignature[1] / 4) * ppq.value;
 
-  // ticks of the next time signature
-  const nextTicks = timeSignatures[i + 1]?.ticks ?? (durationTicks.value + ticksPerBar);
+  // ticks of next time signature
+  const nextTicks = timeSignatures[i + 1]?.ticks ?? durationTicks.value + ticksPerBar;
 
-  // bar line seconds
-  return [...Array(Math.ceil((nextTicks - ticks) / ticksPerBar)).keys()].map((i) => {
-    return header.value?.ticksToSeconds?.(ticks + (ticksPerBar * i)) ?? 0;
-  });
-}));
+  // add bar line seconds
+  for (let ticks = timeSignature.ticks; ticks < nextTicks; ticks += ticksPerBar) {
+    barLineSeconds.push(midi.value?.header?.ticksToSeconds?.(ticks) ?? 0);
+  }
+
+  return barLineSeconds;
+}, [] as number[]));
 
 // notes in A0 (21) to C8 (108)
 const notes = computed(() => tracks.value.flatMap(({ notes, channel }) => {
@@ -273,14 +270,15 @@ const play = async () => {
   // set current state to loading
   currentState.value = 'loading';
 
-  // get the midi url
-  const url = await Storage.get(props.midiKey, {
+  // download midi file
+  const { Body: body } = await Storage.get(props.midiKey, {
     level: 'protected',
+    download: true,
     ...props,
-  });
+  }) as { Body: Blob };
 
-  // download and parse the midi file
-  midi.value = await Midi.fromUrl(url);
+  // parse midi file
+  midi.value = new Midi(await new Response(body).arrayBuffer());
 
   // control changes
   const controlChanges = tracks.value.reduce((values, { channel, controlChanges }) => {
@@ -311,7 +309,7 @@ const play = async () => {
     return values.set(channel, pitchBends.concat(values.get(channel) ?? []));
   }, new Map<number, Track['pitchBends']>());
 
-  // control changes parts
+  // parts of control changes
   [...controlChanges.entries()].forEach(([channel, controlChanges]) => {
     // part
     const part = new Tone.Part((time, { value, number }) => {
@@ -322,7 +320,7 @@ const play = async () => {
     part.start();
   });
 
-  // pitch bends parts
+  // parts of pitch bends
   [...pitchBends.entries()].forEach(([channel, pitchBends]) => {
     // part
     const part = new Tone.Part((time, { value }) => {
@@ -333,7 +331,7 @@ const play = async () => {
     part.start();
   });
 
-  // notes parts
+  // parts of notes
   tracks.value.filter(({ notes }) => notes.length).forEach(({ instrument: { number, percussion }, notes, channel }) => {
     if (percussion) {
       number = 32768;
