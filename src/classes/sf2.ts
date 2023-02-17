@@ -30,54 +30,9 @@ export class Sf2 {
   readonly samples: Sample[];
 
   /**
-   * The smpl chunk.
+   * The buffers.
    */
-  private _smpl: Float32Array;
-
-  /**
-   * The phdr chunks.
-   */
-  private _phdr: Uint8Array[];
-
-  /**
-   * The pbag chunks.
-   */
-  private _pbag: Uint8Array[];
-
-  /**
-   * The pmod chunks.
-   */
-  private _pmod: Uint8Array[];
-
-  /**
-   * The pgen chunks.
-   */
-  private _pgen: Uint8Array[];
-
-  /**
-   * The inst chunks.
-   */
-  private _inst: Uint8Array[];
-
-  /**
-   * The ibag chunks.
-   */
-  private _ibag: Uint8Array[];
-
-  /**
-   * The imod chunks.
-   */
-  private _imod: Uint8Array[];
-
-  /**
-   * The igen chunks.
-   */
-  private _igen: Uint8Array[];
-
-  /**
-   * The shdr chunks.
-   */
-  private _shdr: Uint8Array[];
+  readonly buffers: Float32Array;
 
   /**
    * @param sf2 The sf2 buffer.
@@ -97,85 +52,85 @@ export class Sf2 {
       shdr,
     } = splitRiffToChunks(sf2);
 
-    // smpl chunk
-    this._smpl = new Float32Array(new Int16Array(smpl.buffer, smpl.byteOffset, smpl.length / 2)).map((smpl) => {
+    // buffers
+    this.buffers = new Float32Array(new Int16Array(smpl.buffer, smpl.byteOffset, smpl.length / 2)).map((smpl) => {
       return smpl < 0 ? smpl / 0x8000 : smpl / 0x7FFF;
     });
 
     // phdr chunks
-    this._phdr = [...Array(phdr.length / 38).keys()].map((i) => {
+    const phdrChunks = [...Array(phdr.length / 38)].map((_, i) => {
       return phdr.subarray(i * 38, i * 38 + 38);
     });
 
     // pbag chunks
-    this._pbag = [...Array(pbag.length / 4).keys()].map((i) => {
+    const pbagChunks = [...Array(pbag.length / 4)].map((_, i) => {
       return pbag.subarray(i * 4, i * 4 + 4);
     });
 
     // pmod chunks
-    this._pmod = [...Array(pmod.length / 10).keys()].map((i) => {
+    const pmodChunks = [...Array(pmod.length / 10)].map((_, i) => {
       return pmod.subarray(i * 10, i * 10 + 10);
     });
 
     // pgen chunks
-    this._pgen = [...Array(pgen.length / 4).keys()].map((i) => {
+    const pgenChunks = [...Array(pgen.length / 4)].map((_, i) => {
       return pgen.subarray(i * 4, i * 4 + 4);
     });
 
     // inst chunks
-    this._inst = [...Array(inst.length / 22).keys()].map((i) => {
+    const instChunks = [...Array(inst.length / 22)].map((_, i) => {
       return inst.subarray(i * 22, i * 22 + 22);
     });
 
     // ibag chunks
-    this._ibag = [...Array(ibag.length / 4).keys()].map((i) => {
+    const ibagChunks = [...Array(ibag.length / 4)].map((_, i) => {
       return ibag.subarray(i * 4, i * 4 + 4);
     });
 
     // imod chunks
-    this._imod = [...Array(imod.length / 10).keys()].map((i) => {
+    const imodChunks = [...Array(imod.length / 10)].map((_, i) => {
       return imod.subarray(i * 10, i * 10 + 10);
     });
 
     // igen chunks
-    this._igen = [...Array(igen.length / 4).keys()].map((i) => {
+    const igenChunks = [...Array(igen.length / 4)].map((_, i) => {
       return igen.subarray(i * 4, i * 4 + 4);
     });
 
     // shdr chunks
-    this._shdr = [...Array(shdr.length / 46).keys()].map((i) => {
+    const shdrChunks = [...Array(shdr.length / 46)].map((_, i) => {
       return shdr.subarray(i * 46, i * 46 + 46);
     });
 
     // presets
-    this.presets = this._phdr.slice(0, -1).map((phdr, i) => {
+    this.presets = phdrChunks.slice(0, -1).map((phdr, i) => {
       // pbag points
       const pbagPoints = [
-        getWord(this._phdr[i + 0], 24),
-        getWord(this._phdr[i + 1], 24),
+        getWord(phdrChunks[i + 0], 24),
+        getWord(phdrChunks[i + 1], 24),
       ];
 
       // zones
-      const zones = this._pbag.slice(...pbagPoints).map((_, i) => {
+      const zones = pbagChunks.slice(...pbagPoints).map((_, i) => {
         // pgen points
         const pgenPoints = [
-          getWord(this._pbag[pbagPoints[0] + i + 0], 0),
-          getWord(this._pbag[pbagPoints[0] + i + 1], 0),
+          getWord(pbagChunks[pbagPoints[0] + i + 0], 0),
+          getWord(pbagChunks[pbagPoints[0] + i + 1], 0),
         ];
 
         // pmod points
         const pmodPoints = [
-          getWord(this._pbag[pbagPoints[0] + i + 0], 2),
-          getWord(this._pbag[pbagPoints[0] + i + 1], 2),
+          getWord(pbagChunks[pbagPoints[0] + i + 0], 2),
+          getWord(pbagChunks[pbagPoints[0] + i + 1], 2),
         ];
 
         // generator
-        const generator = Object.fromEntries(this._pgen.slice(...pgenPoints).map((pgen) => {
+        const generator = Object.fromEntries(pgenChunks.slice(...pgenPoints).map((pgen) => {
           return [getWord(pgen, 0), getShort(pgen, 2)];
         }));
 
         // modulator
-        const modulator = Object.fromEntries(this._pmod.slice(...pmodPoints).map((pmod) => {
+        const modulator = Object.fromEntries(pmodChunks.slice(...pmodPoints).map((pmod) => {
           return [getWord(pmod, 2), [
             getWord(pmod, 0),
             getWord(pmod, 2),
@@ -210,34 +165,34 @@ export class Sf2 {
     });
 
     // instruments
-    this.instruments = this._inst.slice(0, -1).map((inst, i) => {
+    this.instruments = instChunks.slice(0, -1).map((inst, i) => {
       // ibag points
       const ibagPoints = [
-        getWord(this._inst[i + 0], 20),
-        getWord(this._inst[i + 1], 20),
+        getWord(instChunks[i + 0], 20),
+        getWord(instChunks[i + 1], 20),
       ];
 
       // zones
-      const zones = this._ibag.slice(...ibagPoints).map((_, i) => {
+      const zones = ibagChunks.slice(...ibagPoints).map((_, i) => {
         // igen points
         const igenPoints = [
-          getWord(this._ibag[ibagPoints[0] + i + 0], 0),
-          getWord(this._ibag[ibagPoints[0] + i + 1], 0),
+          getWord(ibagChunks[ibagPoints[0] + i + 0], 0),
+          getWord(ibagChunks[ibagPoints[0] + i + 1], 0),
         ];
 
         // imod points
         const imodPoints = [
-          getWord(this._ibag[ibagPoints[0] + i + 0], 2),
-          getWord(this._ibag[ibagPoints[0] + i + 1], 2),
+          getWord(ibagChunks[ibagPoints[0] + i + 0], 2),
+          getWord(ibagChunks[ibagPoints[0] + i + 1], 2),
         ];
 
         // generator
-        const generator = Object.fromEntries(this._igen.slice(...igenPoints).map((igen) => {
+        const generator = Object.fromEntries(igenChunks.slice(...igenPoints).map((igen) => {
           return [getWord(igen, 0), getShort(igen, 2)];
         }));
 
         // modulator
-        const modulator = Object.fromEntries(this._imod.slice(...imodPoints).map((imod) => {
+        const modulator = Object.fromEntries(imodChunks.slice(...imodPoints).map((imod) => {
           return [getWord(imod, 2), [
             getWord(imod, 0),
             getWord(imod, 2),
@@ -270,7 +225,7 @@ export class Sf2 {
     });
 
     // samples
-    this.samples = this._shdr.slice(0, -1).map((shdr) => ({
+    this.samples = shdrChunks.slice(0, -1).map((shdr) => ({
       name: toString(shdr.subarray(0, shdr.indexOf(0))),
       dataPoints: [
         getDword(shdr, 20),
@@ -422,13 +377,6 @@ export class Sf2 {
     });
 
     return generator;
-  }
-
-  /**
-   * Get the sample buffer.
-   */
-  getSampleBuffer(start: number, end: number) {
-    return this._smpl.subarray(start, end);
   }
 }
 

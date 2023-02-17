@@ -140,7 +140,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       const buffer = this.context.createBuffer(1, length, sampleRate);
 
       // set sample to buffer
-      buffer.copyToChannel(sf2.getSampleBuffer(...dataPoints), 0);
+      buffer.copyToChannel(sf2.buffers.subarray(...dataPoints), 0);
 
       // add buffer
       buffers.add(i, buffer);
