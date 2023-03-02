@@ -14,6 +14,9 @@ import { Sampler } from '@/classes/sampler';
 // Utilities
 import { search } from '@/classes/utils';
 
+// Midi
+import { Midi } from '@/classes/midi';
+
 // Amplify
 import { Storage } from 'aws-amplify';
 
@@ -22,9 +25,6 @@ import { dom, format } from 'quasar';
 
 // Tone.js
 import * as Tone from 'tone';
-
-// Tone.js - MIDI
-import { Midi, Track } from '@tonejs/midi';
 
 // p5.js
 import p5 from 'p5';
@@ -127,61 +127,136 @@ const keyY = computed(() => canvasHeight.value - whiteKeyHeight.value);
 // midi
 const midi = shallowRef<Midi>();
 
-// midi - total length of the file in seconds
-const duration = computed(() => midi.value?.duration ?? 0);
+// midi duration in seconds
+const duration = computed(() => {
+  if (midi.value) {
+    return midi.value.ticksToSeconds(midi.value.duration);
+  } else {
+    return 0;
+  }
+});
 
-// midi - total length of the file in ticks
-const durationTicks = computed(() => midi.value?.durationTicks ?? 0);
+// midi time signatures
+const timeSignatures = computed(() => {
+  if (midi.value) {
+    return midi.value.timeSignatures;
+  } else {
+    return [];
+  }
+});
 
-// midi header - array of all the tempo events
-const tempos = computed(() => midi.value?.header?.tempos ?? []);
+// midi tempos
+const tempos = computed(() => {
+  if (midi.value) {
+    return midi.value.tempos;
+  } else {
+    return [];
+  }
+});
 
-// midi header - time signatures
-const timeSignatures = computed(() => midi.value?.header?.timeSignatures?.map?.((timeSignature) => {
-  return { ...timeSignature, time: midi.value?.header?.ticksToSeconds?.(timeSignature.ticks) ?? 0 };
-}) ?? []);
+// midi measure ticks
+const measureTicks = computed(() => {
+  if (midi.value) {
+    return midi.value.measureTicks;
+  } else {
+    return [];
+  }
+});
 
-// midi header - ticks per quarter note
-const ppq = computed(() => midi.value?.header?.ppq ?? 480);
+// midi measure seconds
+const measureSeconds = computed(() => measureTicks.value.flatMap((ticks) => {
+  if (midi.value) {
+    return [midi.value.ticksToSeconds(ticks)];
+  } else {
+    return [];
+  }
+}));
 
 // midi tracks
-const tracks = computed(() => midi.value?.tracks ?? []);
-
-// current time in seconds
-const currentTime = ref(0);
-
-// current tempo
-const currentTempo = computed(() => search(tempos.value, 'time', currentTime.value) ?? tempos.value[0]);
-
-// current time signature
-const currentTimeSignature = computed(() => search(timeSignatures.value, 'time', currentTime.value) ?? timeSignatures.value[0]);
-
-// bar line seconds
-const barLineSeconds = computed(() => timeSignatures.value.reduce((barLineSeconds, timeSignature, i, timeSignatures) => {
-  // ticks per bar
-  const ticksPerBar = timeSignature.timeSignature[0] / (timeSignature.timeSignature[1] / 4) * ppq.value;
-
-  // ticks of next time signature
-  const nextTicks = timeSignatures[i + 1]?.ticks ?? durationTicks.value + ticksPerBar;
-
-  // add bar line seconds
-  for (let ticks = timeSignature.ticks; ticks < nextTicks; ticks += ticksPerBar) {
-    barLineSeconds.push(midi.value?.header?.ticksToSeconds?.(ticks) ?? 0);
+const tracks = computed(() => {
+  if (midi.value) {
+    return midi.value.tracks;
+  } else {
+    return [];
   }
+});
 
-  return barLineSeconds;
-}, [] as number[]));
+// midi channel events
+const channelEvents = computed(() => {
+  return tracks.value.map((track) => {
+    return track.flatMap((event) => {
+      switch (event.type) {
+        case 'controller':
+        case 'programChange':
+        case 'pitchBend':
+          if (midi.value) {
+            return [
+              { ...event, time: midi.value.ticksToSeconds(event.absoluteTime) },
+            ];
+          }
+      }
+      return [];
+    });
+  });
+});
+
+// notes by a track
+const notesByTrack = computed(() => tracks.value.map((track) => {
+  // note offs
+  const noteOffs = track.getEvents('noteOff');
+
+  // note offs by a channel
+  const noteOffsByChannel = noteOffs.reduce((noteOffs, noteOff, i, { [i]: { channel } }) => {
+    return { ...noteOffs, [channel]: [...(noteOffs[channel] ?? []), noteOff] };
+  }, {} as Record<number, typeof noteOffs>);
+
+  // note ons
+  const noteOns = track.getEvents('noteOn');
+
+  // notes
+  return noteOns.flatMap(({ absoluteTime, channel, noteNumber, velocity }) => {
+    // note off index
+    const i = noteOffsByChannel[channel].findIndex((noteOff) => {
+      return noteOff.noteNumber === noteNumber
+        && noteOff.absoluteTime - absoluteTime >= 0;
+    });
+
+    if (i >= 0 && midi.value) {
+      // note off
+      const noteOff = noteOffsByChannel[channel].splice(i, 1)[0];
+
+      // note time
+      const time = midi.value.ticksToSeconds(absoluteTime);
+
+      // note duration
+      const duration = midi.value.ticksToSeconds(noteOff.absoluteTime) - time;
+
+      // note name
+      const name = Tone.Frequency(noteNumber, 'midi').toNote();
+
+      return [
+        { channel, noteNumber, velocity, time, duration, name },
+      ];
+    } else {
+      return [];
+    }
+  });
+}));
 
 // notes in A0 (21) to C8 (108)
-const notes = computed(() => tracks.value.flatMap(({ notes, channel }) => {
-  return notes.map(({ midi, name, duration, time, velocity }) => {
-    return { midi, name, duration, time, velocity, channel };
-  }).filter(({ midi }) => midi >= 21 && midi <= 108);
+const notes = computed(() => notesByTrack.value.flatMap((notes) => {
+  return notes.flatMap((note, i, { [i]: { noteNumber } }) => {
+    if (noteNumber >= 21 && noteNumber <= 108) {
+      return [note];
+    } else {
+      return [];
+    }
+  });
 }));
 
 // notes with a key
 const notesWithKey = computed(() => notes.value.map((note) => {
-  return { ...note, key: keysById[note.midi] };
+  return { ...note, key: keysById[note.noteNumber] };
 }));
 
 // notes on a white key
@@ -256,6 +331,15 @@ const volumeControlIconName = computed(() => {
   }
 });
 
+// current time in seconds
+const currentTime = ref(0);
+
+// current time signature
+const currentTimeSignature = computed(() => search(timeSignatures.value, 'time', currentTime.value) ?? timeSignatures.value[0]);
+
+// current tempo
+const currentTempo = computed(() => search(tempos.value, 'time', currentTime.value) ?? tempos.value[0]);
+
 // current state
 const currentState = ref<Tone.PlaybackState | 'loading'>('stopped');
 
@@ -278,90 +362,76 @@ const play = async () => {
   }) as { Body: Blob };
 
   // parse midi file
-  midi.value = new Midi(await new Response(body).arrayBuffer());
+  midi.value = new Midi(new Uint8Array(await new Response(body).arrayBuffer()));
 
-  // control changes
-  const controlChanges = tracks.value.reduce((values, { channel, controlChanges }) => {
-    values.set(channel, Object.entries(controlChanges).flatMap(([key, values]) => {
-      switch (Number(key)) {
-        case 6:
-        case 7:
-        case 10:
-        case 11:
-        case 38:
-        case 64:
-        case 100:
-        case 101:
-        case 120:
-        case 121:
-        case 123:
-          return values;
-        default:
-          return [];
-      }
-    }).concat(values.get(channel) ?? []).sort((a, b) => b.number - a.number));
-
-    return values;
-  }, new Map<number, Track['controlChanges'][number]>());
-
-  // pitch bends
-  const pitchBends = tracks.value.reduce((values, { channel, pitchBends }) => {
-    return values.set(channel, pitchBends.concat(values.get(channel) ?? []));
-  }, new Map<number, Track['pitchBends']>());
-
-  // parts of control changes
-  [...controlChanges.entries()].forEach(([channel, controlChanges]) => {
-    // part
-    const part = new Tone.Part((time, { value, number }) => {
-      sampler.setControlChange(number, value, time, channel);
-    }, controlChanges);
-
-    // start
-    part.start();
-  });
-
-  // parts of pitch bends
-  [...pitchBends.entries()].forEach(([channel, pitchBends]) => {
-    // part
-    const part = new Tone.Part((time, { value }) => {
-      sampler.changePitchBend(value, time, channel);
-    }, pitchBends);
-
-    // start
-    part.start();
-  });
+  // parts of channel events
+  channelEvents.value.forEach((events) => new Tone.Part((time, event) => {
+    switch (event.type) {
+      case 'controller':
+        sampler.setControlChange(
+          event.controllerType,
+          event.value / 127,
+          time,
+          event.channel,
+        );
+        break;
+      case 'programChange':
+        sampler.setProgramChange(
+          event.programNumber,
+          event.channel,
+        );
+        break;
+      case 'pitchBend':
+        sampler.changePitchBend(
+          event.value / (event.value < 0 ? 8192 : 8191),
+          time,
+          event.channel,
+        );
+        break;
+    }
+  }, events).start());
 
   // parts of notes
-  tracks.value.filter(({ notes }) => notes.length).forEach(({ instrument: { number, percussion }, notes, channel }) => {
-    if (percussion) {
-      number = 32768;
+  notesByTrack.value.forEach((notes) => new Tone.Part((time, note) => {
+    if (currentState.value === 'started') {
+      sampler.triggerAttackRelease(
+        note.name,
+        note.duration,
+        time,
+        note.velocity / 127,
+        note.channel,
+      );
     }
+  }, notes).start());
 
-    // patch and bank
-    const [patch, bank] = [
-      (number & 0x00FF) >> 0,
-      (number & 0xFF00) >> 8,
-    ];
+  // program changes
+  const programChanges = midi.value.getEvents('programChange');
 
-    // part
-    const part = new Tone.Part((time, { name, duration, velocity, patch, bank, channel }) => {
-      sampler.triggerAttackRelease(name, duration, time, velocity, patch, bank, channel);
-    }, notes.map((note) => Object.assign(note, { patch, bank, channel })));
+  // first program change by channel
+  const firstProgramChangeByChannel = programChanges.reduce((programChanges, { channel, programNumber }) => {
+    return programChanges.set(channel, programChanges.get(channel) ?? programNumber);
+  }, new Map<number, number>());
 
-    // start
-    part.start();
+  // set default program change
+  [...firstProgramChangeByChannel.entries()].forEach(([channel, programNumber]) => {
+    sampler.setProgramChange(programNumber, channel);
   });
 
-  // wait for sf2 files to load
-  await Promise.all(tracks.value.filter(({ notes }) => notes.length).map(({ instrument: { number, percussion } }) => {
-    if (percussion) {
-      number = 32768;
-    }
+  // preset ids
+  const presetIds = programChanges.map(({ channel, programNumber }) => {
+    return channel === 9 ? 128 << 8 : programNumber;
+  });
 
-    // load the sf2 file
+  // add preset id for percussion
+  if (notes.value.some(({ channel }) => channel === 9)) {
+    presetIds.push(128 << 8);
+  }
+
+  // wait for sf2 files to load
+  await Promise.all([...new Set(presetIds)].map((id) => {
     return sampler.loadSf2(
-      (number & 0x00FF) >> 0,
-      (number & 0xFF00) >> 8,
+      (id & 0x00FF) >> 0,
+      (id & 0xFF00) >> 8,
     );
   }));
 
@@ -509,7 +579,7 @@ onMounted(() => {
       updateTime();
       this.background(32);
       this.drawMinorSecondLines();
-      this.drawBarLines();
+      this.drawMeasureLines();
       this.drawNotes();
       this.drawKeys();
       this.drawInfo();
@@ -592,20 +662,20 @@ onMounted(() => {
       });
     }
 
-    drawBarLines() {
+    drawMeasureLines() {
       this.noFill();
       this.stroke(64);
 
-      // draw bar lines
-      barLineSeconds.value.filter((seconds) => seconds >= currentTime.value && seconds < (currentTime.value + 4)).forEach((seconds) => {
-        // y-coordinate of the bar line
+      // draw measure lines
+      measureSeconds.value.filter((seconds) => seconds >= currentTime.value && seconds < (currentTime.value + 4)).forEach((seconds) => {
+        // y-coordinate of the measure line
         const y = keyY.value - (seconds - currentTime.value) * (keyY.value / 4) - 4;
 
         if (y < 0) {
           return;
         }
 
-        // draw the bar line
+        // draw the measure line
         this.line(0, y, canvasWidth.value, y);
       });
     }
@@ -620,7 +690,7 @@ onMounted(() => {
 
       // draw the info text
       if (currentTempo.value && currentTimeSignature.value) {
-        this.text(`BPM:${this.round(currentTempo.value.bpm, 2)} BEAT:${currentTimeSignature.value.timeSignature.join('/')}`, 8, keyY.value - 8);
+        this.text(`BPM:${this.floor(60000000 / currentTempo.value.value)} BEAT:${currentTimeSignature.value.value.join('/')}`, 8, keyY.value - 8);
       }
     }
   };
@@ -687,7 +757,7 @@ onUnmounted(() => {
         </div>
       </div>
     </template>
-    <q-resize-observer debounce="0" @resize="canvas?.resizeCanvas(...calcCanvasSize())" />
+    <q-resize-observer debounce="0" @resize="canvas?.resizeCanvas?.(...calcCanvasSize())" />
   </div>
 </template>
 

@@ -97,6 +97,11 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
 
     // base url
     this.baseUrl = baseUrl;
+
+    // set bank
+    this._channels.forEach((channel, i) => {
+      channel.bank = i === 9 ? 128 : 0;
+    });
   }
 
   /**
@@ -153,7 +158,7 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * Trigger the attack.
    */
-  triggerAttack(note: Tone.Unit.Frequency, time?: Tone.Unit.Time, velocity: Tone.Unit.NormalRange = 1, patch: number = 0, bank: number = 0, channel: number = 0) {
+  triggerAttack(note: Tone.Unit.Frequency, time?: Tone.Unit.Time, velocity: Tone.Unit.NormalRange = 1, channel: number = 0) {
     // computed time
     const computedTime = this.toSeconds(time);
 
@@ -164,7 +169,10 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const vel = velocity * 127;
 
     // preset id
-    const presetId = getPresetId(patch, bank);
+    const presetId = getPresetId(
+      this._channels[channel].patch,
+      this._channels[channel].bank,
+    );
 
     // sf2
     const sf2 = this._sf2List.get(presetId);
@@ -174,7 +182,12 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     }
 
     // generator
-    const generator = sf2.getGenerator(patch, bank, key, vel);
+    const generator = sf2.getGenerator(
+      this._channels[channel].patch,
+      this._channels[channel].bank,
+      key,
+      vel,
+    );
 
     if (!generator) {
       throw Error('The generator not found.');
@@ -398,12 +411,12 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
   /**
    * Trigger the attack and release.
    */
-  triggerAttackRelease(note: Tone.Unit.Frequency, duration: Tone.Unit.Time, time?: Tone.Unit.Time, velocity: Tone.Unit.NormalRange = 1, patch: number = 0, bank: number = 0, channel: number = 0) {
+  triggerAttackRelease(note: Tone.Unit.Frequency, duration: Tone.Unit.Time, time?: Tone.Unit.Time, velocity: Tone.Unit.NormalRange = 1, channel: number = 0) {
     // attack time
     const attackTime = this.toSeconds(time);
 
     // attack
-    this.triggerAttack(note, attackTime, velocity, patch, bank, channel);
+    this.triggerAttack(note, attackTime, velocity, channel);
 
     // release time
     const releaseTime = attackTime + this.toSeconds(duration);
@@ -429,6 +442,9 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    */
   setControlChange(number: number, value: Tone.Unit.NormalRange, time?: Tone.Unit.Time, channel: number = 0) {
     switch (number) {
+      case 0:
+        this.changeBank(value, channel);
+        break;
       case 6:
         this.changeDataEntryMsb(value, time, channel);
         break;
@@ -462,6 +478,17 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
       case 123:
         this.allNotesOff(time, channel);
         break;
+    }
+  }
+
+  /**
+   * Change the bank.
+   */
+  changeBank(_: number, channel: number = 0) {
+    if (channel === 9) {
+      this._channels[channel].bank = 128;
+    } else {
+      this._channels[channel].bank = 0;
     }
   }
 
@@ -592,7 +619,13 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
    * Reset all controllers.
    */
   resetAllControllers(channel: number = 0) {
-    this._channels[channel] = new Channel();
+    Object.assign(this._channels[channel], {
+      expression: 1,
+      damperPedal: 0,
+      rpnLsb: 1,
+      rpnMsb: 1,
+      pitchBend: 0,
+    });
   }
 
   /**
@@ -607,6 +640,17 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
         this._release(voice, computedTime);
       }
     });
+  }
+
+  /**
+   * Set the program change.
+   */
+  setProgramChange(patch: number, channel: number = 0) {
+    if (channel === 9) {
+      this._channels[channel].patch = 0;
+    } else {
+      this._channels[channel].patch = patch;
+    }
   }
 
   /**

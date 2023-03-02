@@ -6,6 +6,16 @@ import * as Tone from 'tone';
  */
 export class Channel {
   /**
+   * The patch.
+   */
+  patch: number = 0;
+
+  /**
+   * The bank.
+   */
+  bank: number = 0;
+
+  /**
    * The volume.
    */
   volume: Tone.Unit.NormalRange = 100 / 127;
