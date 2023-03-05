@@ -427,6 +427,9 @@ const play = async () => {
     presetIds.push(128 << 8);
   }
 
+  // add preset id for piano
+  presetIds.push(0);
+
   // wait for sf2 files to load
   await Promise.all([...new Set(presetIds)].map((id) => {
     return sampler.loadSf2(
