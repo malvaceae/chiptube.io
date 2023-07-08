@@ -11,7 +11,7 @@ import pinia from '@/stores';
 import '@/plugins/amplify';
 
 // Quasar
-import { useQuasar } from '@/plugins/quasar';
+import { Quasar, iconSet, plugins } from '@/plugins/quasar';
 
 // App
 import App from '@/App.vue';
@@ -26,7 +26,10 @@ app.use(router);
 app.use(pinia);
 
 // use the quasar
-useQuasar(app);
+app.use(Quasar, {
+  iconSet,
+  plugins,
+});
 
 // mount the app
 app.mount('#app');
