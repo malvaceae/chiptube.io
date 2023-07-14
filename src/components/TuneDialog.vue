@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 // Vue Router
 import { useRouter } from 'vue-router';
@@ -10,6 +10,9 @@ import { API, Storage } from 'aws-amplify';
 
 // Quasar
 import { uid, useDialogPluginComponent, useQuasar } from 'quasar';
+
+// properties
+const props = defineProps<{ tune?: { id: string, title: string, description: string } }>();
 
 // emits
 defineEmits(useDialogPluginComponent.emitsObject);
@@ -33,10 +36,50 @@ const midi = ref<File | null>(null);
 
 // the tune
 const tune = reactive({
+  id: '',
   title: '',
   description: '',
   midi,
 });
+
+if (props.tune) {
+  Object.assign(tune, props.tune);
+}
+
+// is disable
+const isDisable = computed(() => !tune.title || !tune.description || (!props.tune && !midi.value));
+
+// update the tune
+const updateTune = async ({ id, title, description }: typeof tune) => {
+  // show loading
+  $q.loading.show({ spinnerSize: 46 });
+
+  try {
+    // update the tune info
+    const tune = await API.put('Api', `/tunes/${id}`, {
+      body: {
+        title,
+        description,
+      },
+    });
+
+    // close dialog
+    onDialogOK(tune);
+  } catch (e: any) {
+    if (e.response.status === 422) {
+      $q.notify({
+        type: 'negative',
+        message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
+          return messages.map((message) => `The ${field} ${message}.`);
+        }).join('<br>'),
+        html: true,
+      });
+    }
+  }
+
+  // hide loading
+  $q.loading.hide();
+};
 
 // upload the tune
 const uploadTune = async ({ title, description, midi }: typeof tune) => {
@@ -97,7 +140,7 @@ const uploadTune = async ({ title, description, midi }: typeof tune) => {
   <q-dialog ref="dialogRef" persistent @hide="onDialogHide">
     <q-card class="full-width" bordered flat square>
       <q-card-section class="text-h6">
-        Upload tune
+        {{ props.tune ? 'Edit' : 'Upload' }} tune
       </q-card-section>
       <q-separator />
       <q-card-section>
@@ -112,7 +155,7 @@ const uploadTune = async ({ title, description, midi }: typeof tune) => {
               Description
             </template>
           </q-input>
-          <q-file v-model="tune.midi" accept=".mid" label-slot outlined square>
+          <q-file v-if="!props.tune" v-model="tune.midi" accept=".mid" label-slot outlined square>
             <template #prepend>
               <q-icon name="mdi-file-music" />
             </template>
@@ -127,8 +170,8 @@ const uploadTune = async ({ title, description, midi }: typeof tune) => {
         <q-btn color="grey-6" flat square @click="onDialogCancel">
           <span class="block">Cancel</span>
         </q-btn>
-        <q-btn color="primary" :disable="!Object.values(tune).every(Boolean)" flat square @click="uploadTune(tune)">
-          <span class="block">Upload</span>
+        <q-btn color="primary" :disable="isDisable" flat square @click="props.tune ? updateTune(tune) : uploadTune(tune)">
+          <span class="block">{{ props.tune ? 'Update' : 'Upload' }}</span>
         </q-btn>
       </q-card-actions>
     </q-card>

@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth';
 import { API, Storage } from 'aws-amplify';
 
 // Quasar
-import { date, exportFile, useMeta } from 'quasar';
+import { date, exportFile, useMeta, useQuasar } from 'quasar';
 
 // Google Sign In
 import GoogleSignIn from '@/components/GoogleSignIn.vue';
@@ -19,6 +19,9 @@ import RelatedTunes from '@/components/RelatedTunes.vue';
 
 // Tune Comments
 import TuneComments from '@/components/TuneComments.vue';
+
+// Tune Dialog
+import TuneDialog from '@/components/TuneDialog.vue';
 
 // Tune Player
 import TunePlayer from '@/components/TunePlayer.vue';
@@ -32,6 +35,30 @@ const { id } = toRefs(props);
 // get the auth store
 const auth = useAuthStore();
 
+// get the $q object
+const $q = useQuasar();
+
+// edit the tune
+const editTune = () => {
+  if (tune.value) {
+    const dialog = $q.dialog({
+      component: TuneDialog,
+      componentProps: {
+        tune: tune.value,
+      },
+    });
+
+    dialog.onOk(({ title, description }) => {
+      if (tune.value) {
+        Object.assign(tune.value, {
+          title,
+          description,
+        });
+      }
+    });
+  }
+};
+
 // toggle is liked
 const toggleIsLiked = async () => {
   if (tune.value && auth.user) {
@@ -43,7 +70,7 @@ const toggleIsLiked = async () => {
   }
 };
 
-// download tune
+// download the tune
 const downloadTune = async () => {
   if (tune.value) {
     const { Body } = await Storage.get(tune.value.midiKey, {
@@ -116,6 +143,11 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
               </q-item-label>
             </q-item-section>
             <div v-if="tune" class="absolute-right">
+              <template v-if="tune.userId === auth.user?.sub">
+                <q-btn flat square @click="editTune">
+                  <q-icon name="mdi-pencil-outline" />
+                </q-btn>
+              </template>
               <q-btn flat square @click="toggleIsLiked">
                 <template v-if="tune.isLiked">
                   <q-icon class="q-mr-sm" name="mdi-thumb-up" />
