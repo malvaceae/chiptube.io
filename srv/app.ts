@@ -35,7 +35,7 @@ import {
 import { Construct } from 'constructs';
 
 // Api
-import { ChipTubeApi } from './api';
+import { ChipTubeApi } from '@/api';
 
 /**
  * A root construct which represents a single CloudFormation stack.
