@@ -4,6 +4,12 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 
+// AWS SDK - DynamoDB - Document Client
+import {
+  BatchGetCommand,
+  QueryCommand,
+} from '@aws-sdk/lib-dynamodb';
+
 // Api Commons
 import {
   dynamodb,
@@ -32,8 +38,8 @@ export default async ({ pathParameters, queryStringParameters }: APIGatewayProxy
 
   const { comments, lastEvaluatedKey } = await (async () => {
     // Get comments and the last evaluated key.
-    const { Items: comments, LastEvaluatedKey: lastEvaluatedKey } = await dynamodb.query({
-      TableName: process.env.APP_TABLE_NAME!,
+    const { Items: comments, LastEvaluatedKey: lastEvaluatedKey } = await dynamodb.send(new QueryCommand({
+      TableName: process.env.APP_TABLE_NAME,
       IndexName: 'LSI-PublishedAt',
       Limit: 24,
       ScanIndexForward: false,
@@ -42,7 +48,7 @@ export default async ({ pathParameters, queryStringParameters }: APIGatewayProxy
       ExpressionAttributeValues: {
         ':pk': `tuneId#${id}#comments`,
       },
-    }).promise();
+    }));
 
     return {
       comments,
@@ -70,7 +76,7 @@ export default async ({ pathParameters, queryStringParameters }: APIGatewayProxy
   const userIds = [...new Set(comments.map(({ userId }) => userId))];
 
   // Get raw responses.
-  const { Responses: responses } = await dynamodb.batchGet({
+  const { Responses: responses } = await dynamodb.send(new BatchGetCommand({
     RequestItems: {
       [process.env.APP_TABLE_NAME!]: {
         Keys: userIds.map((userId) => ({
@@ -84,7 +90,7 @@ export default async ({ pathParameters, queryStringParameters }: APIGatewayProxy
         ],
       },
     },
-  }).promise();
+  }));
 
   // Get users.
   const users = responses?.[process.env.APP_TABLE_NAME!];

@@ -5,11 +5,15 @@ import {
   CdkCustomResourceResponse,
 } from 'aws-lambda';
 
-// AWS SDK
-import { CodeBuild } from 'aws-sdk';
-
 // AWS SDK - CodeBuild
-const codebuild = new CodeBuild({
+import {
+  BatchGetBuildsCommand,
+  CodeBuildClient,
+  StartBuildCommand,
+} from '@aws-sdk/client-codebuild';
+
+// AWS SDK - CodeBuild - Client
+const codebuild = new CodeBuildClient({
   apiVersion: '2016-10-06',
 });
 
@@ -17,20 +21,20 @@ export const handler: CdkCustomResourceHandler = async (event: CdkCustomResource
   switch (event.RequestType) {
     case 'Create':
     case 'Update':
-      const { build } = await codebuild.startBuild({
-        projectName: process.env.APP_PROJECT_NAME!,
-      }).promise();
+      const { build } = await codebuild.send(new StartBuildCommand({
+        projectName: process.env.APP_PROJECT_NAME,
+      }));
 
       if (!build?.id) {
         throw Error();
       }
 
       while (true) {
-        const { builds } = await codebuild.batchGetBuilds({
+        const { builds } = await codebuild.send(new BatchGetBuildsCommand({
           ids: [
             build.id,
           ],
-        }).promise();
+        }));
 
         if (!builds?.[0]) {
           throw Error();

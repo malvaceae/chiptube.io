@@ -4,6 +4,12 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 
+// AWS SDK - DynamoDB - Document Client
+import { GetCommand } from '@aws-sdk/lib-dynamodb';
+
+// AWS SDK - SNS
+import { PublishCommand } from '@aws-sdk/client-sns';
+
 // Api Commons
 import {
   ajv,
@@ -63,13 +69,13 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
     const userId = getUserId(cognitoAuthenticationProvider);
 
     // Get the user.
-    const { Item: user } = await dynamodb.get({
-      TableName: process.env.APP_TABLE_NAME!,
+    const { Item: user } = await dynamodb.send(new GetCommand({
+      TableName: process.env.APP_TABLE_NAME,
       Key: {
         pk: `userId#${userId}`,
         sk: `userId#${userId}`,
       },
-    }).promise();
+    }));
 
     // Add the user to messages.
     if (user) {
@@ -91,11 +97,11 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
   }
 
   // Send the feedback.
-  await sns.publish({
+  await sns.send(new PublishCommand({
     TopicArn: process.env.FEEDBACK_TOPIC_ARN,
     Message: messages.join('\n'),
     Subject: 'ChipTube Feedback',
-  }).promise();
+  }));
 
   return response({
     message: 'OK',

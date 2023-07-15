@@ -325,7 +325,7 @@ class ChipTubeStack extends Stack {
     // User Pool Signed In Trigger
     const userPoolSignedInTrigger = new nodejs.NodejsFunction(this, 'UserPoolSignedInTrigger', {
       architecture: lambda.Architecture.ARM_64,
-      runtime: lambda.Runtime.NODEJS_16_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       timeout: Duration.seconds(30),
       memorySize: 1769, // 1 vCPU
       environment: {
@@ -691,7 +691,8 @@ class ChipTubeStack extends Stack {
         path: appAsset.s3ObjectKey,
       }),
       environment: {
-        buildImage: codebuild.LinuxBuildImage.STANDARD_6_0,
+        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+        computeType: codebuild.ComputeType.SMALL,
         environmentVariables: {
           VITE_API_ENDPOINT: {
             value: apiEndpoint,
@@ -720,10 +721,13 @@ class ChipTubeStack extends Stack {
             'runtime-versions': {
               nodejs: 'latest',
             },
+            commands: [
+              'npm install -g yarn',
+            ],
           },
           pre_build: {
             commands: [
-              'yarn',
+              'yarn --frozen-lockfile',
             ],
           },
           build: {
@@ -750,7 +754,7 @@ class ChipTubeStack extends Stack {
     // App Build Handler
     const appBuildHandler = new nodejs.NodejsFunction(this, 'AppBuildHandler', {
       architecture: lambda.Architecture.ARM_64,
-      runtime: lambda.Runtime.NODEJS_16_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       timeout: Duration.minutes(15),
       environment: {
         APP_PROJECT_NAME: appProject.projectName,

@@ -4,6 +4,12 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 
+// AWS SDK - DynamoDB - Document Client
+import {
+  GetCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
+
 // Api Commons
 import {
   dynamodb,
@@ -22,8 +28,8 @@ export default async ({ pathParameters, requestContext: { identity: { cognitoAut
   }
 
   try {
-    await dynamodb.update({
-      TableName: process.env.APP_TABLE_NAME!,
+    await dynamodb.send(new UpdateCommand({
+      TableName: process.env.APP_TABLE_NAME,
       Key: {
         pk: 'tunes',
         sk: `tuneId#${id}`,
@@ -44,18 +50,18 @@ export default async ({ pathParameters, requestContext: { identity: { cognitoAut
         ':identityId': identityId,
         ':additionalValue': 1,
       },
-    }).promise();
+    }));
   } catch {
     //
   }
 
-  const { Item: tune } = await dynamodb.get({
-    TableName: process.env.APP_TABLE_NAME!,
+  const { Item: tune } = await dynamodb.send(new GetCommand({
+    TableName: process.env.APP_TABLE_NAME,
     Key: {
       pk: 'tunes',
       sk: `tuneId#${id}`,
     },
-  }).promise();
+  }));
 
   if (tune === undefined) {
     return response({
@@ -63,8 +69,8 @@ export default async ({ pathParameters, requestContext: { identity: { cognitoAut
     }, 404);
   }
 
-  const { Item: user } = await dynamodb.get({
-    TableName: process.env.APP_TABLE_NAME!,
+  const { Item: user } = await dynamodb.send(new GetCommand({
+    TableName: process.env.APP_TABLE_NAME,
     Key: {
       pk: `userId#${tune.userId}`,
       sk: `userId#${tune.userId}`,
@@ -74,7 +80,7 @@ export default async ({ pathParameters, requestContext: { identity: { cognitoAut
       'nickname',
       'picture',
     ],
-  }).promise();
+  }));
 
   if (user === undefined) {
     return response({
@@ -93,13 +99,13 @@ export default async ({ pathParameters, requestContext: { identity: { cognitoAut
   // Get the user id from cognito authentication provider.
   const userId = getUserId(cognitoAuthenticationProvider);
 
-  const { Item: isLiked } = await dynamodb.get({
-    TableName: process.env.APP_TABLE_NAME!,
+  const { Item: isLiked } = await dynamodb.send(new GetCommand({
+    TableName: process.env.APP_TABLE_NAME,
     Key: {
       pk: `userId#${userId}`,
       sk: `tuneLikeId#${id}`,
     },
-  }).promise();
+  }));
 
   Object.assign(tune, {
     isLiked: !!isLiked,

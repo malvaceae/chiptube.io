@@ -61,7 +61,7 @@ export class ChipTubeApi extends apigateway.RestApi {
     // Api Handler
     this.handler = new nodejs.NodejsFunction(this, 'Handler', {
       architecture: lambda.Architecture.ARM_64,
-      runtime: lambda.Runtime.NODEJS_16_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       timeout: Duration.seconds(30),
       memorySize: 1769, // 1 vCPU
       initialPolicy: [

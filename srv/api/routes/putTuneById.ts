@@ -4,6 +4,15 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 
+// AWS SDK - DynamoDB - Document Client
+import {
+  BatchWriteCommand,
+  GetCommand,
+  QueryCommand,
+  TransactWriteCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
+
 // Api Commons
 import {
   ajv,
@@ -70,13 +79,13 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
   }
 
   if (params.title || params.description) {
-    const { Item: tune } = await dynamodb.get({
-      TableName: process.env.APP_TABLE_NAME!,
+    const { Item: tune } = await dynamodb.send(new GetCommand({
+      TableName: process.env.APP_TABLE_NAME,
       Key: {
         pk: 'tunes',
         sk: `tuneId#${id}`,
       },
-    }).promise();
+    }));
 
     if (tune === undefined) {
       return response({
@@ -92,8 +101,8 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
 
     if (params.title) {
       try {
-        await dynamodb.update({
-          TableName: process.env.APP_TABLE_NAME!,
+        await dynamodb.send(new UpdateCommand({
+          TableName: process.env.APP_TABLE_NAME,
           Key: {
             pk: 'tunes',
             sk: `tuneId#${id}`,
@@ -108,7 +117,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
           ExpressionAttributeValues: {
             ':title': params.title,
           },
-        }).promise();
+        }));
       } catch {
         //
       }
@@ -116,8 +125,8 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
 
     if (params.description) {
       try {
-        await dynamodb.update({
-          TableName: process.env.APP_TABLE_NAME!,
+        await dynamodb.send(new UpdateCommand({
+          TableName: process.env.APP_TABLE_NAME,
           Key: {
             pk: 'tunes',
             sk: `tuneId#${id}`,
@@ -132,7 +141,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
           ExpressionAttributeValues: {
             ':description': params.description,
           },
-        }).promise();
+        }));
       } catch {
         //
       }
@@ -140,8 +149,8 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
 
     try {
       // Get keywords.
-      const { Items: keywords } = await dynamodb.query({
-        TableName: process.env.APP_TABLE_NAME!,
+      const { Items: keywords } = await dynamodb.send(new QueryCommand({
+        TableName: process.env.APP_TABLE_NAME,
         IndexName: 'GSI-AdjacencyList',
         KeyConditionExpression: [
           'sk = :sk',
@@ -151,7 +160,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
           ':sk': `tuneId#${id}`,
           ':pk': 'tuneKeyword#',
         },
-      }).promise();
+      }));
 
       if (keywords === undefined) {
         return response({
@@ -161,7 +170,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
 
       // Delete keywords.
       await Promise.all([...Array(Math.ceil(keywords.length / 25)).keys()].map((i) => keywords.slice(i * 25, (i + 1) * 25)).map((keywords) => {
-        return dynamodb.batchWrite({
+        return dynamodb.send(new BatchWriteCommand({
           RequestItems: {
             [process.env.APP_TABLE_NAME!]: keywords.map(({ keyword }) => ({
               DeleteRequest: {
@@ -172,7 +181,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
               },
             })),
           },
-        }).promise();
+        }));
       }));
     } catch {
       //
@@ -189,7 +198,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
 
       // Add keywords.
       await Promise.all([...Array(Math.ceil(occurrences.length / 25)).keys()].map((i) => occurrences.slice(i * 25, (i + 1) * 25)).map((occurrences) => {
-        return dynamodb.batchWrite({
+        return dynamodb.send(new BatchWriteCommand({
           RequestItems: {
             [process.env.APP_TABLE_NAME!]: occurrences.map(([keyword, occurrences]) => ({
               PutRequest: {
@@ -203,7 +212,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
               },
             })),
           },
-        }).promise();
+        }));
       }));
     } catch {
       //
@@ -213,11 +222,11 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
   if (typeof params.isLiked === 'boolean') {
     try {
       if (params.isLiked) {
-        await dynamodb.transactWrite({
+        await dynamodb.send(new TransactWriteCommand({
           TransactItems: [
             {
               Put: {
-                TableName: process.env.APP_TABLE_NAME!,
+                TableName: process.env.APP_TABLE_NAME,
                 Item: {
                   pk: `userId#${userId}`,
                   sk: `tuneLikeId#${id}`,
@@ -230,7 +239,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
             },
             {
               Update: {
-                TableName: process.env.APP_TABLE_NAME!,
+                TableName: process.env.APP_TABLE_NAME,
                 Key: {
                   pk: 'tunes',
                   sk: `tuneId#${id}`,
@@ -246,13 +255,13 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
               },
             },
           ],
-        }).promise();
+        }));
       } else {
-        await dynamodb.transactWrite({
+        await dynamodb.send(new TransactWriteCommand({
           TransactItems: [
             {
               Delete: {
-                TableName: process.env.APP_TABLE_NAME!,
+                TableName: process.env.APP_TABLE_NAME,
                 Key: {
                   pk: `userId#${userId}`,
                   sk: `tuneLikeId#${id}`,
@@ -265,7 +274,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
             },
             {
               Update: {
-                TableName: process.env.APP_TABLE_NAME!,
+                TableName: process.env.APP_TABLE_NAME,
                 Key: {
                   pk: 'tunes',
                   sk: `tuneId#${id}`,
@@ -281,20 +290,20 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
               },
             },
           ],
-        }).promise();
+        }));
       }
     } catch {
       //
     }
   }
 
-  const { Item: tune } = await dynamodb.get({
-    TableName: process.env.APP_TABLE_NAME!,
+  const { Item: tune } = await dynamodb.send(new GetCommand({
+    TableName: process.env.APP_TABLE_NAME,
     Key: {
       pk: 'tunes',
       sk: `tuneId#${id}`,
     },
-  }).promise();
+  }));
 
   if (tune === undefined) {
     return response({
@@ -302,8 +311,8 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
     }, 404);
   }
 
-  const { Item: user } = await dynamodb.get({
-    TableName: process.env.APP_TABLE_NAME!,
+  const { Item: user } = await dynamodb.send(new GetCommand({
+    TableName: process.env.APP_TABLE_NAME,
     Key: {
       pk: `userId#${tune.userId}`,
       sk: `userId#${tune.userId}`,
@@ -313,7 +322,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
       'nickname',
       'picture',
     ],
-  }).promise();
+  }));
 
   if (user === undefined) {
     return response({
@@ -325,13 +334,13 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
     user,
   });
 
-  const { Item: isLiked } = await dynamodb.get({
-    TableName: process.env.APP_TABLE_NAME!,
+  const { Item: isLiked } = await dynamodb.send(new GetCommand({
+    TableName: process.env.APP_TABLE_NAME,
     Key: {
       pk: `userId#${userId}`,
       sk: `tuneLikeId#${id}`,
     },
-  }).promise();
+  }));
 
   Object.assign(tune, {
     isLiked: !!isLiked,

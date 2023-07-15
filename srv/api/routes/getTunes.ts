@@ -4,6 +4,12 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 
+// AWS SDK - DynamoDB - Document Client
+import {
+  BatchGetCommand,
+  QueryCommand,
+} from '@aws-sdk/lib-dynamodb';
+
 // Api Commons
 import {
   dynamodb,
@@ -32,13 +38,13 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
 
       // Get tune ids by keyword.
       const tuneIdsByKeyword = await Promise.all(keywords.map((keyword) => {
-        return dynamodb.query({
-          TableName: process.env.APP_TABLE_NAME!,
+        return dynamodb.send(new QueryCommand({
+          TableName: process.env.APP_TABLE_NAME,
           KeyConditionExpression: 'pk = :pk',
           ExpressionAttributeValues: {
             ':pk': `tuneKeyword#${keyword}`,
           },
-        }).promise();
+        }));
       }));
 
       // Get tune ids.
@@ -65,7 +71,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
       sortedTuneIds.splice(24);
 
       // Get raw responses.
-      const { Responses: responses } = await dynamodb.batchGet({
+      const { Responses: responses } = await dynamodb.send(new BatchGetCommand({
         RequestItems: {
           [process.env.APP_TABLE_NAME!]: {
             Keys: sortedTuneIds.map((tuneId) => ({
@@ -74,7 +80,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
             })),
           },
         },
-      }).promise();
+      }));
 
       // Get tunes.
       const tunes = responses?.[process.env.APP_TABLE_NAME!]?.sort?.((a, b) => {
@@ -94,8 +100,8 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
       };
     } else {
       // Get tunes and the last evaluated key.
-      const { Items: tunes, LastEvaluatedKey: lastEvaluatedKey } = await dynamodb.query({
-        TableName: process.env.APP_TABLE_NAME!,
+      const { Items: tunes, LastEvaluatedKey: lastEvaluatedKey } = await dynamodb.send(new QueryCommand({
+        TableName: process.env.APP_TABLE_NAME,
         IndexName: 'LSI-PublishedAt',
         Limit: 24,
         ScanIndexForward: false,
@@ -104,7 +110,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
         ExpressionAttributeValues: {
           ':pk': 'tunes',
         },
-      }).promise();
+      }));
 
       return {
         tunes,
@@ -133,7 +139,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
   const userIds = [...new Set(tunes.map(({ userId }) => userId))];
 
   // Get raw responses.
-  const { Responses: responses } = await dynamodb.batchGet({
+  const { Responses: responses } = await dynamodb.send(new BatchGetCommand({
     RequestItems: {
       [process.env.APP_TABLE_NAME!]: {
         Keys: userIds.map((userId) => ({
@@ -147,7 +153,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
         ],
       },
     },
-  }).promise();
+  }));
 
   // Get users.
   const users = responses?.[process.env.APP_TABLE_NAME!];

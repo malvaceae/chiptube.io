@@ -7,6 +7,12 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 
+// AWS SDK - DynamoDB - Document Client
+import {
+  GetCommand,
+  TransactWriteCommand,
+} from '@aws-sdk/lib-dynamodb';
+
 // Api Commons
 import {
   ajv,
@@ -72,11 +78,11 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
         return '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz'[i];
       }).join('');
 
-      await dynamodb.transactWrite({
+      await dynamodb.send(new TransactWriteCommand({
         TransactItems: [
           {
             Put: {
-              TableName: process.env.APP_TABLE_NAME!,
+              TableName: process.env.APP_TABLE_NAME,
               Item: {
                 pk: `tuneId#${tuneId}#comments`,
                 sk: `commentId#${id}`,
@@ -94,7 +100,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
           },
           {
             Update: {
-              TableName: process.env.APP_TABLE_NAME!,
+              TableName: process.env.APP_TABLE_NAME,
               Key: {
                 pk: 'tunes',
                 sk: `tuneId#${tuneId}`,
@@ -110,15 +116,15 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
             },
           },
         ],
-      }).promise();
+      }));
 
-      const { Item: comment } = await dynamodb.get({
-        TableName: process.env.APP_TABLE_NAME!,
+      const { Item: comment } = await dynamodb.send(new GetCommand({
+        TableName: process.env.APP_TABLE_NAME,
         Key: {
           pk: `tuneId#${tuneId}#comments`,
           sk: `commentId#${id}`,
         },
-      }).promise();
+      }));
 
       if (comment === undefined) {
         return response({
@@ -126,8 +132,8 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
         }, 404);
       }
 
-      const { Item: user } = await dynamodb.get({
-        TableName: process.env.APP_TABLE_NAME!,
+      const { Item: user } = await dynamodb.send(new GetCommand({
+        TableName: process.env.APP_TABLE_NAME,
         Key: {
           pk: `userId#${comment.userId}`,
           sk: `userId#${comment.userId}`,
@@ -137,7 +143,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
           'nickname',
           'picture',
         ],
-      }).promise();
+      }));
 
       if (user === undefined) {
         return response({

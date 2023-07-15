@@ -4,6 +4,12 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 
+// AWS SDK - Cognito
+import { AdminUpdateUserAttributesCommand } from '@aws-sdk/client-cognito-identity-provider';
+
+// AWS SDK - DynamoDB - Document Client
+import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
+
 // Api Commons
 import {
   ajv,
@@ -54,8 +60,8 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
   }
 
   if (params.nickname) {
-    const { Attributes: user } = await dynamodb.update({
-      TableName: process.env.APP_TABLE_NAME!,
+    const { Attributes: user } = await dynamodb.send(new UpdateCommand({
+      TableName: process.env.APP_TABLE_NAME,
       Key: {
         pk: `userId#${userId}`,
         sk: `userId#${userId}`,
@@ -74,13 +80,13 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
       ExpressionAttributeValues: {
         ':nickname': params.nickname,
       },
-    }).promise();
+    }));
 
     if (!user) {
       throw Error('The user not found.');
     }
 
-    await cognito.adminUpdateUserAttributes({
+    await cognito.send(new AdminUpdateUserAttributesCommand({
       UserPoolId: userPoolId,
       Username: user.userName,
       UserAttributes: [
@@ -89,7 +95,7 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
           Value: params.nickname,
         },
       ],
-    }).promise();
+    }));
   }
 
   return response({
