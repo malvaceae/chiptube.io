@@ -172,7 +172,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
       await Promise.all([...Array(Math.ceil(keywords.length / 25)).keys()].map((i) => keywords.slice(i * 25, (i + 1) * 25)).map((keywords) => {
         return dynamodb.send(new BatchWriteCommand({
           RequestItems: {
-            [process.env.APP_TABLE_NAME!]: keywords.map(({ keyword }) => ({
+            [process.env.APP_TABLE_NAME]: keywords.map(({ keyword }) => ({
               DeleteRequest: {
                 Key: {
                   pk: `tuneKeyword#${keyword}`,
@@ -200,7 +200,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
       await Promise.all([...Array(Math.ceil(occurrences.length / 25)).keys()].map((i) => occurrences.slice(i * 25, (i + 1) * 25)).map((occurrences) => {
         return dynamodb.send(new BatchWriteCommand({
           RequestItems: {
-            [process.env.APP_TABLE_NAME!]: occurrences.map(([keyword, occurrences]) => ({
+            [process.env.APP_TABLE_NAME]: occurrences.map(([keyword, occurrences]) => ({
               PutRequest: {
                 Item: {
                   pk: `tuneKeyword#${keyword}`,

@@ -78,7 +78,7 @@ export default async ({ pathParameters, queryStringParameters }: APIGatewayProxy
   // Get raw responses.
   const { Responses: responses } = await dynamodb.send(new BatchGetCommand({
     RequestItems: {
-      [process.env.APP_TABLE_NAME!]: {
+      [process.env.APP_TABLE_NAME]: {
         Keys: userIds.map((userId) => ({
           pk: `userId#${userId}`,
           sk: `userId#${userId}`,
@@ -93,7 +93,7 @@ export default async ({ pathParameters, queryStringParameters }: APIGatewayProxy
   }));
 
   // Get users.
-  const users = responses?.[process.env.APP_TABLE_NAME!];
+  const users = responses?.[process.env.APP_TABLE_NAME];
 
   if (users === undefined) {
     return response({

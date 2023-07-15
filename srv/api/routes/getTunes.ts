@@ -73,7 +73,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
       // Get raw responses.
       const { Responses: responses } = await dynamodb.send(new BatchGetCommand({
         RequestItems: {
-          [process.env.APP_TABLE_NAME!]: {
+          [process.env.APP_TABLE_NAME]: {
             Keys: sortedTuneIds.map((tuneId) => ({
               pk: 'tunes',
               sk: `tuneId#${tuneId}`,
@@ -83,7 +83,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
       }));
 
       // Get tunes.
-      const tunes = responses?.[process.env.APP_TABLE_NAME!]?.sort?.((a, b) => {
+      const tunes = responses?.[process.env.APP_TABLE_NAME]?.sort?.((a, b) => {
         return sortedTuneIds.indexOf(a.id) - sortedTuneIds.indexOf(b.id);
       });
 
@@ -141,7 +141,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
   // Get raw responses.
   const { Responses: responses } = await dynamodb.send(new BatchGetCommand({
     RequestItems: {
-      [process.env.APP_TABLE_NAME!]: {
+      [process.env.APP_TABLE_NAME]: {
         Keys: userIds.map((userId) => ({
           pk: `userId#${userId}`,
           sk: `userId#${userId}`,
@@ -156,7 +156,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
   }));
 
   // Get users.
-  const users = responses?.[process.env.APP_TABLE_NAME!];
+  const users = responses?.[process.env.APP_TABLE_NAME];
 
   if (users === undefined) {
     return response({
