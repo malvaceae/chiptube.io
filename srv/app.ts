@@ -55,18 +55,11 @@ class ChipTubeStack extends Stack {
 
     // Context Values
     const [googleClientId, googleClientSecret, feedbackEmail, domainName] = [
-      this.node.tryGetContext('googleClientId'),
-      this.node.tryGetContext('googleClientSecret'),
+      this.node.getContext('googleClientId'),
+      this.node.getContext('googleClientSecret'),
       this.node.tryGetContext('feedbackEmail'),
       this.node.tryGetContext('domainName'),
     ];
-
-    // Validate context values.
-    this.node.addValidation({
-      validate: () => Object.entries({ googleClientId, googleClientSecret }).reduce((errors, [key, value]) => {
-        return typeof value === 'string' && value.length > 0 ? errors : [...errors, `The ${key} is required.`];
-      }, [] as string[]),
-    });
 
     // If the domain name exists, create Route53 and ACM resources.
     const [zone, certificate, domainNames] = (() => {
