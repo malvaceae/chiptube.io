@@ -34,7 +34,7 @@ const routes = new Map<{ resource: string, httpMethod: string }, (event: APIGate
   [{ resource: '/feedback', httpMethod: 'POST' }, postFeedback],
 ]);
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     for (const [{ resource, httpMethod }, route] of routes) {
       if (httpMethod === event.httpMethod) {
