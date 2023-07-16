@@ -92,7 +92,7 @@ export class ChipTubeApi extends apigateway.RestApi {
       const resource = this.root.resourceForPath(path);
 
       // Add methods.
-      Object.values(OpenAPIV3.HttpMethods).filter((v) => pathItem?.hasOwnProperty(v)).forEach((httpMethod) => {
+      Object.values(OpenAPIV3.HttpMethods).filter((v) => pathItem?.[v]).forEach((httpMethod) => {
         resource.addMethod(httpMethod, new apigateway.LambdaIntegration(this.handler), {
           authorizationType: apigateway.AuthorizationType.IAM,
         });
