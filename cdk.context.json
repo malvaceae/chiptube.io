@@ -1,5 +1,5 @@
 {
-  "hosted-zone:account=601750217430:domainName=chiptube.io:region=ap-northeast-1": {
+  "hosted-zone:account=601750217430:domainName=chiptube.io:region=us-east-1": {
     "Id": "/hostedzone/Z082676031VEKRN78IW0N",
     "Name": "chiptube.io."
   }

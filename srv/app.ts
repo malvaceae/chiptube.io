@@ -38,6 +38,46 @@ import { Construct } from 'constructs';
 import { ChipTubeApi } from '@/api';
 
 /**
+ * ChipTube Stack Properties
+ */
+interface ChipTubeStackProps extends StackProps {
+  /**
+   * Google Client Id
+   */
+  readonly googleClientId: string;
+
+  /**
+   * Google Client Secret
+   */
+  readonly googleClientSecret: string;
+
+  /**
+   * Feedback Email
+   */
+  readonly feedbackEmail?: string;
+
+  /**
+   * Domain Name
+   */
+  readonly domainName?: string;
+
+  /**
+   * Hosted Zone
+   */
+  readonly zone?: route53.IHostedZone;
+
+  /**
+   * Certificate
+   */
+  readonly certificate?: acm.ICertificate;
+
+  /**
+   * Domain Names
+   */
+  readonly domainNames?: string[];
+}
+
+/**
  * A root construct which represents a single CloudFormation stack.
  */
 class ChipTubeStack extends Stack {
@@ -50,40 +90,19 @@ class ChipTubeStack extends Stack {
    * physical ID of the stack.
    * @param props Stack properties.
    */
-  constructor(scope?: Construct, id?: string, props?: StackProps) {
+  constructor(scope: Construct, id: string, props: ChipTubeStackProps) {
     super(scope, id, props);
 
-    // Context Values
-    const [googleClientId, googleClientSecret, feedbackEmail, domainName] = [
-      this.node.getContext('googleClientId'),
-      this.node.getContext('googleClientSecret'),
-      this.node.tryGetContext('feedbackEmail'),
-      this.node.tryGetContext('domainName'),
-    ];
-
-    // If the domain name exists, create Route53 and ACM resources.
-    const [zone, certificate, domainNames] = (() => {
-      if (domainName) {
-        // Hosted Zone
-        const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
-          domainName,
-        });
-
-        // Certificate
-        const certificate = new acm.DnsValidatedCertificate(this, 'Certificate', {
-          hostedZone,
-          region: 'us-east-1',
-          domainName,
-          subjectAlternativeNames: [
-            `*.${domainName}`,
-          ],
-        });
-
-        return [hostedZone, certificate, [domainName]];
-      } else {
-        return [];
-      }
-    })();
+    // Stack Properties
+    const {
+      googleClientId,
+      googleClientSecret,
+      feedbackEmail,
+      domainName,
+      zone,
+      certificate,
+      domainNames,
+    } = props;
 
     // App Table
     const appTable = new dynamodb.Table(this, 'AppTable', {
@@ -792,9 +811,63 @@ class ChipTubeStack extends Stack {
   }
 }
 
+// CDK App
 const app = new App();
+
+// AWS Environment
+const env = Object.fromEntries(['account', 'region'].map((key) => {
+  return [key, process.env[`CDK_DEFAULT_${key.toUpperCase()}`]];
+}));
+
+// Context Values
+const [googleClientId, googleClientSecret, feedbackEmail, domainName] = [
+  app.node.getContext('googleClientId'),
+  app.node.getContext('googleClientSecret'),
+  app.node.tryGetContext('feedbackEmail'),
+  app.node.tryGetContext('domainName'),
+];
+
+// If the domain name exists, create ACM resource in us-east-1.
+const [zone, certificate, domainNames] = (() => {
+  if (domainName) {
+    // ChipTube Certificate Stack
+    const stack = new Stack(app, 'ChipTube-CertificateStack', {
+      env: {
+        ...env,
+        region: 'us-east-1',
+      },
+      crossRegionReferences: true,
+    });
+
+    // Hosted Zone
+    const hostedZone = route53.HostedZone.fromLookup(stack, 'HostedZone', {
+      domainName,
+    });
+
+    // Certificate
+    const certificate = new acm.Certificate(stack, 'Certificate', {
+      domainName,
+      subjectAlternativeNames: [
+        `*.${domainName}`,
+      ],
+      validation: acm.CertificateValidation.fromDns(hostedZone),
+    });
+
+    return [hostedZone, certificate, [domainName]];
+  } else {
+    return [];
+  }
+})();
+
+// ChipTube Stack
 new ChipTubeStack(app, 'ChipTube', {
-  env: Object.fromEntries(['account', 'region'].map((key) => [
-    key, process.env[`CDK_DEFAULT_${key.toUpperCase()}`],
-  ])),
+  env,
+  crossRegionReferences: true,
+  googleClientId,
+  googleClientSecret,
+  feedbackEmail,
+  domainName,
+  zone,
+  certificate,
+  domainNames,
 });
