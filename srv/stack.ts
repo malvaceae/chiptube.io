@@ -382,11 +382,11 @@ export class ChipTubeStack extends Stack {
         },
         callbackUrls: [
           'http://localhost:5173',
-          `https://${domainName || appDistribution.domainName}`,
+          `https://${domainName ?? appDistribution.domainName}`,
         ],
         logoutUrls: [
           'http://localhost:5173',
-          `https://${domainName || appDistribution.domainName}`,
+          `https://${domainName ?? appDistribution.domainName}`,
         ],
         scopes: [
           cognito.OAuthScope.EMAIL,
