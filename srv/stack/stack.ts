@@ -1,6 +1,3 @@
-// Node.js Core Modules
-import { join } from 'path';
-
 // AWS CDK
 import {
   CfnOutput,
@@ -202,9 +199,7 @@ export class ChipTubeStack extends Stack {
     });
 
     // Api
-    const api = new ChipTubeApi(this, 'Api', {
-      specFile: join(__dirname, 'api.yml'),
-    });
+    const api = new ChipTubeApi(this, 'Api');
 
     // Add environment variable for access App Table.
     api.handler.addEnvironment('APP_TABLE_NAME', appTable.tableName);
@@ -679,7 +674,7 @@ export class ChipTubeStack extends Stack {
 
     // App Asset
     const appAsset = new assets.Asset(this, 'AppAsset', {
-      path: join(__dirname, '..'),
+      path: '.',
       exclude: [
         '/*',
         '!.browserslistrc',

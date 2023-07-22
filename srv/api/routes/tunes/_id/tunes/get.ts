@@ -1,8 +1,11 @@
-// AWS Lambda
+// Express
 import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-} from 'aws-lambda';
+  Request,
+  Response,
+} from 'express';
+
+// HTTP Errors
+import createError from 'http-errors';
 
 // AWS SDK - DynamoDB - Document Client
 import {
@@ -10,31 +13,23 @@ import {
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 
-// Api Commons
-import {
-  dynamodb,
-  response,
-} from '@/api/commons';
+// Api Services
+import { dynamodb } from '@/api/services';
 
-export default async ({ pathParameters, queryStringParameters }: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+// Handler
+export default async (req: Request, res: Response): Promise<Response> => {
   // Get the tune id.
-  const { id } = pathParameters ?? {};
-
-  if (!id) {
-    return response({
-      message: 'Not found',
-    }, 404);
-  }
+  const { id } = req.params;
 
   const exclusiveStartKey = (({ after }) => {
-    if (after) {
+    if (typeof after === 'string') {
       try {
         return JSON.parse(Buffer.from(after, 'base64').toString());
       } catch {
         //
       }
     }
-  })(queryStringParameters ?? {});
+  })(req.query);
 
   const { tunes, lastEvaluatedKey } = await (async () => {
     // Get keywords.
@@ -122,7 +117,7 @@ export default async ({ pathParameters, queryStringParameters }: APIGatewayProxy
   })();
 
   if (!tunes?.length) {
-    return response({
+    return res.send({
       tunes: [],
     });
   }
@@ -161,9 +156,7 @@ export default async ({ pathParameters, queryStringParameters }: APIGatewayProxy
   const users = responses?.[process.env.APP_TABLE_NAME];
 
   if (users === undefined) {
-    return response({
-      message: 'Not found',
-    }, 404);
+    throw createError(404);
   }
 
   // Get users by id.
@@ -176,7 +169,7 @@ export default async ({ pathParameters, queryStringParameters }: APIGatewayProxy
     user: usersById[tune.userId],
   }));
 
-  return response({
+  return res.send({
     tunes,
     after,
   });

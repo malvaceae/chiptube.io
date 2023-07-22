@@ -1,8 +1,14 @@
-// AWS Lambda
+// Express
 import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-} from 'aws-lambda';
+  Request,
+  Response,
+} from 'express';
+
+// Serverless Express
+import { getCurrentInvoke } from '@vendia/serverless-express';
+
+// HTTP Errors
+import createError from 'http-errors';
 
 // AWS SDK - DynamoDB - Document Client
 import { GetCommand } from '@aws-sdk/lib-dynamodb';
@@ -10,18 +16,30 @@ import { GetCommand } from '@aws-sdk/lib-dynamodb';
 // AWS SDK - SNS
 import { PublishCommand } from '@aws-sdk/client-sns';
 
-// Api Commons
+// Api Services
 import {
   ajv,
   dynamodb,
-  getUserId,
-  response,
   sns,
-} from '@/api/commons';
+} from '@/api/services';
 
-export default async ({ body, requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId, sourceIp, userAgent } } }: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  // Parse the JSON of request body.
-  const params = JSON.parse(body ?? '{}');
+// Api Utilities
+import { getUserId } from '@/api/utils';
+
+// Handler
+export default async (req: Request, res: Response): Promise<Response> => {
+  const {
+    event: {
+      requestContext: {
+        identity: {
+          cognitoAuthenticationProvider,
+          cognitoIdentityId: identityId,
+          sourceIp,
+          userAgent,
+        },
+      },
+    },
+  } = getCurrentInvoke();
 
   // Compile the parameter schema.
   const validate = ajv.compile({
@@ -40,18 +58,17 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
   });
 
   // Validate request parameters.
-  if (!validate(params)) {
-    return response({
-      message: 'Unprocessable entity',
+  if (!validate(req.body)) {
+    throw createError(422, {
       errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
         return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
       }, {} as Record<string, string[]>),
-    }, 422);
+    });
   }
 
   // Build the message.
   const messages = [
-    params.text,
+    req.body.text,
     '',
     '--',
     'IP Address',
@@ -103,7 +120,7 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
     Subject: 'ChipTube Feedback',
   }));
 
-  return response({
+  return res.send({
     message: 'OK',
   });
 };

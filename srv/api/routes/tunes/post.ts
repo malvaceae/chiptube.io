@@ -1,11 +1,17 @@
 // Node.js Core Modules
 import { randomFillSync } from 'crypto';
 
-// AWS Lambda
+// Express
 import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-} from 'aws-lambda';
+  Request,
+  Response,
+} from 'express';
+
+// Serverless Express
+import { getCurrentInvoke } from '@vendia/serverless-express';
+
+// HTTP Errors
+import createError from 'http-errors';
 
 // AWS SDK - DynamoDB - Document Client
 import {
@@ -16,30 +22,40 @@ import {
 // AWS SDK - S3
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 
-// Api Commons
+// Api Services
 import {
   ajv,
   dynamodb,
+  s3,
+} from '@/api/services';
+
+// Api Utilities
+import {
   getUserId,
   getWords,
   normalize,
-  response,
-  s3,
   tokenize,
-} from '@/api/commons';
+} from '@/api/utils';
 
-export default async ({ body, requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId } } }: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+// Handler
+export default async (req: Request, res: Response): Promise<Response> => {
+  const {
+    event: {
+      requestContext: {
+        identity: {
+          cognitoAuthenticationProvider,
+          cognitoIdentityId: identityId,
+        },
+      },
+    },
+  } = getCurrentInvoke();
+
   if (!cognitoAuthenticationProvider) {
-    return response({
-      message: 'Unauthorized',
-    }, 401);
+    throw createError(401);
   }
 
   // Get the user id from cognito authentication provider.
   const userId = getUserId(cognitoAuthenticationProvider);
-
-  // Parse the JSON of request body.
-  const params = JSON.parse(body ?? '{}');
 
   // Compile the parameter schema.
   const validate = ajv.compile({
@@ -72,17 +88,16 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
   });
 
   // Validate request parameters.
-  if (!validate(params)) {
-    return response({
-      message: 'Unprocessable entity',
+  if (!validate(req.body)) {
+    throw createError(422, {
       errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
         return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
       }, {} as Record<string, string[]>),
-    }, 422);
+    });
   }
 
   // Get a title, a description and a midi key.
-  const { title, description, midiKey } = params;
+  const { title, description, midiKey } = req.body;
 
   // Get a midi file.
   const midiFile = await (async () => {
@@ -101,14 +116,13 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
 
   // Validate a midi file.
   if (!midiFile || !(midiFile[0] === 0x4D && midiFile[1] === 0x54 && midiFile[2] === 0x68 && midiFile[3] === 0x64)) {
-    return response({
-      message: 'Unprocessable entity',
+    throw createError(422, {
       errors: {
         midiKey: [
           'does NOT indicate a valid MIDI file',
         ],
       },
-    }, 422);
+    });
   }
 
   while (true) {
@@ -187,7 +201,9 @@ export default async ({ body, requestContext: { identity: { cognitoAuthenticatio
         }));
       }));
 
-      return response({ id });
+      return res.send({
+        id,
+      });
     } catch (e: any) {
       if (e.code === 'TransactionCanceledException') {
         await new Promise((resolve) => {

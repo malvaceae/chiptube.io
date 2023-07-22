@@ -1,8 +1,14 @@
-// AWS Lambda
+// Express
 import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-} from 'aws-lambda';
+  Request,
+  Response,
+} from 'express';
+
+// Serverless Express
+import { getCurrentInvoke } from '@vendia/serverless-express';
+
+// HTTP Errors
+import createError from 'http-errors';
 
 // AWS SDK - DynamoDB - Document Client
 import {
@@ -13,29 +19,38 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 
-// Api Commons
+// Api Services
 import {
   ajv,
   dynamodb,
+} from '@/api/services';
+
+// Api Utilities
+import {
   getUserId,
   getWords,
   normalize,
-  response,
   tokenize,
-} from '@/api/commons';
+} from '@/api/utils';
 
-export default async ({ body, pathParameters, requestContext: { identity: { cognitoAuthenticationProvider } } }: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+// Handler
+export default async (req: Request, res: Response): Promise<Response> => {
+  const {
+    event: {
+      requestContext: {
+        identity: {
+          cognitoAuthenticationProvider,
+        },
+      },
+    },
+  } = getCurrentInvoke();
+
   if (!cognitoAuthenticationProvider) {
-    return response({
-      message: 'Unauthorized',
-    }, 401);
+    throw createError(401);
   }
 
   // Get the user id from cognito authentication provider.
   const userId = getUserId(cognitoAuthenticationProvider);
-
-  // Parse the JSON of request body.
-  const params = JSON.parse(body ?? '{}');
 
   // Compile the parameter schema.
   const validate = ajv.compile<{ title?: string, description?: string, isLiked?: boolean }>({
@@ -60,25 +75,18 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
   });
 
   // Validate request parameters.
-  if (!validate(params)) {
-    return response({
-      message: 'Unprocessable entity',
+  if (!validate(req.body)) {
+    throw createError(422, {
       errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
         return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
       }, {} as Record<string, string[]>),
-    }, 422);
+    });
   }
 
   // Get the tune id.
-  const { id } = pathParameters ?? {};
+  const { id } = req.params;
 
-  if (!id) {
-    return response({
-      message: 'Not found',
-    }, 404);
-  }
-
-  if (params.title || params.description) {
+  if (req.body.title || req.body.description) {
     const { Item: tune } = await dynamodb.send(new GetCommand({
       TableName: process.env.APP_TABLE_NAME,
       Key: {
@@ -88,18 +96,14 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
     }));
 
     if (tune === undefined) {
-      return response({
-        message: 'Not found',
-      }, 404);
+      throw createError(404);
     }
 
     if (tune.userId !== userId) {
-      return response({
-        message: 'Forbidden',
-      }, 403);
+      throw createError(403);
     }
 
-    if (params.title) {
+    if (req.body.title) {
       try {
         await dynamodb.send(new UpdateCommand({
           TableName: process.env.APP_TABLE_NAME,
@@ -115,7 +119,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
             'attribute_exists(sk)',
           ].join(' AND '),
           ExpressionAttributeValues: {
-            ':title': params.title,
+            ':title': req.body.title,
           },
         }));
       } catch {
@@ -123,7 +127,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
       }
     }
 
-    if (params.description) {
+    if (req.body.description) {
       try {
         await dynamodb.send(new UpdateCommand({
           TableName: process.env.APP_TABLE_NAME,
@@ -139,7 +143,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
             'attribute_exists(sk)',
           ].join(' AND '),
           ExpressionAttributeValues: {
-            ':description': params.description,
+            ':description': req.body.description,
           },
         }));
       } catch {
@@ -163,9 +167,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
       }));
 
       if (keywords === undefined) {
-        return response({
-          message: 'Not found',
-        }, 404);
+        throw createError(404);
       }
 
       // Delete keywords.
@@ -189,7 +191,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
 
     try {
       // Tokenize title and description.
-      const keywords = getWords(await tokenize([params.title, params.description].join())).map(normalize);
+      const keywords = getWords(await tokenize([req.body.title, req.body.description].join())).map(normalize);
 
       // Get number of occurrences by keyword.
       const occurrences = [...keywords.reduce((keywords, keyword) => {
@@ -219,9 +221,9 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
     }
   }
 
-  if (typeof params.isLiked === 'boolean') {
+  if (typeof req.body.isLiked === 'boolean') {
     try {
-      if (params.isLiked) {
+      if (req.body.isLiked) {
         await dynamodb.send(new TransactWriteCommand({
           TransactItems: [
             {
@@ -306,9 +308,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
   }));
 
   if (tune === undefined) {
-    return response({
-      message: 'Not found',
-    }, 404);
+    throw createError(404);
   }
 
   const { Item: user } = await dynamodb.send(new GetCommand({
@@ -325,9 +325,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
   }));
 
   if (user === undefined) {
-    return response({
-      message: 'Not found',
-    }, 404);
+    throw createError(404);
   }
 
   Object.assign(tune, {
@@ -346,5 +344,5 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
     isLiked: !!isLiked,
   });
 
-  return response(tune);
+  return res.send(tune);
 };

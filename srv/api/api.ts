@@ -1,6 +1,3 @@
-// Node.js Core Modules
-import { readFileSync } from 'fs';
-
 // AWS CDK
 import {
   Duration,
@@ -12,22 +9,6 @@ import {
 
 // Constructs
 import { Construct } from 'constructs';
-
-// OpenAPI
-import { OpenAPIV3 } from 'openapi-types';
-
-// js-yaml
-import yaml from 'js-yaml';
-
-/**
- * ChipTube Api Properties
- */
-export interface ChipTubeApiProps {
-  /**
-   * Api Spec File
-   */
-  readonly specFile: string;
-}
 
 /**
  * ChipTube Api Construct
@@ -41,7 +22,7 @@ export class ChipTubeApi extends apigateway.RestApi {
   /**
    * Creates a new api.
    */
-  constructor(scope: Construct, id: string, props: ChipTubeApiProps) {
+  constructor(scope: Construct, id: string) {
     super(scope, id, {
       deployOptions: {
         stageName: 'v1',
@@ -81,21 +62,10 @@ export class ChipTubeApi extends apigateway.RestApi {
       },
     });
 
-    // Load the api spec file.
-    const spec = loadYaml<OpenAPIV3.Document>(
-      readFileSync(props.specFile).toString(),
-    );
-
-    // Add resources and methods.
-    Object.entries(spec.paths).forEach(([path, pathItem]) => {
-      // Add the resource.
-      const resource = this.root.resourceForPath(path);
-
-      // Add methods.
-      Object.values(OpenAPIV3.HttpMethods).filter((v) => pathItem?.[v]).forEach((httpMethod) => {
-        resource.addMethod(httpMethod, new apigateway.LambdaIntegration(this.handler), {
-          authorizationType: apigateway.AuthorizationType.IAM,
-        });
+    // Add the proxy resource and any methods.
+    [this.root, this.root.addProxy({ anyMethod: false })].forEach((resource) => {
+      resource.addMethod('ANY', new apigateway.LambdaIntegration(this.handler), {
+        authorizationType: apigateway.AuthorizationType.IAM,
       });
     });
 
@@ -116,7 +86,3 @@ export class ChipTubeApi extends apigateway.RestApi {
     });
   }
 }
-
-const loadYaml = <T = ReturnType<typeof yaml.load>>(...args: Parameters<typeof yaml.load>): T => {
-  return yaml.load(...args) as T;
-};

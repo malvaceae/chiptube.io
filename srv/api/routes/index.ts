@@ -1,9 +1,3 @@
-export { default as getTunes } from './getTunes';
-export { default as postTune } from './postTune';
-export { default as getTuneById } from './getTuneById';
-export { default as putTuneById } from './putTuneById';
-export { default as getTuneComments } from './getTuneComments';
-export { default as postTuneComment } from './postTuneComment';
-export { default as getTunesById } from './getTunesById';
-export { default as putUserByMe } from './putUserByMe';
-export { default as postFeedback } from './postFeedback';
+export * as feedback from './feedback';
+export * as tunes from './tunes';
+export * as users from './users';

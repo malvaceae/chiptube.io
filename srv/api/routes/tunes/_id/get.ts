@@ -1,8 +1,14 @@
-// AWS Lambda
+// Express
 import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-} from 'aws-lambda';
+  Request,
+  Response,
+} from 'express';
+
+// Serverless Express
+import { getCurrentInvoke } from '@vendia/serverless-express';
+
+// HTTP Errors
+import createError from 'http-errors';
 
 // AWS SDK - DynamoDB - Document Client
 import {
@@ -10,22 +16,27 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 
-// Api Commons
-import {
-  dynamodb,
-  getUserId,
-  response,
-} from '@/api/commons';
+// Api Services
+import { dynamodb } from '@/api/services';
 
-export default async ({ pathParameters, requestContext: { identity: { cognitoAuthenticationProvider, cognitoIdentityId: identityId } } }: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+// Api Utilities
+import { getUserId } from '@/api/utils';
+
+// Handler
+export default async (req: Request, res: Response): Promise<Response> => {
+  const {
+    event: {
+      requestContext: {
+        identity: {
+          cognitoAuthenticationProvider,
+          cognitoIdentityId: identityId,
+        },
+      },
+    },
+  } = getCurrentInvoke();
+
   // Get the tune id.
-  const { id } = pathParameters ?? {};
-
-  if (!id) {
-    return response({
-      message: 'Not found',
-    }, 404);
-  }
+  const { id } = req.params;
 
   try {
     await dynamodb.send(new UpdateCommand({
@@ -64,9 +75,7 @@ export default async ({ pathParameters, requestContext: { identity: { cognitoAut
   }));
 
   if (tune === undefined) {
-    return response({
-      message: 'Not found',
-    }, 404);
+    throw createError(404);
   }
 
   const { Item: user } = await dynamodb.send(new GetCommand({
@@ -83,9 +92,7 @@ export default async ({ pathParameters, requestContext: { identity: { cognitoAut
   }));
 
   if (user === undefined) {
-    return response({
-      message: 'Not found',
-    }, 404);
+    throw createError(404);
   }
 
   Object.assign(tune, {
@@ -93,7 +100,7 @@ export default async ({ pathParameters, requestContext: { identity: { cognitoAut
   });
 
   if (!cognitoAuthenticationProvider) {
-    return response(tune);
+    return res.send(tune);
   }
 
   // Get the user id from cognito authentication provider.
@@ -111,5 +118,5 @@ export default async ({ pathParameters, requestContext: { identity: { cognitoAut
     isLiked: !!isLiked,
   });
 
-  return response(tune);
+  return res.send(tune);
 };

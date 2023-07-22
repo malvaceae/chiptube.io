@@ -1,11 +1,17 @@
 // Node.js Core Modules
 import { randomFillSync } from 'crypto';
 
-// AWS Lambda
+// Express
 import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-} from 'aws-lambda';
+  Request,
+  Response,
+} from 'express';
+
+// Serverless Express
+import { getCurrentInvoke } from '@vendia/serverless-express';
+
+// HTTP Errors
+import createError from 'http-errors';
 
 // AWS SDK - DynamoDB - Document Client
 import {
@@ -13,35 +19,36 @@ import {
   TransactWriteCommand,
 } from '@aws-sdk/lib-dynamodb';
 
-// Api Commons
+// Api Services
 import {
   ajv,
   dynamodb,
-  getUserId,
-  response,
-} from '@/api/commons';
+} from '@/api/services';
 
-export default async ({ body, pathParameters, requestContext: { identity: { cognitoAuthenticationProvider } } }: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+// Api Utilities
+import { getUserId } from '@/api/utils';
+
+// Handler
+export default async (req: Request, res: Response): Promise<Response> => {
+  const {
+    event: {
+      requestContext: {
+        identity: {
+          cognitoAuthenticationProvider,
+        },
+      },
+    },
+  } = getCurrentInvoke();
+
   if (!cognitoAuthenticationProvider) {
-    return response({
-      message: 'Unauthorized',
-    }, 401);
+    throw createError(401);
   }
 
   // Get the user id from cognito authentication provider.
   const userId = getUserId(cognitoAuthenticationProvider);
 
   // Get the tune id.
-  const { id: tuneId } = pathParameters ?? {};
-
-  if (!tuneId) {
-    return response({
-      message: 'Not found',
-    }, 404);
-  }
-
-  // Parse the JSON of request body.
-  const params = JSON.parse(body ?? '{}');
+  const { id: tuneId } = req.params;
 
   // Compile the parameter schema.
   const validate = ajv.compile({
@@ -60,17 +67,16 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
   });
 
   // Validate request parameters.
-  if (!validate(params)) {
-    return response({
-      message: 'Unprocessable entity',
+  if (!validate(req.body)) {
+    throw createError(422, {
       errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
         return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
       }, {} as Record<string, string[]>),
-    }, 422);
+    });
   }
 
   // Get a text.
-  const { text } = params;
+  const { text } = req.body;
 
   while (true) {
     try {
@@ -127,9 +133,7 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
       }));
 
       if (comment === undefined) {
-        return response({
-          message: 'Not found',
-        }, 404);
+        throw createError(404);
       }
 
       const { Item: user } = await dynamodb.send(new GetCommand({
@@ -146,16 +150,14 @@ export default async ({ body, pathParameters, requestContext: { identity: { cogn
       }));
 
       if (user === undefined) {
-        return response({
-          message: 'Not found',
-        }, 404);
+        throw createError(404);
       }
 
       Object.assign(comment, {
         user,
       });
 
-      return response(comment);
+      return res.send(comment);
     } catch (e: any) {
       if (e.code === 'TransactionCanceledException') {
         await new Promise((resolve) => {

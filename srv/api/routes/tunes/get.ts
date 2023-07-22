@@ -1,8 +1,11 @@
-// AWS Lambda
+// Express
 import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-} from 'aws-lambda';
+  Request,
+  Response,
+} from 'express';
+
+// HTTP Errors
+import createError from 'http-errors';
 
 // AWS SDK - DynamoDB - Document Client
 import {
@@ -10,29 +13,31 @@ import {
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 
-// Api Commons
+// Api Services
+import { dynamodb } from '@/api/services';
+
+// Api Utilities
 import {
-  dynamodb,
   getWords,
   normalize,
-  response,
   tokenize,
-} from '@/api/commons';
+} from '@/api/utils';
 
-export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+// Handler
+export default async (req: Request, res: Response): Promise<Response> => {
   const exclusiveStartKey = (({ after }) => {
-    if (after) {
+    if (typeof after === 'string') {
       try {
         return JSON.parse(Buffer.from(after, 'base64').toString());
       } catch {
         //
       }
     }
-  })(queryStringParameters ?? {});
+  })(req.query);
 
   const { tunes, lastEvaluatedKey } = await (async ({ query }) => {
     // Get tunes with the search query if it exists.
-    if (query) {
+    if (typeof query === 'string') {
       // Tokenize the search query.
       const keywords = [...new Set(getWords(await tokenize(query)).map(normalize))];
 
@@ -117,10 +122,10 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
         lastEvaluatedKey,
       };
     }
-  })(queryStringParameters ?? {});
+  })(req.query);
 
   if (!tunes?.length) {
-    return response({
+    return res.send({
       tunes: [],
     });
   }
@@ -159,9 +164,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
   const users = responses?.[process.env.APP_TABLE_NAME];
 
   if (users === undefined) {
-    return response({
-      message: 'Not found',
-    }, 404);
+    throw createError(404);
   }
 
   // Get users by id.
@@ -174,7 +177,7 @@ export default async ({ queryStringParameters }: APIGatewayProxyEvent): Promise<
     user: usersById[tune.userId],
   }));
 
-  return response({
+  return res.send({
     tunes,
     after,
   });
