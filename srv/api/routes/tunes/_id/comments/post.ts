@@ -13,6 +13,9 @@ import { getCurrentInvoke } from '@vendia/serverless-express';
 // HTTP Errors
 import createError from 'http-errors';
 
+// AWS SDK - DynamoDB
+import { TransactionCanceledException } from '@aws-sdk/client-dynamodb';
+
 // AWS SDK - DynamoDB - Document Client
 import {
   GetCommand,
@@ -158,8 +161,8 @@ export default async (req: Request, res: Response): Promise<Response> => {
       });
 
       return res.send(comment);
-    } catch (e: any) {
-      if (e.code === 'TransactionCanceledException') {
+    } catch (e) {
+      if (e instanceof TransactionCanceledException) {
         await new Promise((resolve) => {
           setTimeout(resolve, 1000);
         });
