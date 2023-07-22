@@ -79,7 +79,7 @@ const downloadTune = async () => {
       download: true,
     });
 
-    if (Body instanceof Blob) {
+    if (Body) {
       exportFile(`${tune.value.title}.mid`, Body, {
         mimeType: 'audio/midi',
       });
