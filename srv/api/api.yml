@@ -117,6 +117,10 @@ paths:
             schema:
               type: object
               properties:
+                title:
+                  type: string
+                description:
+                  type: string
                 isLiked:
                   type: boolean
       responses:
