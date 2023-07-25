@@ -1,6 +1,7 @@
 // AWS CDK
 import {
   Duration,
+  Size,
   aws_apigateway as apigateway,
   aws_iam as iam,
   aws_lambda as lambda,
@@ -34,6 +35,7 @@ export class ChipTubeApi extends apigateway.RestApi {
         allowMethods: apigateway.Cors.ALL_METHODS,
         maxAge: Duration.days(1),
       },
+      minCompressionSize: Size.bytes(0),
     });
 
     // Remove the default endpoint output.
