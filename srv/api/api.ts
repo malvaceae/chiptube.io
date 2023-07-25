@@ -45,6 +45,9 @@ export class ChipTubeApi extends apigateway.RestApi {
       runtime: lambda.Runtime.NODEJS_18_X,
       timeout: Duration.seconds(30),
       memorySize: 1769, // 1 vCPU
+      environment: {
+        NODE_ENV: 'production',
+      },
       initialPolicy: [
         new iam.PolicyStatement({
           actions: [
