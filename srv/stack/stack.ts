@@ -223,15 +223,14 @@ export class ChipTubeStack extends Stack {
           endpointType: apigateway.EndpointType.EDGE,
         });
 
+        // Api Domain Alias Record Target
+        const target = route53.RecordTarget.fromAlias(new targets.ApiGatewayDomain(apiDomainName));
+
         // Api Domain Alias Record
         new route53.ARecord(this, 'ApiDomainAliasRecord', {
           zone,
+          target,
           recordName: 'api',
-          target: route53.RecordTarget.fromAlias(
-            new targets.ApiGatewayDomain(
-              apiDomainName,
-            ),
-          ),
         });
 
         return `https://${apiDomainName.domainName}`;
@@ -281,14 +280,14 @@ export class ChipTubeStack extends Stack {
       domainNames,
       errorResponses: [
         {
-          ttl: Duration.days(1),
           httpStatus: 403,
+          ttl: Duration.days(1),
           responseHttpStatus: 200,
           responsePagePath: '/',
         },
         {
-          ttl: Duration.days(1),
           httpStatus: 404,
+          ttl: Duration.days(1),
           responseHttpStatus: 200,
           responsePagePath: '/',
         },
@@ -298,14 +297,13 @@ export class ChipTubeStack extends Stack {
     // If the domain name exists, create a alias record to App Distribution.
     const appDistributionAliasRecord = (() => {
       if (zone) {
+        // App Distribution Alias Record Target
+        const target = route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(appDistribution));
+
         // App Distribution Alias Record
         return new route53.ARecord(this, 'AppDistributionAliasRecord', {
           zone,
-          target: route53.RecordTarget.fromAlias(
-            new targets.CloudFrontTarget(
-              appDistribution,
-            ),
-          ),
+          target,
         });
       }
     })();
@@ -415,15 +413,14 @@ export class ChipTubeStack extends Stack {
         // Wait for the App Distribution Alias Record to create.
         userPoolDomain.node.addDependency(appDistributionAliasRecord);
 
+        // User Pool Domain Alias Record Target
+        const target = route53.RecordTarget.fromAlias(new targets.UserPoolDomainTarget(userPoolDomain));
+
         // User Pool Domain Alias Record
         new route53.ARecord(this, 'UserPoolDomainAliasRecord', {
           zone,
+          target,
           recordName: 'auth',
-          target: route53.RecordTarget.fromAlias(
-            new targets.UserPoolDomainTarget(
-              userPoolDomain,
-            ),
-          ),
         });
 
         return userPoolDomain;
