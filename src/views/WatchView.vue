@@ -1,9 +1,12 @@
 <script lang="ts" setup>
 // Vue.js
-import { ref, toRefs } from 'vue';
+import { computed, ref, toRefs } from 'vue';
 
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
+
+// Midi
+import { Midi } from '@/classes/midi';
 
 // Amplify
 import { API, Storage } from 'aws-amplify';
@@ -73,14 +76,16 @@ const toggleIsLiked = async () => {
 // download the tune
 const downloadTune = async () => {
   if (tune.value) {
-    const { Body } = await Storage.get(tune.value.midiKey, {
+    const { midiKey, identityId } = tune.value;
+
+    const { Body: body } = await Storage.get(midiKey, {
       level: 'protected',
-      identityId: tune.value.identityId,
       download: true,
+      identityId,
     });
 
-    if (Body) {
-      exportFile(`${tune.value.title}.mid`, Body, {
+    if (body) {
+      exportFile(`${tune.value.title}.mid`, body, {
         mimeType: 'audio/midi',
       });
     }
@@ -89,6 +94,23 @@ const downloadTune = async () => {
 
 // the tune
 const tune = ref<Record<string, any> | null>(null);
+
+// the midi
+const midi = computed(() => {
+  if (tune.value) {
+    const { midiKey, identityId } = tune.value;
+
+    return async () => {
+      const { Body: body } = await Storage.get(midiKey, {
+        level: 'protected',
+        download: true,
+        identityId,
+      });
+
+      return new Midi(new Uint8Array(await new Response(body).arrayBuffer()));
+    };
+  }
+});
 
 // use meta
 useMeta(() => ({
@@ -111,8 +133,8 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
     <div class="row q-col-gutter-md">
       <div class="col-12 col-md-8">
         <q-responsive :ratio="16 / 9">
-          <template v-if="tune">
-            <tune-player :identity-id="tune.identityId" :midi-key="tune.midiKey" />
+          <template v-if="midi">
+            <tune-player :midi="midi" />
           </template>
           <template v-else>
             <q-skeleton animation="none" square />

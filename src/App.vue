@@ -281,7 +281,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                 Subscriptions
               </q-item-section>
             </q-item>
-            <q-item disable v-ripple>
+            <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" :to="{ name: 'playground' }" v-ripple>
               <q-item-section side>
                 <q-icon name="mdi-pinwheel-outline" />
               </q-item-section>

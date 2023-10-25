@@ -25,6 +25,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/SettingsView.vue'),
   },
   {
+    path: '/playground',
+    name: 'playground',
+    component: () => import('@/views/PlaygroundView.vue'),
+  },
+  {
     path: '/watch',
     name: 'watch',
     component: () => import('@/views/WatchView.vue'),

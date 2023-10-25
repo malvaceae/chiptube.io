@@ -17,9 +17,6 @@ import { search } from '@/classes/utils';
 // Midi
 import { Midi } from '@/classes/midi';
 
-// Amplify
-import { Storage } from 'aws-amplify';
-
 // Quasar
 import { dom, format } from 'quasar';
 
@@ -30,7 +27,7 @@ import * as Tone from 'tone';
 import p5 from 'p5';
 
 // properties
-const props = defineProps<{ identityId: string, midiKey: string }>();
+const props = defineProps<{ midi: Midi | (() => Promise<Midi>) }>();
 
 // volume and mute
 const { volume, mute } = storeToRefs(useTuneStore());
@@ -354,15 +351,8 @@ const play = async () => {
   // set current state to loading
   currentState.value = 'loading';
 
-  // download midi file
-  const { Body: body } = await Storage.get(props.midiKey, {
-    level: 'protected',
-    download: true,
-    ...props,
-  }) as { Body: Blob };
-
-  // parse midi file
-  midi.value = new Midi(new Uint8Array(await new Response(body).arrayBuffer()));
+  // get midi
+  midi.value = props.midi instanceof Midi ? props.midi : await props.midi();
 
   // parts of channel events
   channelEvents.value.forEach((events) => new Tone.Part((time, event) => {
