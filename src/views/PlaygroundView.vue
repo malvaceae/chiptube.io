@@ -11,6 +11,9 @@ import { Midi } from '@/classes/midi';
 // Quasar
 import { date, format, useMeta } from 'quasar';
 
+// encoding.js
+import { codeToString, convert } from 'encoding-japanese';
+
 // Tune Player
 import TunePlayer from '@/components/TunePlayer.vue';
 
@@ -38,16 +41,16 @@ watchEffect(async () => {
 });
 
 // the midi title
-const midiTitle = computed(() => midi.value?.tracks?.[0]?.getEvents?.('trackName')?.[0]?.text);
+const midiTitle = computed(() => convertToUnicode(midi.value?.tracks?.[0]?.getEvents?.('trackName')?.[0]?.text ?? ''));
 
 // the midi description
-const midiDescription = computed(() => midi.value?.tracks?.[0]?.getEvents?.('text')?.map?.(({ text }) => text)?.join?.('\n'));
-
-// the exists midi lyrics
-const existsMidiLyrics = computed(() => Boolean(midi.value?.getEvents?.('lyrics')?.length));
+const midiDescription = computed(() => convertToUnicode(midi.value?.tracks?.[0]?.getEvents?.('text')?.map?.(({ text }) => text)?.join?.('\n') ?? ''));
 
 // the midi copyright
-const midiCopyright = computed(() => midi.value?.getEvents?.('copyrightNotice')?.[0]?.text);
+const midiCopyright = computed(() => convertToUnicode(midi.value?.tracks?.[0]?.getEvents?.('copyrightNotice')?.[0]?.text ?? ''));
+
+// exists midi lyrics
+const existsMidiLyrics = computed(() => Boolean(midi.value?.getEvents?.('lyrics')?.length));
 
 // the midi duration in seconds
 const midiDuration = computed(() => {
@@ -75,6 +78,9 @@ const midiTempos = computed(() => {
     return [];
   }
 });
+
+// convert to unicode
+const convertToUnicode = (s: string) => codeToString(convert(s.split('').map((c) => c.charCodeAt(0)), 'UNICODE'));
 
 // format time
 const formatTime = (seconds: number) => {
@@ -431,7 +437,7 @@ useMeta(() => ({
                       {{ i + 1 }}
                     </td>
                     <td>
-                      {{ track.getEvents('trackName')[0]?.text }}
+                      {{ convertToUnicode(track.getEvents('trackName')[0]?.text ?? '') }}
                     </td>
                     <td>
                       {{ track.getEvents('noteOn').length }}
