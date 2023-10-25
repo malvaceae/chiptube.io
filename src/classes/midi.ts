@@ -58,8 +58,8 @@ export class MidiTrack extends Array<MidiEvent & { absoluteTime: number }> {
   /**
    * Returns a new midi track from a set of events.
    */
-  static from(events: Array<MidiTrack[number]>) {
-    const track = new MidiTrack(events.length);
+  static from(events: MidiTrack[number][]) {
+    const track = new this(events.length);
 
     // copy events
     events.forEach((_, i) => {
