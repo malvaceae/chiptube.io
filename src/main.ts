@@ -14,7 +14,7 @@ import '@/plugins/amplify';
 import { Quasar, iconSet, plugins } from '@/plugins/quasar';
 
 // App
-import App from '@/App.vue';
+import App from '@/app.vue';
 
 // create the root component
 const app = createApp(App);

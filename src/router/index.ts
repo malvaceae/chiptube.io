@@ -11,29 +11,29 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'index',
-    component: () => import('@/views/IndexView.vue'),
-  },
-  {
-    path: '/search',
-    name: 'search',
-    component: () => import('@/views/SearchView.vue'),
-    props: ({ query: { q: query } }) => ({ query }),
-  },
-  {
-    path: '/settings',
-    name: 'settings',
-    component: () => import('@/views/SettingsView.vue'),
+    component: () => import('@/pages/index.vue'),
   },
   {
     path: '/playground',
     name: 'playground',
-    component: () => import('@/views/PlaygroundView.vue'),
+    component: () => import('@/pages/playground.vue'),
+  },
+  {
+    path: '/search',
+    name: 'search',
+    component: () => import('@/pages/search.vue'),
+    props: ({ query: { q } }) => ({ query: q }),
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('@/pages/settings.vue'),
   },
   {
     path: '/watch',
     name: 'watch',
-    component: () => import('@/views/WatchView.vue'),
-    props: ({ query: { v: id } }) => ({ id }),
+    component: () => import('@/pages/watch.vue'),
+    props: ({ query: { v } }) => ({ id: v }),
   },
 ];
 
