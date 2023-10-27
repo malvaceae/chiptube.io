@@ -382,7 +382,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
     </q-drawer>
     <q-page-container>
       <router-view v-slot="{ Component }">
-        <keep-alive :include="/(?:Index|Search)View/" max="1">
+        <keep-alive exclude="playground,settings,watch" max="1">
           <component :is="Component" :key="$route.fullPath" />
         </keep-alive>
       </router-view>
