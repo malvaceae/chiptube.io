@@ -58,6 +58,11 @@ export interface ChipTubeStackProps extends StackProps {
   readonly domainName?: string;
 
   /**
+   * GitHub Repository Name
+   */
+  readonly githubRepo?: string;
+
+  /**
    * Hosted Zone
    */
   readonly zone?: route53.IHostedZone;
@@ -95,6 +100,7 @@ export class ChipTubeStack extends Stack {
       googleClientSecret,
       feedbackEmail,
       domainName,
+      githubRepo,
       zone,
       certificate,
       domainNames,
@@ -799,5 +805,37 @@ export class ChipTubeStack extends Stack {
 
     // Wait for the build to complete.
     appBucketDeployment.node.addDependency(appBuild);
+
+    // If the GitHub repository name exists, create a role to cdk deploy from GitHub.
+    if (githubRepo) {
+      // GitHub OpenID Connect Provider
+      const githubOpenIdConnectProvider = iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(this, 'GitHubOpenIdConnectProvider', `arn:aws:iam::${this.account}:oidc-provider/token.actions.githubusercontent.com`);
+
+      // GitHub Deploy Role
+      new iam.Role(this, 'GitHubDeployRole', {
+        assumedBy: new iam.WebIdentityPrincipal(githubOpenIdConnectProvider.openIdConnectProviderArn, {
+          'StringEquals': {
+            [`${githubOpenIdConnectProvider.openIdConnectProviderIssuer}:aud`]: 'sts.amazonaws.com',
+          },
+          'StringLike': {
+            [`${githubOpenIdConnectProvider.openIdConnectProviderIssuer}:sub`]: `repo:${githubRepo}:*`,
+          },
+        }),
+        inlinePolicies: {
+          GitHubDeployRolePolicy: new iam.PolicyDocument({
+            statements: [
+              new iam.PolicyStatement({
+                actions: [
+                  'sts:AssumeRole',
+                ],
+                resources: [
+                  `arn:aws:iam::${this.account}:role/cdk-${this.synthesizer.bootstrapQualifier}-*-role-${this.account}-*`,
+                ],
+              }),
+            ],
+          }),
+        },
+      });
+    }
   }
 }

@@ -27,5 +27,6 @@ jobs:
             -c googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }} \
             -c feedbackEmail=${{ secrets.FEEDBACK_EMAIL }} \
             -c domainName=${{ secrets.DOMAIN_NAME }} \
+            -c githubRepo=${{ github.repository }} \
             --require-approval never \
             --all
