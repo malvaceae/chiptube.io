@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
 
 // Vue Router
 import { useRouter } from 'vue-router';
@@ -31,13 +31,8 @@ const page = usePageStore();
 // get the $router object
 const $router = useRouter();
 
-// the drawer behavior
-const drawerBehavior = computed(() => {
-  const { name } = $router.resolve(location.pathname);
-  if (['watch'].includes(String(name))) {
-    return 'mobile';
-  }
-});
+// the current route
+const currentRoute = computed(() => $router.resolve(location.pathname + location.search + location.hash));
 
 // get the $q object
 const $q = useQuasar();
@@ -46,9 +41,7 @@ const $q = useQuasar();
 $q.dark.set(page.dark);
 
 // watch dark mode status
-watch(() => $q.dark.mode, (dark) => {
-  page.dark = dark;
-});
+watchEffect(() => (page.dark = $q.dark.mode));
 
 // use meta
 useMeta({
@@ -60,11 +53,19 @@ useMeta({
   },
 });
 
+// the drawer behavior
+const drawerBehavior = computed(() => {
+  const { name } = currentRoute.value;
+  if (name === 'watch') {
+    return 'mobile';
+  }
+});
+
 // the drawer state
 const drawer = ref(false);
 
 // the search query
-const query = ref(new URLSearchParams(location.search).get('q') ?? '');
+const query = ref(currentRoute.value.name === 'search' && typeof currentRoute.value.query.q === 'string' ? currentRoute.value.query.q : '');
 
 // search
 const search = async () => {
