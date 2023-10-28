@@ -67,8 +67,8 @@ const drawer = ref(false);
 const query = ref(new URLSearchParams(location.search).get('q') ?? '');
 
 // search
-const search = async (e: KeyboardEvent | PointerEvent) => {
-  if (query.value && (e instanceof PointerEvent || e.key === 'Enter')) {
+const search = async () => {
+  if (query.value) {
     await $router.push({ name: 'search', query: { q: query.value } });
   }
 };
@@ -104,9 +104,9 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
           </router-link>
         </q-toolbar-title>
         <q-space />
-        <q-input v-model="query" class="col-grow gt-xs" dense outlined placeholder="Search" square @keyup="search">
+        <q-input v-model="query" class="col-grow gt-xs" dense outlined placeholder="Search" square @keyup.enter="search">
           <template #after>
-            <q-btn flat round @click="search($event as KeyboardEvent)">
+            <q-btn flat round @click="search">
               <q-icon name="mdi-magnify" />
             </q-btn>
           </template>
