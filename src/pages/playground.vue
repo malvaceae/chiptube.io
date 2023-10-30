@@ -104,8 +104,11 @@ useMeta(() => ({
 
 <template>
   <q-page padding>
-    <q-stepper active-color="grey" flat :model-value="1" vertical>
-      <q-step active-icon="mdi-file-music" :name="1" title="Select MIDI file">
+    <q-card flat square>
+      <q-card-section>
+        <div class="q-mb-sm text-subtitle1 text-weight-medium">
+          1. Select MIDI file
+        </div>
         <q-file v-model="file" accept=".mid" label-slot outlined square>
           <template #prepend>
             <q-icon name="mdi-file-music" />
@@ -114,8 +117,11 @@ useMeta(() => ({
             MIDI File
           </template>
         </q-file>
-      </q-step>
-      <q-step active-icon="mdi-music-note" :name="1" title="Watch MIDI">
+      </q-card-section>
+      <q-card-section>
+        <div class="q-mb-sm text-subtitle1 text-weight-medium">
+          2. Watch MIDI
+        </div>
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-8">
             <q-responsive :ratio="16 / 9">
@@ -461,8 +467,8 @@ useMeta(() => ({
             </q-markup-table>
           </div>
         </div>
-      </q-step>
-    </q-stepper>
+      </q-card-section>
+    </q-card>
   </q-page>
 </template>
 
