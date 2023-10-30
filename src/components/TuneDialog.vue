@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watchEffect } from 'vue';
 
 // Vue Router
 import { useRouter } from 'vue-router';
@@ -8,8 +8,14 @@ import { useRouter } from 'vue-router';
 // Amplify
 import { API, Storage } from 'aws-amplify';
 
+// Midi
+import { Midi } from '@/classes/midi';
+
 // Quasar
-import { uid, useDialogPluginComponent, useQuasar } from 'quasar';
+import { format, uid, useDialogPluginComponent, useQuasar } from 'quasar';
+
+// encoding.js
+import Encoding from 'encoding-japanese';
 
 // properties
 const props = defineProps<{ tune?: { id: string, title: string, description: string } }>();
@@ -31,23 +37,61 @@ const $router = useRouter();
 // get the $q object
 const $q = useQuasar();
 
+// the step
+const step = ref(props.tune ? 2 : 1);
+
+// the file
+const file = ref<File | null>(null);
+
 // the midi
-const midi = ref<File | null>(null);
+const midi = ref<Midi | null>(null);
 
 // the tune
 const tune = reactive({
   id: '',
   title: '',
   description: '',
-  midi,
+  file,
 });
 
 if (props.tune) {
   Object.assign(tune, props.tune);
 }
 
-// is disable
-const isDisable = computed(() => !tune.title || !tune.description || (!props.tune && !midi.value));
+// watch file
+watchEffect(async () => {
+  if (file.value) {
+    const body = new Blob([file.value], {
+      type: file.value.type,
+    });
+
+    midi.value = null;
+    midi.value = new Midi(new Uint8Array((await Promise.all([
+      new Promise((resolve) => setTimeout(resolve, 500)),
+      new Response(body).arrayBuffer(),
+    ]))[1]));
+  } else {
+    midi.value = null;
+  }
+});
+
+// watch midi
+watchEffect(async () => {
+  if (midi.value) {
+    tune.title = midiTitle.value;
+    tune.description = midiDescription.value;
+    step.value = 2;
+  }
+});
+
+// the midi title
+const midiTitle = computed(() => convertSJISToUnicode(midi.value?.tracks?.[0]?.getEvents?.('trackName')?.[0]?.text ?? ''));
+
+// the midi description
+const midiDescription = computed(() => convertSJISToUnicode(midi.value?.tracks?.[0]?.getEvents?.('text')?.map?.(({ text }) => text)?.join?.('\n') ?? ''));
+
+// convert SJIS to unicode
+const convertSJISToUnicode = (data: string) => Encoding.detect(data, 'SJIS') ? Encoding.convert(data, 'UNICODE', 'SJIS') : data;
 
 // update the tune
 const updateTune = async ({ id, title, description }: typeof tune) => {
@@ -82,8 +126,8 @@ const updateTune = async ({ id, title, description }: typeof tune) => {
 };
 
 // upload the tune
-const uploadTune = async ({ title, description, midi }: typeof tune) => {
-  if (midi === null) {
+const uploadTune = async ({ title, description, file }: typeof tune) => {
+  if (file === null) {
     return;
   }
 
@@ -92,7 +136,7 @@ const uploadTune = async ({ title, description, midi }: typeof tune) => {
 
   try {
     // upload the tune
-    const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, midi, {
+    const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, file, {
       level: 'protected',
     });
 
@@ -138,42 +182,112 @@ const uploadTune = async ({ title, description, midi }: typeof tune) => {
 
 <template>
   <q-dialog ref="dialogRef" persistent @hide="onDialogHide">
-    <q-card class="full-width" bordered flat square>
-      <q-card-section class="text-h6">
-        {{ props.tune ? 'Edit' : 'Upload' }} tune
+    <q-card bordered flat square style="width: 700px; max-width: 80vw;">
+      <q-card-section class="row items-center">
+        <div class="text-h6">
+          {{ props.tune ? 'Edit' : 'Upload' }} tune
+        </div>
+        <q-space />
+        <q-btn dense flat round v-close-popup>
+          <q-icon name="mdi-close" />
+        </q-btn>
       </q-card-section>
       <q-separator />
-      <q-card-section>
-        <div class="column q-gutter-md">
-          <q-input v-model="tune.title" label-slot outlined square>
-            <template #label>
-              Title
-            </template>
-          </q-input>
-          <q-input v-model="tune.description" label-slot outlined square type="textarea">
-            <template #label>
-              Description
-            </template>
-          </q-input>
-          <q-file v-if="!props.tune" v-model="tune.midi" accept=".mid" label-slot outlined square>
-            <template #prepend>
-              <q-icon name="mdi-file-music" />
-            </template>
-            <template #label>
-              MIDI File
-            </template>
-          </q-file>
-        </div>
+      <q-card-section class="q-pa-none">
+        <q-stepper v-model="step" animated flat>
+          <q-step active-icon="mdi-file-music" icon="mdi-file-music" :name="1" title="MIDI">
+            <q-file v-model="file" accept=".mid" input-class="invisible" input-style="height: 253px;" outlined square>
+              <div class="full-width absolute-center text-center text-subtitle1 no-pointer-events">
+                <template v-if="file">
+                  <template v-if="midi">
+                    {{ file.name }} ({{ format.humanStorageSize(file.size) }})
+                  </template>
+                  <template v-else>
+                    <q-circular-progress indeterminate rounded size="50px" />
+                  </template>
+                </template>
+                <template v-else>
+                  Drag and drop MIDI file to upload
+                </template>
+              </div>
+            </q-file>
+          </q-step>
+          <q-step active-icon="mdi-pencil" icon="mdi-pencil" :name="2" title="Details">
+            <div class="column q-gutter-md">
+              <div class="text-h6">
+                Details
+              </div>
+              <q-input v-model="tune.title" label-slot outlined square>
+                <template #label>
+                  Title
+                </template>
+              </q-input>
+              <q-input v-model="tune.description" label-slot outlined square type="textarea">
+                <template #label>
+                  Description
+                </template>
+              </q-input>
+            </div>
+          </q-step>
+          <q-step active-icon="mdi-check" icon="mdi-check" :name="3" title="Confirm">
+            <div class="column q-gutter-md">
+              <div class="text-h6">
+                Confirm
+              </div>
+              <q-input label-slot :model-value="tune.title" outlined readonly square>
+                <template #label>
+                  Title
+                </template>
+              </q-input>
+              <q-input label-slot :model-value="tune.description" outlined readonly square type="textarea">
+                <template #label>
+                  Description
+                </template>
+              </q-input>
+            </div>
+          </q-step>
+        </q-stepper>
       </q-card-section>
       <q-separator />
       <q-card-actions align="right">
-        <q-btn color="grey-6" flat square @click="onDialogCancel">
-          <span class="block">Cancel</span>
-        </q-btn>
-        <q-btn color="primary" :disable="isDisable" flat square @click="props.tune ? updateTune(tune) : uploadTune(tune)">
-          <span class="block">{{ props.tune ? 'Update' : 'Upload' }}</span>
-        </q-btn>
+        <template v-if="step === 1">
+          <q-btn color="grey-6" flat square @click="onDialogCancel">
+            <span class="block">Cancel</span>
+          </q-btn>
+          <q-btn color="primary" :disable="!midi" flat square @click="step = 2">
+            <span class="block">Continue</span>
+          </q-btn>
+        </template>
+        <template v-if="step === 2">
+          <template v-if="props.tune">
+            <q-btn color="grey-6" flat square @click="onDialogCancel">
+              <span class="block">Cancel</span>
+            </q-btn>
+          </template>
+          <template v-else>
+            <q-btn color="grey-6" flat square @click="step = 1">
+              <span class="block">Back</span>
+            </q-btn>
+          </template>
+          <q-btn color="primary" :disable="!tune.title || !tune.description" flat square @click="step = 3">
+            <span class="block">Continue</span>
+          </q-btn>
+        </template>
+        <template v-if="step === 3">
+          <q-btn color="grey-6" flat square @click="step = 2">
+            <span class="block">Back</span>
+          </q-btn>
+          <q-btn color="primary" flat square @click="props.tune ? updateTune(tune) : uploadTune(tune)">
+            <span class="block">{{ props.tune ? 'Update' : 'Upload' }}</span>
+          </q-btn>
+        </template>
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
+
+<style lang="scss" scoped>
+:deep(.q-stepper__step-inner) {
+  padding-top: 0;
+}
+</style>
