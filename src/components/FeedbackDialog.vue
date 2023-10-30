@@ -67,8 +67,14 @@ const sendFeedback = async () => {
 <template>
   <q-dialog ref="dialogRef" persistent @hide="onDialogHide">
     <q-card class="full-width" bordered flat square>
-      <q-card-section class="text-h6">
-        Send feedback to ChipTube
+      <q-card-section class="row items-center">
+        <div class="text-h6">
+          Send feedback to ChipTube
+        </div>
+        <q-space />
+        <q-btn dense flat round v-close-popup>
+          <q-icon name="mdi-close" />
+        </q-btn>
       </q-card-section>
       <q-separator />
       <q-card-section>
