@@ -194,7 +194,7 @@ const uploadTune = async ({ title, description, file }: typeof tune) => {
       </q-card-section>
       <q-separator />
       <q-card-section class="q-pa-none">
-        <q-stepper v-model="step" animated flat>
+        <q-stepper v-model="step" animated :contracted="$q.screen.lt.sm" flat>
           <q-step active-icon="mdi-file-music" icon="mdi-file-music" :name="1" title="MIDI">
             <q-file v-model="file" accept=".mid" input-class="invisible" input-style="height: 253px;" outlined square>
               <div class="full-width absolute-center text-center text-subtitle1 no-pointer-events">
