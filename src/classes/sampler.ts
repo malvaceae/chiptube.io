@@ -218,6 +218,16 @@ export class Sampler extends Tone.ToneAudioNode<SamplerOptions> {
     const candidate = (() => {
       for (const candidate of this._activeVoices.keys()) {
         if (this._activeVoices[candidate] === undefined) {
+          continue;
+        }
+
+        if (this._activeVoices[candidate].key === key && this._activeVoices[candidate].velocity === velocity && this._activeVoices[candidate].channel === channel && computedTime - this._activeVoices[candidate].start < 1e-3) {
+          return candidate;
+        }
+      }
+
+      for (const candidate of this._activeVoices.keys()) {
+        if (this._activeVoices[candidate] === undefined) {
           return candidate;
         }
       }
