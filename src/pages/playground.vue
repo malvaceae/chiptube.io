@@ -1,18 +1,15 @@
 <script lang="ts" setup>
 // Vue.js
-import { computed, ref, watchEffect } from 'vue';
+import { nextTick, ref, watchEffect } from 'vue';
 
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
 
 // Midi
-import { Midi } from '@/classes/midi';
+import { useMidi } from '@/composables/midi';
 
 // Quasar
 import { date, format, useMeta } from 'quasar';
-
-// encoding.js
-import Encoding from 'encoding-japanese';
 
 // Tune Player
 import TunePlayer from '@/components/TunePlayer.vue';
@@ -23,73 +20,33 @@ const auth = useAuthStore();
 // the file
 const file = ref<File | null>(null);
 
-// the midi
-const midi = ref<Midi | null>(null);
+// use midi
+const {
+  midi,
+  title,
+  description,
+  copyright,
+  lyrics,
+  duration,
+  timeSignatures,
+  tempos,
+  formatTime,
+  convertSJISToUnicode,
+  loadMidi,
+} = useMidi();
 
 // watch file
 watchEffect(async () => {
   if (file.value) {
-    const body = new Blob([file.value], {
-      type: file.value.type,
-    });
-
     midi.value = null;
-    midi.value = new Midi(new Uint8Array(await new Response(body).arrayBuffer()));
-  } else {
-    midi.value = null;
+
+    // wait for next tick
+    await nextTick();
+
+    // load midi
+    await loadMidi(file.value.arrayBuffer());
   }
 });
-
-// the midi title
-const midiTitle = computed(() => convertSJISToUnicode(midi.value?.tracks?.[0]?.getEvents?.('trackName')?.[0]?.text ?? ''));
-
-// the midi description
-const midiDescription = computed(() => convertSJISToUnicode(midi.value?.tracks?.[0]?.getEvents?.('text')?.map?.(({ text }) => text)?.join?.('\n') ?? ''));
-
-// the midi copyright
-const midiCopyright = computed(() => convertSJISToUnicode(midi.value?.tracks?.[0]?.getEvents?.('copyrightNotice')?.[0]?.text ?? ''));
-
-// exists midi lyrics
-const existsMidiLyrics = computed(() => Boolean(midi.value?.getEvents?.('lyrics')?.length));
-
-// the midi duration in seconds
-const midiDuration = computed(() => {
-  if (midi.value) {
-    return midi.value.ticksToSeconds(midi.value.duration);
-  } else {
-    return 0;
-  }
-});
-
-// the midi time signatures
-const midiTimeSignatures = computed(() => {
-  if (midi.value) {
-    return midi.value.timeSignatures;
-  } else {
-    return [];
-  }
-});
-
-// the midi tempos
-const midiTempos = computed(() => {
-  if (midi.value) {
-    return midi.value.tempos;
-  } else {
-    return [];
-  }
-});
-
-// convert SJIS to unicode
-const convertSJISToUnicode = (data: string) => Encoding.detect(data, 'SJIS') ? Encoding.convert(data, 'UNICODE', 'SJIS') : data;
-
-// format time
-const formatTime = (seconds: number) => {
-  return [
-    format.pad(Math.floor(Math.max(seconds, 0) % (60 ** 3) / (60 ** 2)).toString(), 2),
-    format.pad(Math.floor(Math.max(seconds, 0) % (60 ** 2) / (60 ** 1)).toString(), 2),
-    format.pad(Math.floor(Math.max(seconds, 0) % (60 ** 1) / (60 ** 0)).toString(), 2),
-  ].slice(midiDuration.value >= (60 ** 2) ? 0 : 1).join(':');
-};
 
 // use meta
 useMeta(() => ({
@@ -125,8 +82,8 @@ useMeta(() => ({
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-8">
             <q-responsive :ratio="16 / 9">
-              <template v-if="midi">
-                <tune-player :midi="midi" />
+              <template v-if="file">
+                <tune-player :midi-buffer="file.arrayBuffer()" />
               </template>
               <template v-else>
                 <q-skeleton animation="none" square />
@@ -137,12 +94,7 @@ useMeta(() => ({
                 <q-item-section>
                   <q-item-label class="text-h6">
                     <template v-if="midi">
-                      <template v-if="midiTitle">
-                        {{ midiTitle }}
-                      </template>
-                      <template v-else>
-                        no title
-                      </template>
+                      {{ title || 'no title' }}
                     </template>
                     <template v-else>
                       <q-skeleton class="text-subtitle1" animation="none" type="text" />
@@ -209,7 +161,7 @@ useMeta(() => ({
                 <q-item-section>
                   <q-item-label :style="{ whiteSpace: 'pre-wrap' }">
                     <template v-if="midi">
-                      {{ midiDescription || 'no description' }}
+                      {{ description || 'no description' }}
                     </template>
                     <template v-else>
                       <q-skeleton animation="none" type="text" />
@@ -321,7 +273,7 @@ useMeta(() => ({
                       Duration
                     </td>
                     <td class="full-width">
-                      {{ formatTime(midiDuration) }}
+                      {{ formatTime(duration) }}
                     </td>
                   </template>
                   <template v-else>
@@ -339,7 +291,7 @@ useMeta(() => ({
                       Initial tempo
                     </td>
                     <td class="full-width">
-                      {{ midiTempos[0] ? Math.floor(60000000 / midiTempos[0].value) : 'not available' }} beats per minute
+                      {{ tempos[0] ? `${Math.floor(60000000 / tempos[0].value)} beats per minute` : 'not available' }}
                     </td>
                   </template>
                   <template v-else>
@@ -357,7 +309,7 @@ useMeta(() => ({
                       Initial time signature
                     </td>
                     <td class="full-width">
-                      {{ midiTimeSignatures[0] ? midiTimeSignatures[0].value.join('/') : 'not available' }}
+                      {{ timeSignatures[0] ? timeSignatures[0].value.join('/') : 'not available' }}
                     </td>
                   </template>
                   <template v-else>
@@ -375,7 +327,7 @@ useMeta(() => ({
                       Lyrics
                     </td>
                     <td class="full-width">
-                      {{ existsMidiLyrics ? 'words available' : 'not available' }}
+                      {{ lyrics.length ? 'words available' : 'not available' }}
                     </td>
                   </template>
                   <template v-else>
@@ -393,7 +345,7 @@ useMeta(() => ({
                       Copyright
                     </td>
                     <td class="full-width">
-                      {{ midiCopyright || 'no copyright' }}
+                      {{ copyright || 'no copyright' }}
                     </td>
                   </template>
                   <template v-else>

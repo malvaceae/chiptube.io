@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { computed, reactive, ref, watchEffect } from 'vue';
+import { reactive, ref, watchEffect } from 'vue';
 
 // Vue Router
 import { useRouter } from 'vue-router';
@@ -9,13 +9,10 @@ import { useRouter } from 'vue-router';
 import { API, Storage } from 'aws-amplify';
 
 // Midi
-import { Midi } from '@/classes/midi';
+import { useMidi } from '@/composables/midi';
 
 // Quasar
 import { format, uid, useDialogPluginComponent, useQuasar } from 'quasar';
-
-// encoding.js
-import Encoding from 'encoding-japanese';
 
 // properties
 const props = defineProps<{ tune?: { id: string, title: string, description: string } }>();
@@ -43,8 +40,13 @@ const step = ref(props.tune ? 2 : 1);
 // the file
 const file = ref<File | null>(null);
 
-// the midi
-const midi = ref<Midi | null>(null);
+// use midi
+const {
+  midi,
+  title,
+  description,
+  loadMidi,
+} = useMidi();
 
 // the tune
 const tune = reactive({
@@ -61,37 +63,24 @@ if (props.tune) {
 // watch file
 watchEffect(async () => {
   if (file.value) {
-    const body = new Blob([file.value], {
-      type: file.value.type,
-    });
+    midi.value = null;
 
-    midi.value = null;
-    midi.value = new Midi(new Uint8Array((await Promise.all([
-      new Promise((resolve) => setTimeout(resolve, 500)),
-      new Response(body).arrayBuffer(),
-    ]))[1]));
-  } else {
-    midi.value = null;
+    // wait a few moments
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // load midi
+    await loadMidi(file.value.arrayBuffer());
   }
 });
 
 // watch midi
-watchEffect(async () => {
+watchEffect(() => {
   if (midi.value) {
-    tune.title = midiTitle.value;
-    tune.description = midiDescription.value;
+    tune.title = title.value;
+    tune.description = description.value;
     step.value = 2;
   }
 });
-
-// the midi title
-const midiTitle = computed(() => convertSJISToUnicode(midi.value?.tracks?.[0]?.getEvents?.('trackName')?.[0]?.text ?? ''));
-
-// the midi description
-const midiDescription = computed(() => convertSJISToUnicode(midi.value?.tracks?.[0]?.getEvents?.('text')?.map?.(({ text }) => text)?.join?.('\n') ?? ''));
-
-// convert SJIS to unicode
-const convertSJISToUnicode = (data: string) => Encoding.detect(data, 'SJIS') ? Encoding.convert(data, 'UNICODE', 'SJIS') : data;
 
 // update the tune
 const updateTune = async ({ id, title, description }: typeof tune) => {

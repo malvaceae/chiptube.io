@@ -1,12 +1,9 @@
 <script lang="ts" setup>
 // Vue.js
-import { computed, ref, toRefs } from 'vue';
+import { ref, toRefs } from 'vue';
 
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
-
-// Midi
-import { Midi } from '@/classes/midi';
 
 // Amplify
 import { API, Storage } from 'aws-amplify';
@@ -74,43 +71,35 @@ const toggleIsLiked = async () => {
 };
 
 // download the tune
-const downloadTune = async () => {
-  if (tune.value) {
-    const { midiKey, identityId } = tune.value;
+const downloadTune = async ({ title, midiKey, identityId }: Record<string, any>) => {
+  const { Body: body } = await Storage.get(midiKey, {
+    level: 'protected',
+    download: true,
+    identityId,
+  });
 
-    const { Body: body } = await Storage.get(midiKey, {
-      level: 'protected',
-      download: true,
-      identityId,
+  if (body) {
+    exportFile(`${title}.mid`, await new Response(body).blob(), {
+      mimeType: 'audio/midi',
     });
-
-    if (body) {
-      exportFile(`${tune.value.title}.mid`, await new Response(body).blob(), {
-        mimeType: 'audio/midi',
-      });
-    }
   }
 };
 
 // the tune
 const tune = ref<Record<string, any> | null>(null);
 
-// the midi
-const midi = computed(() => {
-  if (tune.value) {
-    const { midiKey, identityId } = tune.value;
+// get midi buffer
+const getMidiBuffer = ({ midiKey, identityId }: Record<string, any>) => {
+  return async () => {
+    const { Body: body } = await Storage.get(midiKey, {
+      level: 'protected',
+      download: true,
+      identityId,
+    });
 
-    return async () => {
-      const { Body: body } = await Storage.get(midiKey, {
-        level: 'protected',
-        download: true,
-        identityId,
-      });
-
-      return new Midi(new Uint8Array(await new Response(body).arrayBuffer()));
-    };
-  }
-});
+    return await new Response(body).arrayBuffer();
+  };
+};
 
 // use meta
 useMeta(() => ({
@@ -133,8 +122,8 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
     <div class="row q-col-gutter-md">
       <div class="col-12 col-md-8">
         <q-responsive :ratio="16 / 9">
-          <template v-if="midi">
-            <tune-player :midi="midi" />
+          <template v-if="tune">
+            <tune-player :midi-buffer="getMidiBuffer(tune)" />
           </template>
           <template v-else>
             <q-skeleton animation="none" square />
@@ -206,7 +195,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
                   </q-menu>
                 </template>
               </q-btn>
-              <q-btn flat square @click="downloadTune">
+              <q-btn flat square @click="downloadTune(tune)">
                 <q-icon class="q-mr-sm" name="mdi-download-outline" />
                 <span class="block">Download</span>
               </q-btn>

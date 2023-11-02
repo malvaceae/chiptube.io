@@ -15,7 +15,7 @@ import { Sampler } from '@/classes/sampler';
 import { search } from '@/classes/utils';
 
 // Midi
-import { Midi } from '@/classes/midi';
+import { useMidi } from '@/composables/midi';
 
 // Quasar
 import { dom, format } from 'quasar';
@@ -27,7 +27,7 @@ import * as Tone from 'tone';
 import p5 from 'p5';
 
 // properties
-const props = defineProps<{ midi: Midi | (() => Promise<Midi>) }>();
+const props = defineProps<{ midiBuffer: Promise<ArrayBuffer> | (() => Promise<ArrayBuffer>) }>();
 
 // volume and mute
 const { volume, mute } = storeToRefs(useTuneStore());
@@ -121,139 +121,27 @@ const posToBlackKeyX = (pos: number) => pos * whiteKeyWidth.value + blackKeyWidt
 // y-coordinate of keys
 const keyY = computed(() => canvasHeight.value - whiteKeyHeight.value);
 
-// midi
-const midi = shallowRef<Midi>();
-
-// midi duration in seconds
-const duration = computed(() => {
-  if (midi.value) {
-    return midi.value.ticksToSeconds(midi.value.duration);
-  } else {
-    return 0;
-  }
-});
-
-// midi time signatures
-const timeSignatures = computed(() => {
-  if (midi.value) {
-    return midi.value.timeSignatures;
-  } else {
-    return [];
-  }
-});
-
-// midi tempos
-const tempos = computed(() => {
-  if (midi.value) {
-    return midi.value.tempos;
-  } else {
-    return [];
-  }
-});
-
-// midi measure ticks
-const measureTicks = computed(() => {
-  if (midi.value) {
-    return midi.value.measureTicks;
-  } else {
-    return [];
-  }
-});
-
-// midi measure seconds
-const measureSeconds = computed(() => measureTicks.value.flatMap((ticks) => {
-  if (midi.value) {
-    return [midi.value.ticksToSeconds(ticks)];
-  } else {
-    return [];
-  }
-}));
-
-// midi tracks
-const tracks = computed(() => {
-  if (midi.value) {
-    return midi.value.tracks;
-  } else {
-    return [];
-  }
-});
-
-// midi channel events
-const channelEvents = computed(() => {
-  return tracks.value.map((track) => {
-    return track.flatMap((event) => {
-      switch (event.type) {
-        case 'controller':
-        case 'programChange':
-        case 'pitchBend':
-          if (midi.value) {
-            return [
-              { ...event, time: midi.value.ticksToSeconds(event.absoluteTime) },
-            ];
-          }
-      }
-      return [];
-    });
-  });
-});
-
-// notes by a track
-const notesByTrack = computed(() => tracks.value.map((track) => {
-  // note offs
-  const noteOffs = track.getEvents('noteOff');
-
-  // note offs by a channel
-  const noteOffsByChannel = noteOffs.reduce((noteOffs, noteOff, i, { [i]: { channel } }) => {
-    return { ...noteOffs, [channel]: [...(noteOffs[channel] ?? []), noteOff] };
-  }, {} as Record<number, typeof noteOffs>);
-
-  // note ons
-  const noteOns = track.getEvents('noteOn');
-
-  // notes
-  return noteOns.flatMap(({ absoluteTime, channel, noteNumber, velocity }) => {
-    // note off index
-    const i = noteOffsByChannel[channel].findIndex((noteOff) => {
-      return noteOff.noteNumber === noteNumber
-        && noteOff.absoluteTime - absoluteTime >= 0;
-    });
-
-    if (i >= 0 && midi.value) {
-      // note off
-      const noteOff = noteOffsByChannel[channel].splice(i, 1)[0];
-
-      // note time
-      const time = midi.value.ticksToSeconds(absoluteTime);
-
-      // note duration
-      const duration = midi.value.ticksToSeconds(noteOff.absoluteTime) - time;
-
-      // note name
-      const name = Tone.Frequency(noteNumber, 'midi').toNote();
-
-      return [
-        { channel, noteNumber, velocity, time, duration, name },
-      ];
-    } else {
-      return [];
-    }
-  });
-}));
-
-// notes in A0 (21) to C8 (108)
-const notes = computed(() => notesByTrack.value.flatMap((notes) => {
-  return notes.flatMap((note, i, { [i]: { noteNumber } }) => {
-    if (noteNumber >= 21 && noteNumber <= 108) {
-      return [note];
-    } else {
-      return [];
-    }
-  });
-}));
+// use midi
+const {
+  midi,
+  duration,
+  timeSignatures,
+  tempos,
+  measureSeconds,
+  channelEvents,
+  notesByTrack,
+  notes,
+  formatTime,
+  loadMidi,
+} = useMidi();
 
 // notes with a key
-const notesWithKey = computed(() => notes.value.map((note) => {
-  return { ...note, key: keysById[note.noteNumber] };
+const notesWithKey = computed(() => notes.value.flatMap((note) => {
+  if (keysById[note.noteNumber]) {
+    return [{ ...note, key: keysById[note.noteNumber] }];
+  } else {
+    return [];
+  }
 }));
 
 // notes on a white key
@@ -351,8 +239,8 @@ const play = async () => {
   // set current state to loading
   currentState.value = 'loading';
 
-  // get midi
-  midi.value = props.midi instanceof Midi ? props.midi : await props.midi();
+  // load midi
+  await loadMidi(props.midiBuffer);
 
   // parts of channel events
   channelEvents.value.forEach((events) => new Tone.Part((time, event) => {
@@ -385,7 +273,7 @@ const play = async () => {
   notesByTrack.value.forEach((notes) => new Tone.Part((time, note) => {
     if (currentState.value === 'started') {
       sampler.triggerAttackRelease(
-        note.name,
+        Tone.Frequency(note.noteNumber, 'midi').toNote(),
         note.duration,
         time,
         note.velocity / 127,
@@ -395,7 +283,7 @@ const play = async () => {
   }, notes).start());
 
   // program changes
-  const programChanges = midi.value.getEvents('programChange');
+  const programChanges = midi.value?.getEvents?.('programChange') ?? [];
 
   // first program change by channel
   const firstProgramChangeByChannel = programChanges.reduce((programChanges, { channel, programNumber }) => {
@@ -538,15 +426,6 @@ const updateTime = () => {
       Tone.Transport.seconds = 0;
     }
   }
-};
-
-// format time
-const formatTime = (seconds: number) => {
-  return [
-    format.pad(Math.floor(Math.max(seconds, 0) % (60 ** 3) / (60 ** 2)).toString(), 2),
-    format.pad(Math.floor(Math.max(seconds, 0) % (60 ** 2) / (60 ** 1)).toString(), 2),
-    format.pad(Math.floor(Math.max(seconds, 0) % (60 ** 1) / (60 ** 0)).toString(), 2),
-  ].slice(duration.value >= (60 ** 2) ? 0 : 1).join(':');
 };
 
 // canvas
