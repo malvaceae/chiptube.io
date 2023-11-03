@@ -35,6 +35,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/watch.vue'),
     props: ({ query: { v } }) => ({ id: v }),
   },
+  {
+    path: '/:pathMatch(.*)',
+    redirect: '/',
+  },
 ];
 
 const router = createRouter({
