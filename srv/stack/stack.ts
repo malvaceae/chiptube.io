@@ -724,14 +724,14 @@ export class ChipTubeStack extends Stack {
         },
       },
       buildSpec: codebuild.BuildSpec.fromObject({
-        version: '0.2',
+        version: 0.2,
         phases: {
           install: {
             'runtime-versions': {
-              nodejs: 'latest',
+              nodejs: 18,
             },
             commands: [
-              'npm install -g yarn',
+              'corepack enable',
             ],
           },
           pre_build: {
