@@ -272,6 +272,20 @@ const play = async () => {
   // parts of notes
   notesByTrack.value.forEach((notes) => new Tone.Part((time, note) => {
     if (currentState.value === 'started') {
+      /**
+       * If note is played, do nothing.
+       *
+       * Related Issues
+       * https://github.com/Tonejs/Tone.js/issues/944
+       * https://github.com/Tonejs/Tone.js/issues/999
+       * https://github.com/Tonejs/Tone.js/issues/1080
+       * https://github.com/Tonejs/Tone.js/issues/1098
+       * https://github.com/Tonejs/Tone.js/issues/1175
+       */
+      if (note.isPlayed) {
+        return;
+      }
+
       sampler.triggerAttackRelease(
         Tone.Frequency(note.noteNumber, 'midi').toNote(),
         note.duration,
@@ -279,6 +293,9 @@ const play = async () => {
         note.velocity / 127,
         note.channel,
       );
+
+      // set note is played to true
+      note.isPlayed = true;
     }
   }, notes).start());
 
@@ -382,6 +399,13 @@ const toggle = () => {
 const seek = (seconds: number) => {
   Tone.Transport.seconds = seconds;
 
+  // set note is played to false
+  notesByTrack.value.forEach((notes) => {
+    notes.forEach((note) => {
+      note.isPlayed = false;
+    });
+  });
+
   // release all voices
   sampler.releaseAll();
 };
@@ -424,6 +448,13 @@ const updateTime = () => {
 
       // seek to first
       Tone.Transport.seconds = 0;
+
+      // set note is played to false
+      notesByTrack.value.forEach((notes) => {
+        notes.forEach((note) => {
+          note.isPlayed = false;
+        });
+      });
     }
   }
 };

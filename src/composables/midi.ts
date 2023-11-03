@@ -84,12 +84,16 @@ export const useMidi = () => {
         // note duration
         const duration = noteOffTime - time;
 
+        // note is played
+        const isPlayed = false;
+
         return [{
           channel,
           noteNumber,
           velocity,
           time,
           duration,
+          isPlayed,
         }];
       } else {
         return [];
