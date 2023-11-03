@@ -82,7 +82,7 @@ useMeta(() => ({
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-8">
             <q-responsive :ratio="16 / 9">
-              <template v-if="file">
+              <template v-if="file && midi">
                 <tune-player :midi-buffer="file.arrayBuffer()" />
               </template>
               <template v-else>
