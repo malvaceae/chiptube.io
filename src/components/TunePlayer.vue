@@ -299,17 +299,20 @@ const play = async () => {
     }
   }, notes).start());
 
+  // channels
+  const channels = [...new Set(notes.value.map(({ channel }) => channel))];
+
   // program changes
-  const programChanges = midi.value?.getEvents?.('programChange') ?? [];
+  const programChanges = midi.value?.getEvents?.('programChange')?.filter?.(({ channel }) => channels.includes(channel)) ?? [];
 
   // first program change by channel
   const firstProgramChangeByChannel = programChanges.reduce((programChanges, { channel, programNumber }) => {
-    return programChanges.set(channel, programChanges.get(channel) ?? programNumber);
-  }, new Map<number, number>());
+    return { ...programChanges, [channel]: programChanges[channel] ?? programNumber };
+  }, {} as Record<number, number>);
 
   // set default program change
-  [...firstProgramChangeByChannel.entries()].forEach(([channel, programNumber]) => {
-    sampler.setProgramChange(programNumber, channel);
+  Object.entries(firstProgramChangeByChannel).forEach(([channel, programNumber]) => {
+    sampler.setProgramChange(programNumber, Number(channel));
   });
 
   // preset ids
@@ -318,12 +321,14 @@ const play = async () => {
   });
 
   // add preset id for percussion
-  if (notes.value.some(({ channel }) => channel === 9)) {
+  if (channels.includes(9)) {
     presetIds.push(128 << 8);
   }
 
   // add preset id for piano
-  presetIds.push(0);
+  if (channels.some((channel) => !(channel === 9 || firstProgramChangeByChannel[channel]))) {
+    presetIds.push(0);
+  }
 
   // wait for sf2 files to load
   await Promise.all([...new Set(presetIds)].map((id) => {
