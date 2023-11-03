@@ -174,11 +174,11 @@ export default async (req: Request, res: Response): Promise<Response> => {
       await Promise.all([...Array(Math.ceil(keywords.length / 25)).keys()].map((i) => keywords.slice(i * 25, (i + 1) * 25)).map((keywords) => {
         return dynamodb.send(new BatchWriteCommand({
           RequestItems: {
-            [process.env.APP_TABLE_NAME]: keywords.map(({ keyword }) => ({
+            [process.env.APP_TABLE_NAME]: keywords.map(({ pk, sk }) => ({
               DeleteRequest: {
                 Key: {
-                  pk: `tuneKeyword#${keyword}`,
-                  sk: `tuneId#${id}`,
+                  pk,
+                  sk,
                 },
               },
             })),
