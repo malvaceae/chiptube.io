@@ -15,7 +15,7 @@ import { useMidi } from '@/composables/midi';
 import { format, uid, useDialogPluginComponent, useQuasar } from 'quasar';
 
 // properties
-const props = defineProps<{ tune?: { id: string, title: string, description: string } }>();
+const props = defineProps<{ tune?: { id: string, title: string, description: string, midiKey: string } }>();
 
 // emits
 defineEmits(useDialogPluginComponent.emitsObject);
@@ -53,6 +53,7 @@ const tune = reactive({
   id: '',
   title: '',
   description: '',
+  midiKey: '',
   file,
 });
 
@@ -167,6 +168,71 @@ const uploadTune = async ({ title, description, file }: typeof tune) => {
   // hide loading
   $q.loading.hide();
 };
+
+// delete the tune
+const deleteTune = async ({ id, midiKey }: typeof tune) => {
+  try {
+    await new Promise((resolve, reject) => {
+      $q.dialog({
+        class: 'no-shadow',
+        title: 'Confirm',
+        message: 'Are you sure you want to delete this tune?',
+        ok: {
+          color: 'negative',
+          flat: true,
+          label: 'Delete',
+          square: true,
+        },
+        cancel: {
+          color: 'grey-6',
+          flat: true,
+          square: true,
+        },
+        focus: 'none',
+      }).onOk(resolve).onCancel(reject);
+    });
+
+    // show loading
+    $q.loading.show({ spinnerSize: 46 });
+
+    try {
+      // delete the tune info
+      await API.del('Api', `/tunes/${id}`, {
+        //
+      });
+
+      try {
+        // remove the tune
+        await Storage.remove(midiKey, {
+          level: 'protected',
+        });
+      } catch {
+        //
+      }
+
+      // move to index route
+      await $router.replace({ name: 'index' });
+
+      // close dialog
+      onDialogHide();
+    } catch (e: any) {
+      if (e.response.status === 422) {
+        $q.notify({
+          type: 'negative',
+          message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
+            return messages.map((message) => `The ${field} ${message}.`);
+          }).join('<br>'),
+          html: true,
+        });
+      }
+    }
+
+    // hide loading
+    $q.loading.hide();
+  } catch {
+    //
+  }
+};
 </script>
 
 <template>
@@ -249,6 +315,10 @@ const uploadTune = async ({ title, description, file }: typeof tune) => {
         </template>
         <template v-if="step === 2">
           <template v-if="props.tune">
+            <q-btn color="negative" flat square @click="deleteTune(tune)">
+              <span class="block">Delete</span>
+            </q-btn>
+            <q-space />
             <q-btn color="grey-6" flat square @click="onDialogCancel">
               <span class="block">Cancel</span>
             </q-btn>

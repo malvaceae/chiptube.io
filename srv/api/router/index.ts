@@ -27,6 +27,11 @@ router.put('/tunes/:id', (req, res, next) => {
   routes.tunes._id.put(req, res).catch(next);
 });
 
+// Delete the tune by id.
+router.delete('/tunes/:id', (req, res, next) => {
+  routes.tunes._id.delete(req, res).catch(next);
+});
+
 // Get tune comments.
 router.get('/tunes/:id/comments', (req, res, next) => {
   routes.tunes._id.comments.get(req, res).catch(next);
