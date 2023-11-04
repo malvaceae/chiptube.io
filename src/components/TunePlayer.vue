@@ -604,6 +604,21 @@ onMounted(() => {
   };
 });
 
+// watch midi buffer
+watch(() => props.midiBuffer, () => {
+  // stop
+  stop();
+
+  // reset all controllers and program changes
+  [...Array(16)].forEach((_, channel) => {
+    sampler.resetAllControllers(channel);
+    sampler.setProgramChange(0, channel);
+  });
+
+  // reset midi
+  midi.value = null;
+});
+
 // finalize
 onUnmounted(() => {
   // remove the canvas

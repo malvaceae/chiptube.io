@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { nextTick, ref, watchEffect } from 'vue';
+import { ref, watchEffect } from 'vue';
 
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
@@ -38,11 +38,6 @@ const {
 // watch file
 watchEffect(async () => {
   if (file.value) {
-    midi.value = null;
-
-    // wait for next tick
-    await nextTick();
-
     // load midi
     await loadMidi(file.value.arrayBuffer());
   }
@@ -82,7 +77,7 @@ useMeta(() => ({
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-8">
             <q-responsive :ratio="16 / 9">
-              <template v-if="file && midi">
+              <template v-if="file">
                 <tune-player :midi-buffer="file.arrayBuffer()" />
               </template>
               <template v-else>
