@@ -58,7 +58,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
       nickname: {
         type: 'string',
         minLength: 1,
-        maxLength: 255,
+        maxLength: 31,
         pattern: '\\S',
       },
     },
