@@ -377,6 +377,14 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
               </q-item-section>
             </q-item>
             <q-separator spaced />
+            <q-item-label class="row q-gutter-sm" caption>
+              <div>
+                ChipTube is a web service for play and share MIDI files.
+              </div>
+              <div class="text-grey-6">
+                &copy; {{ new Date().getFullYear() }} chiptube.io
+              </div>
+            </q-item-label>
           </q-list>
         </q-scroll-area>
       </div>
@@ -428,6 +436,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
   }
 }
 
+.q-drawer .q-list .q-item__label--caption,
 .q-drawer .q-list .q-item__label--header {
   padding: 8px 25px 16px;
 }
