@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { ref, toRefs } from 'vue';
+import { computed, ref, toRefs } from 'vue';
 
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
@@ -88,6 +88,9 @@ const downloadTune = async ({ title, midiKey, identityId }: Record<string, any>)
 // the tune
 const tune = ref<Record<string, any> | null>(null);
 
+// the midi buffer
+const midiBuffer = computed(() => tune.value && getMidiBuffer(tune.value));
+
 // get midi buffer
 const getMidiBuffer = ({ midiKey, identityId }: Record<string, any>) => {
   return async () => {
@@ -122,8 +125,8 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
     <div class="row q-col-gutter-md">
       <div class="col-12 col-md-8">
         <q-responsive :ratio="16 / 9">
-          <template v-if="tune">
-            <tune-player :midi-buffer="getMidiBuffer(tune)" />
+          <template v-if="midiBuffer">
+            <tune-player :midi-buffer="midiBuffer" />
           </template>
           <template v-else>
             <q-skeleton animation="none" square />

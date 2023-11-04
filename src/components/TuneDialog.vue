@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 // Vue.js
-import { reactive, ref, watchEffect } from 'vue';
+import { computed, reactive, ref, watchEffect } from 'vue';
 
 // Vue Router
 import { useRouter } from 'vue-router';
@@ -40,6 +40,9 @@ const step = ref(props.tune ? 2 : 1);
 // the file
 const file = ref<File | null>(null);
 
+// the midi buffer
+const midiBuffer = computed(() => file.value?.arrayBuffer?.());
+
 // use midi
 const {
   midi,
@@ -61,16 +64,16 @@ if (props.tune) {
   Object.assign(tune, props.tune);
 }
 
-// watch file
+// watch midi buffer
 watchEffect(async () => {
-  if (file.value) {
+  if (midiBuffer.value) {
     midi.value = null;
 
     // wait a few moments
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // load midi
-    await loadMidi(file.value.arrayBuffer());
+    await loadMidi(midiBuffer.value);
   }
 });
 
