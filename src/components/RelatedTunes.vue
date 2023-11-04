@@ -70,10 +70,10 @@ onMounted(() => {
           </q-img>
         </q-item-section>
         <q-item-section>
-          <q-item-label class="text-subtitle1" lines="2">
+          <q-item-label class="text-subtitle1" lines="2" :style="{ wordBreak: 'break-all' }">
             {{ tune.title }}
           </q-item-label>
-          <q-item-label class="q-pt-sm" caption>
+          <q-item-label class="q-pt-sm" caption :style="{ wordBreak: 'break-all' }">
             {{ tune.user.nickname }}
           </q-item-label>
           <q-item-label caption>

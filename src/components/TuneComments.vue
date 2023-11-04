@@ -143,14 +143,14 @@ const registerComment = async () => {
         </q-item-section>
         <q-item-section>
           <q-item-label class="row items-center q-gutter-xs">
-            <div class="text-weight-bold">
+            <div class="text-weight-bold" :style="{ wordBreak: 'break-all' }">
               {{ comment.user.nickname }}
             </div>
             <div class="text-caption">
               {{ date.formatDate(comment.publishedAt, 'MMM D, YYYY') }}
             </div>
           </q-item-label>
-          <q-item-label :style="{ whiteSpace: 'pre-wrap' }">
+          <q-item-label :style="{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }">
             <template v-for="line in comment.text.split(/(?=\n)/)">
               <template v-for="text in line.split(/(?=https?:\/\/[!#-;=?-[\]_a-z~]+)|(?![!#-;=?-[\]_a-z~])/)">
                 <template v-if="/^https?:\/\/[!#-;=?-[\]_a-z~]+$/.test(text)">

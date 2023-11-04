@@ -135,7 +135,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
         <q-list dense padding>
           <q-item>
             <q-item-section>
-              <q-item-label class="text-h6">
+              <q-item-label class="text-h6" :style="{ wordBreak: 'break-all' }">
                 <template v-if="tune">
                   {{ tune.title }}
                 </template>
@@ -217,7 +217,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
               </q-avatar>
             </q-item-section>
             <q-item-section>
-              <q-item-label class="text-weight-bold">
+              <q-item-label class="text-weight-bold" :style="{ wordBreak: 'break-all' }">
                 <template v-if="tune">
                   {{ tune.user.nickname }}
                 </template>
@@ -244,7 +244,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
           </q-item>
           <q-item class="q-mt-sm q-mb-md" :inset-level="1">
             <q-item-section>
-              <q-item-label :style="{ whiteSpace: 'pre-wrap' }">
+              <q-item-label :style="{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }">
                 <template v-if="tune">
                   <template v-for="line in tune.description.split(/(?=\n)/)">
                     <template v-for="text in line.split(/(?=https?:\/\/[!#-;=?-[\]_a-z~]+)|(?![!#-;=?-[\]_a-z~])/)">
