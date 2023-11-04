@@ -3,7 +3,7 @@
 import { onMounted, ref, toRefs } from 'vue';
 
 // Amplify
-import { API } from 'aws-amplify';
+import { API, Storage } from 'aws-amplify';
 
 // Quasar
 import { QInfiniteScroll, date } from 'quasar';
@@ -38,6 +38,11 @@ const getTunes: QInfiniteScroll['onLoad'] = async (_: number, done: (stop?: bool
     },
   });
 
+  // get thumbnail
+  for (const tune of data.tunes) {
+    tune.thumbnail = await getThumbnail(tune);
+  }
+
   // add tunes
   tunes.value.push(...data.tunes);
 
@@ -49,6 +54,16 @@ const getTunes: QInfiniteScroll['onLoad'] = async (_: number, done: (stop?: bool
 
   // stop loading
   isLoading.value = false;
+};
+
+// get thumbnail
+const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
+  if (thumbnailKey) {
+    return await Storage.get(thumbnailKey, {
+      level: 'protected',
+      identityId,
+    });
+  }
 };
 
 // initialize
@@ -63,11 +78,16 @@ onMounted(() => {
     <q-list class="q-gutter-md">
       <q-item v-for="tune in tunes" class="q-py-none" active-class="" :to="{ query: { v: tune.id } }">
         <q-item-section side>
-          <q-img src="@/assets/thumbnail.png" width="148px">
-            <div class="absolute-center full-width text-caption text-center ellipsis">
-              {{ tune.title }}
-            </div>
-          </q-img>
+          <template v-if="tune.thumbnail">
+            <q-img :ratio="16 / 9" :src="tune.thumbnail" width="148px" />
+          </template>
+          <template v-else>
+            <q-img src="@/assets/thumbnail.png" width="148px">
+              <div class="absolute-center full-width text-caption text-center ellipsis">
+                {{ tune.title }}
+              </div>
+            </q-img>
+          </template>
         </q-item-section>
         <q-item-section>
           <q-item-label class="text-subtitle1" lines="2" :style="{ wordBreak: 'break-all' }">

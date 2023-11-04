@@ -15,7 +15,7 @@ import { useMidi } from '@/composables/midi';
 import { format, uid, useDialogPluginComponent, useQuasar } from 'quasar';
 
 // properties
-const props = defineProps<{ tune?: { id: string, title: string, description: string, midiKey: string } }>();
+const props = defineProps<{ tune?: { id: string, title: string, description: string, midiKey: string, thumbnailKey: string } }>();
 
 // emits
 defineEmits(useDialogPluginComponent.emitsObject);
@@ -37,11 +37,14 @@ const $q = useQuasar();
 // the step
 const step = ref(props.tune ? 2 : 1);
 
-// the file
-const file = ref<File | null>(null);
+// the midi file
+const midiFile = ref<File | null>(null);
 
 // the midi buffer
-const midiBuffer = computed(() => file.value?.arrayBuffer?.());
+const midiBuffer = computed(() => midiFile.value?.arrayBuffer?.());
+
+// the thumbnail file
+const thumbnailFile = ref<File | null>(null);
 
 // use midi
 const {
@@ -57,7 +60,9 @@ const tune = reactive({
   title: '',
   description: '',
   midiKey: '',
-  file,
+  midiFile,
+  thumbnailKey: '',
+  thumbnailFile,
 });
 
 if (props.tune) {
@@ -87,28 +92,66 @@ watchEffect(() => {
 });
 
 // update the tune
-const updateTune = async ({ id, title, description }: typeof tune) => {
+const updateTune = async ({ id, title, description, thumbnailKey: oldThumbnailKey, thumbnailFile }: typeof tune) => {
   // show loading
   $q.loading.show({ spinnerSize: 46 });
 
   try {
-    // update the tune info
-    const tune = await API.put('Api', `/tunes/${id}`, {
-      body: {
-        title,
-        description,
-      },
-    });
+    // upload the thumbnail
+    const thumbnailKey = await (() => {
+      if (thumbnailFile) {
+        return Storage.put(`thumbnails/${uid()}${getFileExtension(thumbnailFile.type)}`, thumbnailFile, {
+          level: 'protected',
+        }).then(({ key }) => key);
+      }
+    })();
 
-    // close dialog
-    onDialogOK(tune);
+    try {
+      // update the tune info
+      const tune = await API.put('Api', `/tunes/${id}`, {
+        body: {
+          title,
+          description,
+          thumbnailKey,
+        },
+      });
+
+      try {
+        // remove the old thumbnail
+        if (thumbnailKey && oldThumbnailKey) {
+          await Storage.remove(oldThumbnailKey, {
+            level: 'protected',
+          });
+        }
+      } catch {
+        //
+      }
+
+      // close dialog
+      onDialogOK(tune);
+    } catch (e: any) {
+      if (e.response.status === 422) {
+        $q.notify({
+          type: 'negative',
+          message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
+            return messages.map((message) => `The ${field} ${message}.`);
+          }).join('<br>'),
+          html: true,
+        });
+
+        // remove the thumbnail
+        if (thumbnailKey) {
+          await Storage.remove(thumbnailKey, {
+            level: 'protected',
+          });
+        }
+      }
+    }
   } catch (e: any) {
-    if (e.response.status === 422) {
+    if (e.message) {
       $q.notify({
         type: 'negative',
-        message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
-          return messages.map((message) => `The ${field} ${message}.`);
-        }).join('<br>'),
+        message: e.message,
         html: true,
       });
     }
@@ -119,8 +162,8 @@ const updateTune = async ({ id, title, description }: typeof tune) => {
 };
 
 // upload the tune
-const uploadTune = async ({ title, description, file }: typeof tune) => {
-  if (file === null) {
+const uploadTune = async ({ title, description, midiFile, thumbnailFile }: typeof tune) => {
+  if (midiFile === null) {
     return;
   }
 
@@ -129,32 +172,64 @@ const uploadTune = async ({ title, description, file }: typeof tune) => {
 
   try {
     // upload the tune
-    const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, file, {
+    const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, midiFile, {
       level: 'protected',
     });
 
     try {
-      // register the tune info
-      const { id } = await API.post('Api', '/tunes', {
-        body: {
-          title,
-          description,
-          midiKey,
-        },
-      });
+      // upload the thumbnail
+      const thumbnailKey = await (() => {
+        if (thumbnailFile) {
+          return Storage.put(`thumbnails/${uid()}${getFileExtension(thumbnailFile.type)}`, thumbnailFile, {
+            level: 'protected',
+          }).then(({ key }) => key);
+        }
+      })();
 
-      // move to watch route
-      await $router.push({ name: 'watch', query: { v: id } });
+      try {
+        // register the tune info
+        const { id } = await API.post('Api', '/tunes', {
+          body: {
+            title,
+            description,
+            midiKey,
+            thumbnailKey,
+          },
+        });
 
-      // close dialog
-      onDialogOK();
+        // move to watch route
+        await $router.push({ name: 'watch', query: { v: id } });
+
+        // close dialog
+        onDialogOK();
+      } catch (e: any) {
+        if (e.response.status === 422) {
+          $q.notify({
+            type: 'negative',
+            message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
+              return messages.map((message) => `The ${field} ${message}.`);
+            }).join('<br>'),
+            html: true,
+          });
+        }
+
+        // remove the tune
+        await Storage.remove(midiKey, {
+          level: 'protected',
+        });
+
+        // remove the thumbnail
+        if (thumbnailKey) {
+          await Storage.remove(thumbnailKey, {
+            level: 'protected',
+          });
+        }
+      }
     } catch (e: any) {
-      if (e.response.status === 422) {
+      if (e.message) {
         $q.notify({
           type: 'negative',
-          message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
-            return messages.map((message) => `The ${field} ${message}.`);
-          }).join('<br>'),
+          message: e.message,
           html: true,
         });
       }
@@ -173,7 +248,7 @@ const uploadTune = async ({ title, description, file }: typeof tune) => {
 };
 
 // delete the tune
-const deleteTune = async ({ id, midiKey }: typeof tune) => {
+const deleteTune = async ({ id, midiKey, thumbnailKey }: typeof tune) => {
   try {
     await new Promise((resolve, reject) => {
       $q.dialog({
@@ -213,6 +288,17 @@ const deleteTune = async ({ id, midiKey }: typeof tune) => {
         //
       }
 
+      try {
+        // remove the thumbnail
+        if (thumbnailKey) {
+          await Storage.remove(thumbnailKey, {
+            level: 'protected',
+          });
+        }
+      } catch {
+        //
+      }
+
       // move to index route
       await $router.replace({ name: 'index' });
 
@@ -236,6 +322,20 @@ const deleteTune = async ({ id, midiKey }: typeof tune) => {
     //
   }
 };
+
+// get file extension
+const getFileExtension = (mime: string) => {
+  switch (mime) {
+    case 'image/gif':
+      return '.gif';
+    case 'image/jpeg':
+      return '.jpg';
+    case 'image/png':
+      return '.png';
+    default:
+      throw Error('Please choose image files only.');
+  }
+};
 </script>
 
 <template>
@@ -254,11 +354,11 @@ const deleteTune = async ({ id, midiKey }: typeof tune) => {
       <q-card-section class="q-pa-none">
         <q-stepper v-model="step" animated :contracted="$q.screen.lt.sm" flat>
           <q-step active-icon="mdi-file-music" icon="mdi-file-music" :name="1" title="MIDI">
-            <q-file v-model="file" accept=".mid" input-class="invisible" input-style="height: 253px;" outlined square>
+            <q-file v-model="midiFile" accept=".mid" input-class="invisible" input-style="height: 325px;" outlined square>
               <div class="full-width absolute-center text-center text-subtitle1 no-pointer-events">
-                <template v-if="file">
+                <template v-if="midiFile">
                   <template v-if="midi">
-                    {{ file.name }} ({{ format.humanStorageSize(file.size) }})
+                    {{ midiFile.name }} ({{ format.humanStorageSize(midiFile.size) }})
                   </template>
                   <template v-else>
                     <q-circular-progress indeterminate rounded size="50px" />
@@ -285,6 +385,14 @@ const deleteTune = async ({ id, midiKey }: typeof tune) => {
                   Description
                 </template>
               </q-input>
+              <q-file v-model="thumbnailFile" accept=".gif,.jpg,.jpeg,.png" clearable label-slot outlined square>
+                <template #prepend>
+                  <q-icon name="mdi-file-image" />
+                </template>
+                <template #label>
+                  Thumbnail
+                </template>
+              </q-file>
             </div>
           </q-step>
           <q-step active-icon="mdi-check" icon="mdi-check" :name="3" title="Confirm">
@@ -300,6 +408,14 @@ const deleteTune = async ({ id, midiKey }: typeof tune) => {
               <q-input label-slot :model-value="tune.description" outlined readonly square type="textarea">
                 <template #label>
                   Description
+                </template>
+              </q-input>
+              <q-input label-slot :model-value="thumbnailFile?.name" outlined readonly square>
+                <template #prepend>
+                  <q-icon name="mdi-file-image" />
+                </template>
+                <template #label>
+                  Thumbnail
                 </template>
               </q-input>
             </div>

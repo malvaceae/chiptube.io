@@ -195,6 +195,9 @@ export class ChipTubeStack extends Stack {
           allowedOrigins: [
             '*',
           ],
+          exposedHeaders: [
+            'ETag',
+          ],
         },
       ],
     });

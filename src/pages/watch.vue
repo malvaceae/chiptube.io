@@ -48,11 +48,19 @@ const editTune = () => {
       },
     });
 
-    dialog.onOk(({ title, description }) => {
+    dialog.onOk(async ({ title, description, thumbnailKey, identityId }) => {
       if (tune.value) {
+        // get the thumbnail
+        const thumbnail = await getThumbnail({
+          thumbnailKey,
+          identityId,
+        });
+
         Object.assign(tune.value, {
           title,
           description,
+          thumbnailKey,
+          thumbnail,
         });
       }
     });
@@ -115,9 +123,23 @@ useMeta(() => ({
 }));
 
 // get the tune
-API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
+API.get('Api', `/tunes/${id.value}`, {}).then(async (data) => {
+  // get the thumbnail
+  data.thumbnail = await getThumbnail(data);
+
+  // set the tune
   tune.value = data;
 });
+
+// get thumbnail
+const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
+  if (thumbnailKey) {
+    return await Storage.get(thumbnailKey, {
+      level: 'protected',
+      identityId,
+    });
+  }
+};
 </script>
 
 <template>
@@ -126,7 +148,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then((data) => {
       <div class="col-12 col-md-8">
         <q-responsive :ratio="16 / 9">
           <template v-if="midiBuffer">
-            <tune-player :midi-buffer="midiBuffer" />
+            <tune-player :midi-buffer="midiBuffer" :thumbnail="tune?.thumbnail" />
           </template>
           <template v-else>
             <q-skeleton animation="none" square />

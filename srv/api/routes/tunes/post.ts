@@ -61,7 +61,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
   const userId = getUserId(cognitoAuthenticationProvider);
 
   // Compile the parameter schema.
-  const validate = ajv.compile({
+  const validate = ajv.compile<{ title: string, description: string, midiKey: string, thumbnailKey?: string }>({
     type: 'object',
     properties: {
       title: {
@@ -77,6 +77,12 @@ export default async (req: Request, res: Response): Promise<Response> => {
         pattern: '\\S',
       },
       midiKey: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 255,
+        pattern: '\\S',
+      },
+      thumbnailKey: {
         type: 'string',
         minLength: 1,
         maxLength: 255,
@@ -99,8 +105,8 @@ export default async (req: Request, res: Response): Promise<Response> => {
     });
   }
 
-  // Get a title, a description and a midi key.
-  const { title, description, midiKey } = req.body;
+  // Get a title, a description, a midi key and a thumbnail key.
+  const { title, description, midiKey, thumbnailKey } = req.body;
 
   // Get a midi file.
   const midiFile = await (async () => {
@@ -149,6 +155,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
                 title,
                 description,
                 midiKey,
+                thumbnailKey,
                 publishedAt: Date.now(),
                 views: 0,
                 likes: 0,

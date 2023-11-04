@@ -61,6 +61,8 @@ paths:
                   type: string
                 midiKey:
                   type: string
+                thumbnailKey:
+                  type: string
       responses:
         "200":
           description: OK
@@ -120,6 +122,8 @@ paths:
                 title:
                   type: string
                 description:
+                  type: string
+                thumbnailKey:
                   type: string
                 isLiked:
                   type: boolean
@@ -378,6 +382,8 @@ components:
         description:
           type: string
         midiKey:
+          type: string
+        thumbnailKey:
           type: string
         publishedAt:
           type: integer
