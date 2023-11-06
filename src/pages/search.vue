@@ -3,7 +3,7 @@
 import { ref, toRefs } from 'vue';
 
 // Amplify
-import { API } from 'aws-amplify';
+import { API, Storage } from 'aws-amplify';
 
 // Quasar
 import { date, useMeta, useQuasar } from 'quasar';
@@ -46,6 +46,11 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
     },
   });
 
+  // get the thumbnail
+  for (const tune of data.tunes) {
+    tune.thumbnail = await getThumbnail(tune);
+  }
+
   // add tunes
   tunes.value.push(...data.tunes);
 
@@ -58,6 +63,16 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
   // hide loading
   $q.loading.hide();
 };
+
+// get the thumbnail
+const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
+  if (thumbnailKey) {
+    return await Storage.get(thumbnailKey, {
+      level: 'protected',
+      identityId,
+    });
+  }
+};
 </script>
 
 <template>
@@ -66,11 +81,16 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
       <q-list class="q-gutter-md">
         <q-item v-for="tune in tunes" :to="{ name: 'watch', query: { v: tune.id } }">
           <q-item-section side>
-            <q-img src="@/assets/thumbnail.png">
-              <div class="absolute-center full-width text-h6 text-center ellipsis">
-                {{ tune.title }}
-              </div>
-            </q-img>
+            <template v-if="tune.thumbnail">
+              <q-img :ratio="16 / 9" :src="tune.thumbnail" />
+            </template>
+            <template v-else>
+              <q-img src="@/assets/thumbnail.png">
+                <div class="absolute-center full-width text-h6 text-center ellipsis">
+                  {{ tune.title }}
+                </div>
+              </q-img>
+            </template>
           </q-item-section>
           <q-item-section top>
             <q-item-label class="text-h6" lines="2">
