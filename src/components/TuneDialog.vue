@@ -385,7 +385,7 @@ const getFileExtension = (mime: string) => {
                   Description
                 </template>
               </q-input>
-              <q-file v-model="thumbnailFile" accept=".gif,.jpg,.jpeg,.png" clearable label-slot outlined square>
+              <q-file v-model="thumbnailFile" accept=".gif,.jpeg,.jpg,.png" clearable label-slot outlined square>
                 <template #prepend>
                   <q-icon name="mdi-file-image" />
                 </template>

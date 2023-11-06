@@ -92,7 +92,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
   // Get the tune id.
   const { id } = req.params;
 
-  if (req.body.title || req.body.description || req.body.thumbnailKey) {
+  if (req.body.title || req.body.description) {
     const { Item: tune } = await dynamodb.send(new GetCommand({
       TableName: process.env.APP_TABLE_NAME,
       Key: {
@@ -150,30 +150,6 @@ export default async (req: Request, res: Response): Promise<Response> => {
           ].join(' AND '),
           ExpressionAttributeValues: {
             ':description': req.body.description,
-          },
-        }));
-      } catch {
-        //
-      }
-    }
-
-    if (req.body.thumbnailKey) {
-      try {
-        await dynamodb.send(new UpdateCommand({
-          TableName: process.env.APP_TABLE_NAME,
-          Key: {
-            pk: 'tunes',
-            sk: `tuneId#${id}`,
-          },
-          UpdateExpression: `SET ${[
-            'thumbnailKey = :thumbnailKey',
-          ].join(', ')}`,
-          ConditionExpression: [
-            'attribute_exists(pk)',
-            'attribute_exists(sk)',
-          ].join(' AND '),
-          ExpressionAttributeValues: {
-            ':thumbnailKey': req.body.thumbnailKey,
           },
         }));
       } catch {
@@ -245,6 +221,30 @@ export default async (req: Request, res: Response): Promise<Response> => {
             })),
           },
         }));
+      }));
+    } catch {
+      //
+    }
+  }
+
+  if (req.body.thumbnailKey) {
+    try {
+      await dynamodb.send(new UpdateCommand({
+        TableName: process.env.APP_TABLE_NAME,
+        Key: {
+          pk: 'tunes',
+          sk: `tuneId#${id}`,
+        },
+        UpdateExpression: `SET ${[
+          'thumbnailKey = :thumbnailKey',
+        ].join(', ')}`,
+        ConditionExpression: [
+          'attribute_exists(pk)',
+          'attribute_exists(sk)',
+        ].join(' AND '),
+        ExpressionAttributeValues: {
+          ':thumbnailKey': req.body.thumbnailKey,
+        },
       }));
     } catch {
       //

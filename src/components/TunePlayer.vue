@@ -650,7 +650,10 @@ onUnmounted(() => {
         </div>
       </div>
     </template>
-    <template v-if="currentState === 'started' || currentState === 'paused'">
+    <template v-if="props.thumbnail">
+      <q-img class="thumbnail absolute no-pointer-events" :ratio="16 / 9" :src="props.thumbnail" />
+    </template>
+    <template v-if="['started', 'paused'].includes(currentState)">
       <div class="backdrop absolute-bottom" />
       <div class="controls" @click.stop>
         <div class="seekbar absolute">
@@ -680,18 +683,19 @@ onUnmounted(() => {
         </div>
       </div>
     </template>
-    <template v-if="props.thumbnail">
-      <q-img class="thumbnail absolute no-pointer-events" :ratio="16 / 9" :src="props.thumbnail" />
-    </template>
     <q-resize-observer debounce="0" @resize="canvas?.resizeCanvas?.(...calcCanvasSize())" />
   </div>
 </template>
 
 <style lang="scss" scoped>
+.thumbnail,
 .backdrop,
-.controls,
-.thumbnail {
+.controls {
   transition: opacity .25s cubic-bezier(0, 0, .2, 1);
+}
+
+body:not(.no-pointer-events--children) .tune-player:not(:hover) .thumbnail {
+  opacity: v-bind("['started', 'paused'].includes(currentState) ? 0 : .75");
 }
 
 body:not(.no-pointer-events--children) .tune-player:not(:hover) .backdrop,
@@ -699,21 +703,17 @@ body:not(.no-pointer-events--children) .tune-player:not(:hover) .controls {
   opacity: 0;
 }
 
-body:not(.no-pointer-events--children) .tune-player:not(:hover) .thumbnail {
-  opacity: v-bind("['started', 'paused'].includes(currentState) ? 0 : .75");
+.thumbnail {
+  right: 0;
+  bottom: v-bind('`${whiteKeyHeight + 4}px`');
+  width: v-bind('`${whiteKeyWidth * 6}px`');
+  opacity: .75;
 }
 
 .backdrop {
   min-height: 146px;
   max-height: 146px;
   background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAACSCAYAAACE56BkAAAAAXNSR0IArs4c6QAAAPVJREFUKFNlyOlHGAAcxvHuY93H1n1fW1v3fbej+zAmI5PIRGYiM5JEEkkiiSSRRPoj83nze9Pz4uPrSUh4tURPEpKDFJWKtCBdZSAzeKOykB3kqFzkBfmqAIVBkSrGW7wLSlQpyoJyVYHKoEpVoyaoVXWoDxpUI5qCZtWC98EH1YqPwSfVhvagQ3WiK+hWPegN+lQ/BoJBNYRhjASjagzjwYSaxOfgi/qKb8GUmsZMMKvmMB8sqEUsYRnf8QMr+IlV/MIa1rGB39jEFv7gL7axg3/4j13sYR8HOMQRjnGCU5zhHBe4xBWucYNb3OEeD3jEE55fAOe7I9q0+rDDAAAAAElFTkSuQmCC");
-}
-
-.thumbnail {
-  right: 0;
-  bottom: v-bind('`${whiteKeyHeight + 4}px`');
-  width: v-bind('`${whiteKeyWidth * 6}px`');
-  opacity: .75;
 }
 
 .seekbar {

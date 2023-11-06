@@ -17,11 +17,11 @@ import TunePlayer from '@/components/TunePlayer.vue';
 // get the auth store
 const auth = useAuthStore();
 
-// the file
-const file = ref<File | null>(null);
+// the midi file
+const midiFile = ref<File | null>(null);
 
 // the midi buffer
-const midiBuffer = computed(() => file.value?.arrayBuffer?.());
+const midiBuffer = computed(() => midiFile.value?.arrayBuffer?.());
 
 // use midi
 const {
@@ -64,7 +64,7 @@ useMeta(() => ({
         <div class="q-mb-sm text-subtitle1 text-weight-medium">
           1. Select MIDI file
         </div>
-        <q-file v-model="file" accept=".mid" label-slot outlined square>
+        <q-file v-model="midiFile" accept=".mid" label-slot outlined square>
           <template #prepend>
             <q-icon name="mdi-file-music" />
           </template>
@@ -176,12 +176,12 @@ useMeta(() => ({
             <q-markup-table flat square wrap-cells>
               <tbody>
                 <tr>
-                  <template v-if="file">
+                  <template v-if="midiFile">
                     <td class="text-no-wrap text-weight-bold">
                       File name
                     </td>
                     <td class="full-width">
-                      {{ file.name }}
+                      {{ midiFile.name }}
                     </td>
                   </template>
                   <template v-else>
@@ -194,12 +194,12 @@ useMeta(() => ({
                   </template>
                 </tr>
                 <tr>
-                  <template v-if="file">
+                  <template v-if="midiFile">
                     <td class="text-no-wrap text-weight-bold">
                       File size
                     </td>
                     <td class="full-width">
-                      {{ format.humanStorageSize(file.size) }}
+                      {{ format.humanStorageSize(midiFile.size) }}
                     </td>
                   </template>
                   <template v-else>

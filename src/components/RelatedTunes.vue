@@ -38,7 +38,7 @@ const getTunes: QInfiniteScroll['onLoad'] = async (_: number, done: (stop?: bool
     },
   });
 
-  // get thumbnail
+  // get the thumbnail
   for (const tune of data.tunes) {
     tune.thumbnail = await getThumbnail(tune);
   }
@@ -56,7 +56,7 @@ const getTunes: QInfiniteScroll['onLoad'] = async (_: number, done: (stop?: bool
   isLoading.value = false;
 };
 
-// get thumbnail
+// get the thumbnail
 const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
   if (thumbnailKey) {
     return await Storage.get(thumbnailKey, {

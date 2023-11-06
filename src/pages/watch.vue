@@ -131,7 +131,7 @@ API.get('Api', `/tunes/${id.value}`, {}).then(async (data) => {
   tune.value = data;
 });
 
-// get thumbnail
+// get the thumbnail
 const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
   if (thumbnailKey) {
     return await Storage.get(thumbnailKey, {

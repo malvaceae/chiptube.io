@@ -33,7 +33,7 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
     },
   });
 
-  // get thumbnail
+  // get the thumbnail
   for (const tune of data.tunes) {
     tune.thumbnail = await getThumbnail(tune);
   }
@@ -48,7 +48,7 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
   done(!after.value);
 };
 
-// get thumbnail
+// get the thumbnail
 const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
   if (thumbnailKey) {
     return await Storage.get(thumbnailKey, {
