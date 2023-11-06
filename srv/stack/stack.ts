@@ -196,6 +196,9 @@ export class ChipTubeStack extends Stack {
             '*',
           ],
           exposedHeaders: [
+            'x-amz-server-side-encryption',
+            'x-amz-request-id',
+            'x-amz-id-2',
             'ETag',
           ],
         },
