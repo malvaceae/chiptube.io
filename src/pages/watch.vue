@@ -2,6 +2,9 @@
 // Vue.js
 import { computed, ref, toRefs } from 'vue';
 
+// Vue Router
+import { useRouter } from 'vue-router';
+
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
 
@@ -34,6 +37,9 @@ const { id } = toRefs(props);
 
 // get the auth store
 const auth = useAuthStore();
+
+// get the $router object
+const $router = useRouter();
 
 // get the $q object
 const $q = useQuasar();
@@ -122,14 +128,29 @@ useMeta(() => ({
   },
 }));
 
-// get the tune
-API.get('Api', `/tunes/${id.value}`, {}).then(async (data) => {
-  // get the thumbnail
-  data.thumbnail = await getThumbnail(data);
+(async () => {
+  try {
+    // get the tune
+    await API.get('Api', `/tunes/${id.value}`, {}).then(async (data) => {
+      // get the thumbnail
+      data.thumbnail = await getThumbnail(data);
 
-  // set the tune
-  tune.value = data;
-});
+      // set the tune
+      tune.value = data;
+    });
+  } catch (e: any) {
+    if (e.response.status === 404) {
+      $q.notify({
+        type: 'negative',
+        message: 'The tune you are looking for is not found.',
+        html: true,
+      });
+
+      // move to index route
+      await $router.replace({ name: 'index' });
+    }
+  }
+})();
 
 // get the thumbnail
 const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
