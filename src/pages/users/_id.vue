@@ -77,11 +77,8 @@ useMeta(() => ({
 
 (async () => {
   try {
-    // get the tune
-    await API.get('Api', `/users/${id.value}`, {}).then(async (data) => {
-      // set the user
-      user.value = data;
-    });
+    // get the user
+    user.value = await API.get('Api', `/users/${id.value}`, {});
   } catch (e: any) {
     if (e.response.status === 404) {
       $q.notify({

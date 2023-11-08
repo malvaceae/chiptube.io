@@ -291,6 +291,21 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
               </q-item-section>
             </q-item>
             <q-separator spaced />
+            <template v-if="auth.user">
+              <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" style="height: 40px;"
+                :to="{ name: 'users-id', params: { id: auth.user.sub } }" v-ripple>
+                <q-item-section>
+                  <div class="row q-gutter-sm">
+                    <div>
+                      You
+                    </div>
+                    <div>
+                      <q-icon name="mdi-chevron-right" />
+                    </div>
+                  </div>
+                </q-item-section>
+              </q-item>
+            </template>
             <q-item disable v-ripple>
               <q-item-section side>
                 <q-icon name="mdi-music-box-multiple-outline" />

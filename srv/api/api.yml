@@ -309,7 +309,7 @@ paths:
     get:
       tags:
         - Users
-      operationId: getTunesByUserId
+      operationId: getUserTunesById
       parameters:
         - name: id
           in: path

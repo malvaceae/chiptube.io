@@ -52,7 +52,7 @@ router.get('/users/:id', (req, res, next) => {
   routes.users._id.get(req, res).catch(next);
 });
 
-// Get tunes by user id.
+// Get user tunes by id.
 router.get('/users/:id/tunes', (req, res, next) => {
   routes.users._id.tunes.get(req, res).catch(next);
 });
