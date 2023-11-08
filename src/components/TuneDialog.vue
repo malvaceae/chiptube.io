@@ -102,6 +102,7 @@ const updateTune = async ({ id, title, description, thumbnailKey: oldThumbnailKe
       if (thumbnailFile) {
         return Storage.put(`thumbnails/${uid()}${getFileExtension(thumbnailFile.type)}`, thumbnailFile, {
           level: 'protected',
+          contentType: thumbnailFile.type,
         }).then(({ key }) => key);
       }
     })();
@@ -174,6 +175,7 @@ const uploadTune = async ({ title, description, midiFile, thumbnailFile }: typeo
     // upload the tune
     const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, midiFile, {
       level: 'protected',
+      contentType: 'audio/midi',
     });
 
     try {
@@ -182,6 +184,7 @@ const uploadTune = async ({ title, description, midiFile, thumbnailFile }: typeo
         if (thumbnailFile) {
           return Storage.put(`thumbnails/${uid()}${getFileExtension(thumbnailFile.type)}`, thumbnailFile, {
             level: 'protected',
+            contentType: thumbnailFile.type,
           }).then(({ key }) => key);
         }
       })();
