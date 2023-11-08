@@ -114,26 +114,38 @@ useMeta(() => ({
               </q-item>
               <q-separator spaced />
               <q-item class="q-mt-md q-mb-sm">
-                <q-item-section avatar>
-                  <q-avatar>
-                    <template v-if="midi">
-                      <template v-if="auth.user">
-                        <img :src="auth.user.picture" referrerpolicy="no-referrer">
-                      </template>
-                      <template v-else>
+                <template v-if="midi">
+                  <template v-if="auth.user">
+                    <router-link :to="{ name: 'users-id', params: { id: auth.user.sub } }">
+                      <q-item-section avatar>
+                        <q-avatar>
+                          <img :src="auth.user.picture" referrerpolicy="no-referrer">
+                        </q-avatar>
+                      </q-item-section>
+                    </router-link>
+                  </template>
+                  <template v-else>
+                    <q-item-section avatar>
+                      <q-avatar>
                         <q-icon name="mdi-account-circle" size="40px" />
-                      </template>
-                    </template>
-                    <template v-else>
+                      </q-avatar>
+                    </q-item-section>
+                  </template>
+                </template>
+                <template v-else>
+                  <q-item-section avatar>
+                    <q-avatar>
                       <q-skeleton animation="none" type="QAvatar" />
-                    </template>
-                  </q-avatar>
-                </q-item-section>
+                    </q-avatar>
+                  </q-item-section>
+                </template>
                 <q-item-section>
                   <q-item-label class="text-weight-bold">
                     <template v-if="midi">
                       <template v-if="auth.user">
-                        {{ auth.user.nickname }}
+                        <router-link :to="{ name: 'users-id', params: { id: auth.user.sub } }">
+                          {{ auth.user.nickname }}
+                        </router-link>
                       </template>
                       <template v-else>
                         Guest
@@ -159,7 +171,18 @@ useMeta(() => ({
                 <q-item-section>
                   <q-item-label :style="{ whiteSpace: 'pre-wrap' }">
                     <template v-if="midi">
-                      {{ description || 'no description' }}
+                      <template v-for="line in (description || 'no description').split(/(?=\n)/)">
+                        <template v-for="text in line.split(/(?=https?:\/\/[!#-;=?-[\]_a-z~]+)|(?![!#-;=?-[\]_a-z~])/)">
+                          <template v-if="/^https?:\/\/[!#-;=?-[\]_a-z~]+$/.test(text)">
+                            <a :href="text" rel="ugc nofollow" target="_blank">
+                              {{ text }}
+                            </a>
+                          </template>
+                          <template v-else>
+                            {{ text }}
+                          </template>
+                        </template>
+                      </template>
                     </template>
                     <template v-else>
                       <q-skeleton animation="none" type="text" />
@@ -423,7 +446,17 @@ useMeta(() => ({
 </template>
 
 <style lang="scss" scoped>
-:deep(.q-stepper__step-inner) {
-  padding-bottom: 8px;
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a[target="_blank"] {
+  color: $blue;
+  text-decoration: underline;
+}
+
+a[target="_blank"]:visited {
+  color: $purple;
 }
 </style>

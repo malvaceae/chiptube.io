@@ -47,6 +47,16 @@ router.get('/tunes/:id/tunes', (req, res, next) => {
   routes.tunes._id.tunes.get(req, res).catch(next);
 });
 
+// Get the user by id.
+router.get('/users/:id', (req, res, next) => {
+  routes.users._id.get(req, res).catch(next);
+});
+
+// Get tunes by user id.
+router.get('/users/:id/tunes', (req, res, next) => {
+  routes.users._id.tunes.get(req, res).catch(next);
+});
+
 // Put the user by me.
 router.put('/users/me', (req, res, next) => {
   routes.users.me.put(req, res).catch(next);

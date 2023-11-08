@@ -283,6 +283,65 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UserId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /users/{id}/tunes:
+    get:
+      tags:
+        - Users
+      operationId: getTunesByUserId
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UserId"
+        - name: after
+          in: query
+          schema:
+            type: string
+            format: byte
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tunes
+                properties:
+                  tunes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Tune"
+                  after:
+                    type: string
+                    format: byte
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /users/me:
     put:
       tags:
@@ -370,7 +429,7 @@ components:
         id:
           $ref: "#/components/schemas/TuneId"
         userId:
-          type: string
+          $ref: "#/components/schemas/UserId"
         user:
           $ref: "#/components/schemas/User"
         identityId:
@@ -418,7 +477,7 @@ components:
         id:
           $ref: "#/components/schemas/TuneCommentId"
         userId:
-          type: string
+          $ref: "#/components/schemas/UserId"
         user:
           $ref: "#/components/schemas/User"
         text:
@@ -429,6 +488,9 @@ components:
         likes:
           type: integer
           format: int64
+    UserId:
+      type: string
+      format: uuid
     User:
       type: object
       required:
@@ -437,7 +499,7 @@ components:
         - picture
       properties:
         id:
-          type: string
+          $ref: "#/components/schemas/UserId"
         nickname:
           type: string
         picture:

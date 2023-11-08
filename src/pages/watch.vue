@@ -249,20 +249,28 @@ const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) =
           </q-item>
           <q-separator spaced />
           <q-item class="q-mt-md q-mb-sm">
-            <q-item-section avatar>
-              <q-avatar>
-                <template v-if="tune">
-                  <img :src="tune.user.picture" referrerpolicy="no-referrer">
-                </template>
-                <template v-else>
+            <template v-if="tune">
+              <router-link :to="{ name: 'users-id', params: { id: tune.user.id } }">
+                <q-item-section avatar>
+                  <q-avatar>
+                    <img :src="tune.user.picture" referrerpolicy="no-referrer">
+                  </q-avatar>
+                </q-item-section>
+              </router-link>
+            </template>
+            <template v-else>
+              <q-item-section avatar>
+                <q-avatar>
                   <q-skeleton animation="none" type="QAvatar" />
-                </template>
-              </q-avatar>
-            </q-item-section>
+                </q-avatar>
+              </q-item-section>
+            </template>
             <q-item-section>
               <q-item-label class="text-weight-bold" :style="{ wordBreak: 'break-all' }">
                 <template v-if="tune">
-                  {{ tune.user.nickname }}
+                  <router-link :to="{ name: 'users-id', params: { id: tune.user.id } }">
+                    {{ tune.user.nickname }}
+                  </router-link>
                 </template>
                 <template v-else>
                   <q-skeleton animation="none" type="text" width="65%" />
@@ -331,11 +339,17 @@ const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) =
 </template>
 
 <style lang="scss" scoped>
-a:not(.q-link) {
-  color: $blue;
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-a:not(.q-link):visited {
+a[target="_blank"] {
+  color: $blue;
+  text-decoration: underline;
+}
+
+a[target="_blank"]:visited {
   color: $purple;
 }
 </style>

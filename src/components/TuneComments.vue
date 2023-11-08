@@ -136,15 +136,19 @@ const registerComment = async () => {
   <q-infinite-scroll :offset="250" @load="getComments">
     <q-list class="q-gutter-sm">
       <q-item v-for="comment in comments">
-        <q-item-section avatar top>
-          <q-avatar>
-            <img :src="comment.user.picture" referrerpolicy="no-referrer">
-          </q-avatar>
-        </q-item-section>
+        <router-link :to="{ name: 'users-id', params: { id: comment.user.id } }">
+          <q-item-section avatar top>
+            <q-avatar>
+              <img :src="comment.user.picture" referrerpolicy="no-referrer">
+            </q-avatar>
+          </q-item-section>
+        </router-link>
         <q-item-section>
           <q-item-label class="row items-center q-gutter-xs">
             <div class="text-weight-bold" :style="{ wordBreak: 'break-all' }">
-              {{ comment.user.nickname }}
+              <router-link :to="{ name: 'users-id', params: { id: comment.user.id } }">
+                {{ comment.user.nickname }}
+              </router-link>
             </div>
             <div class="text-caption">
               {{ date.formatDate(comment.publishedAt, 'MMM D, YYYY') }}
@@ -176,11 +180,17 @@ const registerComment = async () => {
 </template>
 
 <style lang="scss" scoped>
-a:not(.q-link) {
-  color: $blue;
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-a:not(.q-link):visited {
+a[target="_blank"] {
+  color: $blue;
+  text-decoration: underline;
+}
+
+a[target="_blank"]:visited {
   color: $purple;
 }
 </style>

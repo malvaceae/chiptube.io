@@ -30,6 +30,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/settings.vue'),
   },
   {
+    path: '/users/:id',
+    name: 'users-id',
+    component: () => import('@/pages/users/_id.vue'),
+    props: ({ params: { id } }) => ({ id }),
+  },
+  {
     path: '/watch',
     name: 'watch',
     component: () => import('@/pages/watch.vue'),
