@@ -262,6 +262,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
                 Item: {
                   pk: `userId#${userId}`,
                   sk: `tuneLikeId#${id}`,
+                  publishedAt: Date.now(),
                 },
                 ConditionExpression: [
                   'attribute_not_exists(pk)',

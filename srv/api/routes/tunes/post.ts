@@ -140,6 +140,9 @@ export default async (req: Request, res: Response): Promise<Response> => {
         return '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz'[i];
       }).join('');
 
+      // Get the current time in milliseconds.
+      const publishedAt = Date.now();
+
       await dynamodb.send(new TransactWriteCommand({
         TransactItems: [
           {
@@ -156,7 +159,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
                 description,
                 midiKey,
                 thumbnailKey,
-                publishedAt: Date.now(),
+                publishedAt,
                 views: 0,
                 likes: 0,
                 favorites: 0,
@@ -174,6 +177,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
               Item: {
                 pk: `userId#${userId}`,
                 sk: `tuneId#${id}`,
+                publishedAt,
               },
               ConditionExpression: [
                 'attribute_not_exists(pk)',
