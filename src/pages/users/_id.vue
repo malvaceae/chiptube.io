@@ -5,6 +5,9 @@ import { ref, toRefs } from 'vue';
 // Vue Router
 import { useRouter } from 'vue-router';
 
+// Auth Store
+import { useAuthStore } from '@/stores/auth';
+
 // Amplify
 import { API, Storage } from 'aws-amplify';
 
@@ -16,6 +19,9 @@ const props = defineProps<{ id: string }>();
 
 // get the user id
 const { id } = toRefs(props);
+
+// get the auth store
+const auth = useAuthStore();
 
 // get the $router object
 const $router = useRouter();
@@ -123,6 +129,11 @@ const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) =
             <q-item-label class="text-h4" :style="{ wordBreak: 'break-all' }">
               <template v-if="user">
                 {{ user.nickname }}
+                <template v-if="auth.user && user.id === auth.user.sub">
+                  <q-btn dense flat round :to="{ name: 'settings' }">
+                    <q-icon name="mdi-pencil-outline" />
+                  </q-btn>
+                </template>
               </template>
               <template v-else>
                 <q-skeleton animation="none" height="1.2em" type="text" width="35%" />
