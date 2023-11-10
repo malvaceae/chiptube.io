@@ -76,11 +76,11 @@ const editTune = () => {
 // toggle is liked
 const toggleIsLiked = async () => {
   if (tune.value && auth.user) {
-    tune.value = await API.put('Api', `/tunes/${id.value}`, {
+    Object.assign(tune.value, await API.put('Api', `/tunes/${id.value}`, {
       body: {
         isLiked: !tune.value.isLiked,
       },
-    });
+    }));
   }
 };
 
