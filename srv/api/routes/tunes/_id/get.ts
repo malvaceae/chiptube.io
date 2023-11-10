@@ -175,7 +175,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
                 Item: {
                   pk,
                   sk,
-                  publishedAt: identities[0].dateCreated,
+                  publishedAt: Math.max(identities[0].dateCreated, tune.publishedAt),
                 },
               },
             };
