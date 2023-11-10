@@ -116,6 +116,8 @@ export class ChipTubeStack extends Stack {
         name: 'sk',
         type: dynamodb.AttributeType.STRING,
       },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
     });
 
     // Add the GSI for adjacency list.
