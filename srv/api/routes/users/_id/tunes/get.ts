@@ -51,28 +51,28 @@ export default async (req: Request, res: Response): Promise<Response> => {
   })(req.query);
 
   const { tunes, lastEvaluatedKey } = await (async () => {
-    // Get tune ids.
-    const { Items: tuneIds } = await dynamodb.send(new QueryCommand({
+    // Get user items.
+    const { Items: items } = await dynamodb.send(new QueryCommand({
       TableName: process.env.APP_TABLE_NAME,
-      KeyConditionExpression: [
-        'pk = :pk',
-        'begins_with(sk, :sk)',
-      ].join(' AND '),
+      IndexName: 'LSI-PublishedAt',
+      ScanIndexForward: false,
+      ExclusiveStartKey: exclusiveStartKey,
+      KeyConditionExpression: 'pk = :pk',
       ExpressionAttributeValues: {
         ':pk': `userId#${id}`,
-        ':sk': 'tuneId#',
       },
     }));
 
-    if (!tuneIds?.length) {
-      return {};
-    }
+    // Get tune ids.
+    const tuneIds = items?.filter?.(({ sk }) => sk.startsWith('tuneId#'))?.map?.(({ sk }) => sk.split('#')[1]) ?? [];
 
     // Skip to after the exclusive start key.
     if (typeof exclusiveStartKey === 'string' && exclusiveStartKey.length > 0) {
-      tuneIds.splice(0, tuneIds.findIndex(({ sk }) => {
-        return sk.split('#')[1] === exclusiveStartKey;
-      }) + 1);
+      tuneIds.splice(0, tuneIds.indexOf(exclusiveStartKey) + 1);
+    }
+
+    if (tuneIds.length === 0) {
+      return {};
     }
 
     // Set maximum number of tunes to evaluate.
@@ -82,16 +82,18 @@ export default async (req: Request, res: Response): Promise<Response> => {
     const { Responses: responses } = await dynamodb.send(new BatchGetCommand({
       RequestItems: {
         [process.env.APP_TABLE_NAME]: {
-          Keys: tuneIds.map(({ sk }) => ({
+          Keys: tuneIds.map((tuneId) => ({
             pk: 'tunes',
-            sk,
+            sk: `tuneId#${tuneId}`,
           })),
         },
       },
     }));
 
     // Get tunes.
-    const tunes = responses?.[process.env.APP_TABLE_NAME];
+    const tunes = responses?.[process.env.APP_TABLE_NAME]?.sort?.((a, b) => {
+      return tuneIds.indexOf(a.id) - tuneIds.indexOf(b.id);
+    });
 
     // Get the last evaluated key.
     const lastEvaluatedKey = (() => {
