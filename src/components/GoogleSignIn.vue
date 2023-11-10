@@ -1,10 +1,17 @@
 <script lang="ts" setup>
+// Vue Router
+import { useRoute } from 'vue-router';
+
 // Amplify
 import { Auth, CognitoHostedUIIdentityProvider } from '@aws-amplify/auth';
+
+// get the $route object
+const $route = useRoute();
 
 // Sign In
 const signIn = async () => await Auth.federatedSignIn({
   provider: CognitoHostedUIIdentityProvider.Google,
+  customState: $route.fullPath,
 });
 </script>
 

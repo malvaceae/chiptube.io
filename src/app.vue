@@ -53,6 +53,9 @@ useMeta({
   },
 });
 
+// the custom state
+const customState = ref<string>();
+
 // the drawer behavior
 const drawerBehavior = computed(() => {
   const { name } = currentRoute.value;
@@ -75,11 +78,15 @@ const search = async () => {
 };
 
 // subscribe auth events
-Hub.listen('auth', ({ payload: { event } }) => {
+Hub.listen('auth', ({ payload: { event, data } }) => {
   switch (event) {
     case 'signIn':
     case 'signIn_failure':
       $router.replace({});
+      break;
+    case 'customOAuthState':
+      customState.value = data;
+      break;
   }
 });
 
@@ -87,7 +94,13 @@ Hub.listen('auth', ({ payload: { event } }) => {
 const isLoading = ref(true);
 
 // get the current user
-Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null)).finally(() => {
+Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null)).finally(async () => {
+  // redirect to previous page
+  if (customState.value) {
+    await $router.replace(customState.value);
+  }
+
+  // stop loading
   isLoading.value = false;
 });
 </script>
@@ -405,7 +418,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
       </div>
     </q-drawer>
     <q-page-container>
-      <router-view v-slot="{ Component }">
+      <router-view v-if="!isLoading" #default="{ Component }">
         <keep-alive exclude="playground,settings,watch" max="1">
           <component :is="Component" :key="$route.fullPath" />
         </keep-alive>

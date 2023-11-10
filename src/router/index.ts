@@ -60,17 +60,22 @@ const router = createRouter({
   },
 });
 
-router.beforeEach(async ({ name }) => {
+router.beforeEach(async ({ name, fullPath }) => {
   const auth = useAuthStore();
 
   if (auth.user) {
     return true;
   }
 
-  if (['likes', 'settings'].includes(String(name))) {
-    return await Auth.federatedSignIn({ provider: CognitoHostedUIIdentityProvider.Google }).then(() => {
-      return false;
+  if (typeof name === 'string' && ['likes', 'settings'].includes(name)) {
+    await Auth.federatedSignIn({
+      provider: CognitoHostedUIIdentityProvider.Google,
+      customState: fullPath,
     });
+
+    return false;
+  } else {
+    return true;
   }
 });
 
