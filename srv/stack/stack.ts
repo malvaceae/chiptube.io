@@ -336,6 +336,7 @@ export class ChipTubeStack extends Stack {
     });
 
     // Add permissions to access User Pool.
+    userPool.grant(api.handler, 'cognito-idp:AdminGetUser');
     userPool.grant(api.handler, 'cognito-idp:AdminUpdateUserAttributes');
 
     // User Pool Signed In Trigger
