@@ -323,7 +323,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
               </q-item-section>
             </q-item>
             <template v-if="auth.user">
-              <q-item disable v-ripple>
+              <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" :to="{ name: 'likes' }" v-ripple>
                 <q-item-section side>
                   <q-icon name="mdi-thumb-up-outline" />
                 </q-item-section>

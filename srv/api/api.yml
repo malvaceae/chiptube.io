@@ -373,6 +373,40 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /users/me/likes:
+    get:
+      tags:
+        - Users
+      operationId: getLikedTunesByMe
+      parameters:
+        - name: after
+          in: query
+          schema:
+            type: string
+            format: byte
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tunes
+                properties:
+                  tunes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Tune"
+                  after:
+                    type: string
+                    format: byte
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /feedback:
     post:
       tags:

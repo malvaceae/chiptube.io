@@ -62,6 +62,11 @@ router.put('/users/me', (req, res, next) => {
   routes.users.me.put(req, res).catch(next);
 });
 
+// Get liked tunes by me.
+router.get('/users/me/likes', (req, res, next) => {
+  routes.users.me.likes.get(req, res).catch(next);
+});
+
 // Post the feedback.
 router.post('/feedback', (req, res, next) => {
   routes.feedback.post(req, res).catch(next);

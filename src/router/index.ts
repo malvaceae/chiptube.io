@@ -14,6 +14,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/index.vue'),
   },
   {
+    path: '/likes',
+    name: 'likes',
+    component: () => import('@/pages/likes.vue'),
+  },
+  {
     path: '/playground',
     name: 'playground',
     component: () => import('@/pages/playground.vue'),
@@ -62,7 +67,7 @@ router.beforeEach(async ({ name }) => {
     return true;
   }
 
-  if (['settings'].includes(String(name))) {
+  if (['likes', 'settings'].includes(String(name))) {
     return await Auth.federatedSignIn({ provider: CognitoHostedUIIdentityProvider.Google }).then(() => {
       return false;
     });
