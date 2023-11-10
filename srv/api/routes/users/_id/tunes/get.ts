@@ -56,7 +56,6 @@ export default async (req: Request, res: Response): Promise<Response> => {
       TableName: process.env.APP_TABLE_NAME,
       IndexName: 'LSI-PublishedAt',
       ScanIndexForward: false,
-      ExclusiveStartKey: exclusiveStartKey,
       KeyConditionExpression: 'pk = :pk',
       ExpressionAttributeValues: {
         ':pk': `userId#${id}`,
