@@ -280,32 +280,15 @@ export default async (req: Request, res: Response): Promise<Response> => {
   if (typeof req.body.isLiked === 'boolean') {
     try {
       if (req.body.isLiked) {
-        // Get the current time in milliseconds.
-        const publishedAt = Date.now();
-
         await dynamodb.send(new TransactWriteCommand({
           TransactItems: [
             {
               Put: {
                 TableName: process.env.APP_TABLE_NAME,
                 Item: {
-                  pk: `userId#${userId}`,
-                  sk: `tuneLikeId#${id}`,
-                  publishedAt,
-                },
-                ConditionExpression: [
-                  'attribute_not_exists(pk)',
-                  'attribute_not_exists(sk)',
-                ].join(' AND '),
-              },
-            },
-            {
-              Put: {
-                TableName: process.env.APP_TABLE_NAME,
-                Item: {
                   pk: `userId#${userId}#likes`,
                   sk: `tuneId#${id}`,
-                  publishedAt,
+                  publishedAt: Date.now(),
                 },
                 ConditionExpression: [
                   'attribute_not_exists(pk)',
@@ -339,22 +322,13 @@ export default async (req: Request, res: Response): Promise<Response> => {
               Delete: {
                 TableName: process.env.APP_TABLE_NAME,
                 Key: {
-                  pk: `userId#${userId}`,
-                  sk: `tuneLikeId#${id}`,
+                  pk: `userId#${userId}#likes`,
+                  sk: `tuneId#${id}`,
                 },
                 ConditionExpression: [
                   'attribute_exists(pk)',
                   'attribute_exists(sk)',
                 ].join(' AND '),
-              },
-            },
-            {
-              Delete: {
-                TableName: process.env.APP_TABLE_NAME,
-                Key: {
-                  pk: `userId#${userId}#likes`,
-                  sk: `tuneId#${id}`,
-                },
               },
             },
             {
@@ -418,8 +392,8 @@ export default async (req: Request, res: Response): Promise<Response> => {
   const { Item: isLiked } = await dynamodb.send(new GetCommand({
     TableName: process.env.APP_TABLE_NAME,
     Key: {
-      pk: `userId#${userId}`,
-      sk: `tuneLikeId#${id}`,
+      pk: `userId#${userId}#likes`,
+      sk: `tuneId#${id}`,
     },
   }));
 

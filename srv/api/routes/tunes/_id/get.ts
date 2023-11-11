@@ -12,10 +12,7 @@ import createError from 'http-errors';
 
 // AWS SDK - DynamoDB - Document Client
 import {
-  BatchWriteCommand,
   GetCommand,
-  PutCommand,
-  QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 
@@ -81,59 +78,6 @@ export default async (req: Request, res: Response): Promise<Response> => {
     throw createError(404);
   }
 
-  try {
-    // Add new user tune.
-    await dynamodb.send(new PutCommand({
-      TableName: process.env.APP_TABLE_NAME,
-      Item: {
-        pk: `userId#${tune.userId}#tunes`,
-        sk: `tuneId#${id}`,
-        publishedAt: tune.publishedAt,
-      },
-    }));
-  } catch {
-    //
-  }
-
-  try {
-    // Get tune likes.
-    const { Items: likes } = await dynamodb.send(new QueryCommand({
-      TableName: process.env.APP_TABLE_NAME,
-      IndexName: 'GSI-AdjacencyList',
-      KeyConditionExpression: [
-        'sk = :sk',
-        'begins_with(pk, :pk)',
-      ].join(' AND '),
-      ExpressionAttributeValues: {
-        ':sk': `tuneLikeId#${id}`,
-        ':pk': 'userId#',
-      },
-    }));
-
-    if (likes === undefined) {
-      throw createError(404);
-    }
-
-    // Add new tune likes.
-    await Promise.all([...Array(Math.ceil(likes.length / 25)).keys()].map((i) => likes.slice(i * 25, (i + 1) * 25)).map((likes) => {
-      return dynamodb.send(new BatchWriteCommand({
-        RequestItems: {
-          [process.env.APP_TABLE_NAME]: likes.map(({ pk, sk, publishedAt }) => ({
-            PutRequest: {
-              Item: {
-                pk: `userId#${pk.split('#')[1]}#likes`,
-                sk: `tuneId#${sk.split('#')[1]}`,
-                publishedAt,
-              },
-            },
-          })),
-        },
-      }));
-    }));
-  } catch {
-    //
-  }
-
   const { Item: user } = await dynamodb.send(new GetCommand({
     TableName: process.env.APP_TABLE_NAME,
     Key: {
@@ -165,8 +109,8 @@ export default async (req: Request, res: Response): Promise<Response> => {
   const { Item: isLiked } = await dynamodb.send(new GetCommand({
     TableName: process.env.APP_TABLE_NAME,
     Key: {
-      pk: `userId#${userId}`,
-      sk: `tuneLikeId#${id}`,
+      pk: `userId#${userId}#likes`,
+      sk: `tuneId#${id}`,
     },
   }));
 

@@ -83,7 +83,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
           Delete: {
             TableName: process.env.APP_TABLE_NAME,
             Key: {
-              pk: `userId#${userId}`,
+              pk: `userId#${userId}#tunes`,
               sk: `tuneId#${id}`,
             },
             ConditionExpression: [
@@ -92,92 +92,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
             ].join(' AND '),
           },
         },
-        {
-          Delete: {
-            TableName: process.env.APP_TABLE_NAME,
-            Key: {
-              pk: `userId#${userId}#tunes`,
-              sk: `tuneId#${id}`,
-            },
-          },
-        },
       ],
-    }));
-  } catch {
-    //
-  }
-
-  try {
-    // Get keywords.
-    const { Items: keywords } = await dynamodb.send(new QueryCommand({
-      TableName: process.env.APP_TABLE_NAME,
-      IndexName: 'GSI-AdjacencyList',
-      KeyConditionExpression: [
-        'sk = :sk',
-        'begins_with(pk, :pk)',
-      ].join(' AND '),
-      ExpressionAttributeValues: {
-        ':sk': `tuneId#${id}`,
-        ':pk': 'tuneKeyword#',
-      },
-    }));
-
-    if (keywords === undefined) {
-      throw createError(404);
-    }
-
-    // Delete keywords.
-    await Promise.all([...Array(Math.ceil(keywords.length / 25)).keys()].map((i) => keywords.slice(i * 25, (i + 1) * 25)).map((keywords) => {
-      return dynamodb.send(new BatchWriteCommand({
-        RequestItems: {
-          [process.env.APP_TABLE_NAME]: keywords.map(({ pk, sk }) => ({
-            DeleteRequest: {
-              Key: {
-                pk,
-                sk,
-              },
-            },
-          })),
-        },
-      }));
-    }));
-  } catch {
-    //
-  }
-
-  try {
-    // Get likes.
-    const { Items: likes } = await dynamodb.send(new QueryCommand({
-      TableName: process.env.APP_TABLE_NAME,
-      IndexName: 'GSI-AdjacencyList',
-      KeyConditionExpression: [
-        'sk = :sk',
-        'begins_with(pk, :pk)',
-      ].join(' AND '),
-      ExpressionAttributeValues: {
-        ':sk': `tuneLikeId#${id}`,
-        ':pk': 'userId#',
-      },
-    }));
-
-    if (likes === undefined) {
-      throw createError(404);
-    }
-
-    // Delete likes.
-    await Promise.all([...Array(Math.ceil(likes.length / 25)).keys()].map((i) => likes.slice(i * 25, (i + 1) * 25)).map((likes) => {
-      return dynamodb.send(new BatchWriteCommand({
-        RequestItems: {
-          [process.env.APP_TABLE_NAME]: likes.map(({ pk, sk }) => ({
-            DeleteRequest: {
-              Key: {
-                pk,
-                sk,
-              },
-            },
-          })),
-        },
-      }));
     }));
   } catch {
     //
@@ -190,11 +105,9 @@ export default async (req: Request, res: Response): Promise<Response> => {
       IndexName: 'GSI-AdjacencyList',
       KeyConditionExpression: [
         'sk = :sk',
-        'begins_with(pk, :pk)',
       ].join(' AND '),
       ExpressionAttributeValues: {
         ':sk': `tuneId#${id}`,
-        ':pk': 'userId#',
       },
     }));
 

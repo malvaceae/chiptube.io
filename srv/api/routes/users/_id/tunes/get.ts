@@ -51,31 +51,25 @@ export default async (req: Request, res: Response): Promise<Response> => {
   })(req.query);
 
   const { tunes, lastEvaluatedKey } = await (async () => {
-    // Get user items.
-    const { Items: items } = await dynamodb.send(new QueryCommand({
+    // Get user tunes and the last evaluated key.
+    const { Items: userTunes, LastEvaluatedKey: lastEvaluatedKey } = await dynamodb.send(new QueryCommand({
       TableName: process.env.APP_TABLE_NAME,
       IndexName: 'LSI-PublishedAt',
+      Limit: 24,
       ScanIndexForward: false,
+      ExclusiveStartKey: exclusiveStartKey,
       KeyConditionExpression: 'pk = :pk',
       ExpressionAttributeValues: {
-        ':pk': `userId#${id}`,
+        ':pk': `userId#${id}#tunes`,
       },
     }));
 
-    // Get tune ids.
-    const tuneIds = items?.filter?.(({ sk }) => sk.startsWith('tuneId#'))?.map?.(({ sk }) => sk.split('#')[1]) ?? [];
-
-    // Skip to after the exclusive start key.
-    if (typeof exclusiveStartKey === 'string' && exclusiveStartKey.length > 0) {
-      tuneIds.splice(0, tuneIds.indexOf(exclusiveStartKey) + 1);
-    }
-
-    if (tuneIds.length === 0) {
+    if (!userTunes?.length) {
       return {};
     }
 
-    // Set maximum number of tunes to evaluate.
-    tuneIds.splice(24);
+    // Get tune ids.
+    const tuneIds = userTunes.map(({ sk }) => sk.split('#')[1]);
 
     // Get raw responses.
     const { Responses: responses } = await dynamodb.send(new BatchGetCommand({
@@ -93,13 +87,6 @@ export default async (req: Request, res: Response): Promise<Response> => {
     const tunes = responses?.[process.env.APP_TABLE_NAME]?.sort?.((a, b) => {
       return tuneIds.indexOf(a.id) - tuneIds.indexOf(b.id);
     });
-
-    // Get the last evaluated key.
-    const lastEvaluatedKey = (() => {
-      if (tunes?.length === 24) {
-        return tunes?.[23]?.id;
-      }
-    })();
 
     return {
       tunes,
