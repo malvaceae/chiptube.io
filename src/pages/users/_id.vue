@@ -116,7 +116,7 @@ const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) =
       <q-card flat square>
         <q-item class="q-py-md">
           <q-item-section avatar>
-            <q-avatar class="fit">
+            <q-avatar size="96px">
               <template v-if="user">
                 <img :src="user.picture" referrerpolicy="no-referrer">
               </template>
