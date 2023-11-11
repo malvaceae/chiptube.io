@@ -381,20 +381,28 @@ export class ChipTubeStack extends Stack {
       value: userPool.userPoolId,
     });
 
+    // callback urls and logout urls
+    const { callbackUrls, logoutUrls } = Object.fromEntries(['callbackUrls', 'logoutUrls'].map((key) => {
+      if (domainName) {
+        return [key, [
+          `https://${domainName}`,
+        ]];
+      } else {
+        return [key, [
+          'http://localhost:5173',
+          `https://${appDistribution.domainName}`,
+        ]];
+      }
+    }));
+
     // User Pool Web Client
     const userPoolWebClient = userPool.addClient('WebClient', {
       oAuth: {
         flows: {
           authorizationCodeGrant: true,
         },
-        callbackUrls: [
-          'http://localhost:5173',
-          `https://${domainName ?? appDistribution.domainName}`,
-        ],
-        logoutUrls: [
-          'http://localhost:5173',
-          `https://${domainName ?? appDistribution.domainName}`,
-        ],
+        callbackUrls,
+        logoutUrls,
         scopes: [
           cognito.OAuthScope.EMAIL,
           cognito.OAuthScope.OPENID,
