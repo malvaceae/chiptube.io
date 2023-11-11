@@ -61,7 +61,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
       ExclusiveStartKey: exclusiveStartKey,
       KeyConditionExpression: 'pk = :pk',
       ExpressionAttributeValues: {
-        ':pk': `userId#${userId}#likes`,
+        ':pk': `userId#${userId}#likedTunes`,
       },
     }));
 
@@ -70,7 +70,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
     }
 
     // Get tune ids.
-    const tuneIds = likedTunes.map(({ sk }) => sk.split('#')[1]);
+    const tuneIds = likedTunes.map(({ id }) => id);
 
     // Get raw responses.
     const { Responses: responses } = await dynamodb.send(new BatchGetCommand({

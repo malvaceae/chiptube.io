@@ -69,7 +69,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
     }
 
     // Get tune ids.
-    const tuneIds = userTunes.map(({ sk }) => sk.split('#')[1]);
+    const tuneIds = userTunes.map(({ id }) => id);
 
     // Get raw responses.
     const { Responses: responses } = await dynamodb.send(new BatchGetCommand({
