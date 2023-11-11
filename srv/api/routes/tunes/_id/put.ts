@@ -280,6 +280,9 @@ export default async (req: Request, res: Response): Promise<Response> => {
   if (typeof req.body.isLiked === 'boolean') {
     try {
       if (req.body.isLiked) {
+        // Get the current time in milliseconds.
+        const publishedAt = Date.now();
+
         await dynamodb.send(new TransactWriteCommand({
           TransactItems: [
             {
@@ -288,7 +291,21 @@ export default async (req: Request, res: Response): Promise<Response> => {
                 Item: {
                   pk: `userId#${userId}`,
                   sk: `tuneLikeId#${id}`,
-                  publishedAt: Date.now(),
+                  publishedAt,
+                },
+                ConditionExpression: [
+                  'attribute_not_exists(pk)',
+                  'attribute_not_exists(sk)',
+                ].join(' AND '),
+              },
+            },
+            {
+              Put: {
+                TableName: process.env.APP_TABLE_NAME,
+                Item: {
+                  pk: `userId#${userId}#likes`,
+                  sk: `tuneId#${id}`,
+                  publishedAt,
                 },
                 ConditionExpression: [
                   'attribute_not_exists(pk)',
@@ -329,6 +346,15 @@ export default async (req: Request, res: Response): Promise<Response> => {
                   'attribute_exists(pk)',
                   'attribute_exists(sk)',
                 ].join(' AND '),
+              },
+            },
+            {
+              Delete: {
+                TableName: process.env.APP_TABLE_NAME,
+                Key: {
+                  pk: `userId#${userId}#likes`,
+                  sk: `tuneId#${id}`,
+                },
               },
             },
             {

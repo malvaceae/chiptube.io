@@ -209,6 +209,20 @@ export default async (req: Request, res: Response): Promise<Response> => {
               ].join(' AND '),
             },
           },
+          {
+            Put: {
+              TableName: process.env.APP_TABLE_NAME,
+              Item: {
+                pk: `userId#${userId}#tunes`,
+                sk: `tuneId#${id}`,
+                publishedAt,
+              },
+              ConditionExpression: [
+                'attribute_not_exists(pk)',
+                'attribute_not_exists(sk)',
+              ].join(' AND '),
+            },
+          },
         ],
       }));
 
