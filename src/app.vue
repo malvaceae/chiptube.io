@@ -68,7 +68,15 @@ const drawerBehavior = computed(() => {
 const drawer = ref(false);
 
 // the search query
-const query = ref(currentRoute.value.name === 'search' && typeof currentRoute.value.query.q === 'string' ? currentRoute.value.query.q : '');
+const query = ref('');
+
+// watch current route
+watchEffect(() => {
+  const { name, query: { q } } = currentRoute.value;
+  if (name === 'search' && typeof q === 'string') {
+    query.value = q;
+  }
+});
 
 // search
 const search = async () => {
