@@ -201,6 +201,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
               Item: {
                 pk: `userId#${userId}#tunes`,
                 sk: `tuneId#${id}`,
+                id,
                 publishedAt,
               },
               ConditionExpression: [
