@@ -23,7 +23,10 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 
 // AWS SDK - S3
-import { GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  HeadObjectCommand,
+} from '@aws-sdk/client-s3';
 
 // Api Services
 import {
@@ -129,6 +132,27 @@ export default async (req: Request, res: Response): Promise<Response> => {
       errors: {
         midiKey: [
           'does NOT indicate a valid MIDI file',
+        ],
+      },
+    });
+  }
+
+  // Get a thumbnail file size.
+  const thumbnailFileSize = await (async () => {
+    if (thumbnailKey) {
+      return await s3.send(new HeadObjectCommand({
+        Bucket: process.env.APP_STORAGE_BUCKET_NAME,
+        Key: `protected/${identityId}/${thumbnailKey}`,
+      })).then(({ ContentLength }) => ContentLength);
+    }
+  })();
+
+  // Validate a thumbnail file.
+  if (thumbnailFileSize && thumbnailFileSize > 1024 * 1024 * 2) {
+    throw createError(422, {
+      errors: {
+        thumbnailKey: [
+          'must NOT be greater than 2 megabytes',
         ],
       },
     });

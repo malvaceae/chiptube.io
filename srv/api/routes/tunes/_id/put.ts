@@ -19,10 +19,14 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 
+// AWS SDK - S3
+import { HeadObjectCommand } from '@aws-sdk/client-s3';
+
 // Api Services
 import {
   ajv,
   dynamodb,
+  s3,
 } from '@/api/services';
 
 // Api Utilities
@@ -40,6 +44,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
       requestContext: {
         identity: {
           cognitoAuthenticationProvider,
+          cognitoIdentityId: identityId,
         },
       },
     },
@@ -86,6 +91,27 @@ export default async (req: Request, res: Response): Promise<Response> => {
       errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
         return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
       }, {} as Record<string, string[]>),
+    });
+  }
+
+  // Get a thumbnail file size.
+  const thumbnailFileSize = await (async ({ thumbnailKey }) => {
+    if (thumbnailKey) {
+      return await s3.send(new HeadObjectCommand({
+        Bucket: process.env.APP_STORAGE_BUCKET_NAME,
+        Key: `protected/${identityId}/${thumbnailKey}`,
+      })).then(({ ContentLength }) => ContentLength);
+    }
+  })(req.body);
+
+  // Validate a thumbnail file.
+  if (thumbnailFileSize && thumbnailFileSize > 1024 * 1024 * 2) {
+    throw createError(422, {
+      errors: {
+        thumbnailKey: [
+          'must NOT be greater than 2 megabytes',
+        ],
+      },
     });
   }
 

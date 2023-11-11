@@ -326,6 +326,26 @@ const deleteTune = async ({ id, midiKey, thumbnailKey }: typeof tune) => {
   }
 };
 
+// call if thumbnail is rejected
+const onRejectedThumbnail = ([{ failedPropValidation }]: { failedPropValidation: string }[]) => {
+  switch (failedPropValidation) {
+    case 'accept':
+      $q.notify({
+        type: 'negative',
+        message: 'The thumbnail must be a file of type: .gif, .jpeg, .jpg, .png.',
+        html: true,
+      });
+      break;
+    case 'max-file-size':
+      $q.notify({
+        type: 'negative',
+        message: 'The thumbnail must NOT be greater than 2 megabytes.',
+        html: true,
+      });
+      break;
+  }
+};
+
 // get file extension
 const getFileExtension = (mime: string) => {
   switch (mime) {
@@ -336,7 +356,7 @@ const getFileExtension = (mime: string) => {
     case 'image/png':
       return '.png';
     default:
-      throw Error('Please choose image files only.');
+      throw Error('The thumbnail must be a file of type: .gif, .jpeg, .jpg, .png.');
   }
 };
 </script>
@@ -357,7 +377,7 @@ const getFileExtension = (mime: string) => {
       <q-card-section class="q-pa-none">
         <q-stepper v-model="step" animated :contracted="$q.screen.lt.sm" flat>
           <q-step active-icon="mdi-file-music" icon="mdi-file-music" :name="1" title="MIDI">
-            <q-file v-model="midiFile" accept=".mid" input-class="invisible" input-style="height: 325px;" outlined square>
+            <q-file v-model="midiFile" accept=".mid" input-class="invisible" input-style="height: 345px;" outlined square>
               <div class="full-width absolute-center text-center text-subtitle1 no-pointer-events">
                 <template v-if="midiFile">
                   <template v-if="midi">
@@ -368,7 +388,7 @@ const getFileExtension = (mime: string) => {
                   </template>
                 </template>
                 <template v-else>
-                  Drag and drop MIDI file to upload
+                  Drag and drop a MIDI file to upload
                 </template>
               </div>
             </q-file>
@@ -388,12 +408,16 @@ const getFileExtension = (mime: string) => {
                   Description
                 </template>
               </q-input>
-              <q-file v-model="thumbnailFile" accept=".gif,.jpeg,.jpg,.png" clearable label-slot outlined square>
+              <q-file v-model="thumbnailFile" accept=".gif,.jpeg,.jpg,.png" bottom-slots clearable label-slot
+                :max-file-size="1024 * 1024 * 2" outlined square @rejected="onRejectedThumbnail">
                 <template #prepend>
                   <q-icon name="mdi-file-image" />
                 </template>
                 <template #label>
                   Thumbnail
+                </template>
+                <template #hint>
+                  The maximum file size is 2 megabytes.
                 </template>
               </q-file>
             </div>
@@ -413,12 +437,15 @@ const getFileExtension = (mime: string) => {
                   Description
                 </template>
               </q-input>
-              <q-input label-slot :model-value="thumbnailFile?.name" outlined readonly square>
+              <q-input bottom-slots label-slot :model-value="thumbnailFile?.name" outlined readonly square>
                 <template #prepend>
                   <q-icon name="mdi-file-image" />
                 </template>
                 <template #label>
                   Thumbnail
+                </template>
+                <template #hint>
+                  The maximum file size is 2 megabytes.
                 </template>
               </q-input>
             </div>
