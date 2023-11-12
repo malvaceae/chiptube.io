@@ -147,7 +147,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
         </template>
         <template v-if="$q.screen.gt.xs || !isSearching">
           <q-space />
-          <div class="row q-gutter-md no-wrap items-center">
+          <div class="row no-wrap items-center" :class="$q.screen.lt.sm ? 'q-gutter-sm' : 'q-gutter-md'">
             <template v-if="!isLoading">
               <template v-if="$q.screen.lt.sm && !isSearching">
                 <q-btn flat round @click="isSearching = true">
@@ -277,7 +277,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
                 </q-menu>
               </q-btn>
               <template v-if="auth.user === null">
-                <google-sign-in />
+                <google-sign-in class="q-ml-md" />
               </template>
             </template>
             <template v-else>
