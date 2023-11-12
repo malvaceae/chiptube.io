@@ -377,21 +377,26 @@ const getFileExtension = (mime: string) => {
       <q-card-section class="q-pa-none">
         <q-stepper v-model="step" animated :contracted="$q.screen.lt.sm" flat>
           <q-step active-icon="mdi-file-music" icon="mdi-file-music" :name="1" title="MIDI">
-            <q-file v-model="midiFile" accept=".mid" input-class="invisible" input-style="height: 345px;" outlined square>
-              <div class="full-width absolute-center text-center text-subtitle1 no-pointer-events">
-                <template v-if="midiFile">
-                  <template v-if="midi">
-                    {{ midiFile.name }} ({{ format.humanStorageSize(midiFile.size) }})
+            <div class="column q-gutter-md">
+              <div class="text-h6">
+                MIDI
+              </div>
+              <q-file v-model="midiFile" accept=".mid" input-style="height: 297px; visibility: hidden;" outlined square>
+                <div class="full-width absolute-center text-center text-subtitle1 no-pointer-events">
+                  <template v-if="midiFile">
+                    <template v-if="midi">
+                      {{ midiFile.name }} ({{ format.humanStorageSize(midiFile.size) }})
+                    </template>
+                    <template v-else>
+                      <q-circular-progress indeterminate rounded size="50px" />
+                    </template>
                   </template>
                   <template v-else>
-                    <q-circular-progress indeterminate rounded size="50px" />
+                    Drag and drop a MIDI file to upload
                   </template>
-                </template>
-                <template v-else>
-                  Drag and drop a MIDI file to upload
-                </template>
-              </div>
-            </q-file>
+                </div>
+              </q-file>
+            </div>
           </q-step>
           <q-step active-icon="mdi-pencil" icon="mdi-pencil" :name="2" title="Details">
             <div class="column q-gutter-md">
@@ -495,6 +500,10 @@ const getFileExtension = (mime: string) => {
 </template>
 
 <style lang="scss" scoped>
+:deep(.q-stepper__header--standard-labels .q-stepper__tab) {
+  padding-bottom: 0;
+}
+
 :deep(.q-stepper__step-inner) {
   padding-top: 0;
 }
