@@ -5,6 +5,7 @@ import { singular } from 'pluralize';
 import {
   DetectDominantLanguageCommand,
   DetectSyntaxCommand,
+  SyntaxLanguageCode,
   SyntaxToken,
 } from '@aws-sdk/client-comprehend';
 
@@ -29,20 +30,24 @@ export const tokenize = async (text: string): Promise<SyntaxToken[]> => {
   // Detect dominant language and translate text.
   const { translatedText, languageCode } = await (async (text) => {
     try {
-      // Detect dominant language.
-      const { Languages: languages } = await comprehend.send(new DetectDominantLanguageCommand({
-        Text: text,
-      }));
-
-      if (!languages?.[0]?.LanguageCode) {
-        return { translatedText: text };
-      }
-
       // Get the language code.
-      const { LanguageCode: languageCode } = languages[0];
+      const languageCode = await (async () => {
+        // If the text is Japanese, return "ja".
+        if (/[\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Han}]/u.test(text)) {
+          return 'ja';
+        }
+
+        // Detect dominant language.
+        const { Languages: languages } = await comprehend.send(new DetectDominantLanguageCommand({
+          Text: text,
+        }));
+
+        // Get the language code.
+        return languages?.[0]?.LanguageCode;
+      })();
 
       // If the detected language code is supported by the DetectSyntax API, return it.
-      if (['en', 'es', 'fr', 'de', 'it', 'pt'].includes(languageCode)) {
+      if (languageCode && isSyntaxLanguageCode(languageCode)) {
         return { translatedText: text, languageCode };
       }
 
@@ -60,22 +65,26 @@ export const tokenize = async (text: string): Promise<SyntaxToken[]> => {
   })(text.normalize('NFKC'));
 
   // Detect syntax.
-  return await (async ({ text, languageCode }) => {
-    const { SyntaxTokens: syntaxTokens } = await comprehend.send(new DetectSyntaxCommand({
-      Text: text,
-      LanguageCode: languageCode,
-    }));
-
-    return syntaxTokens ?? [];
-  })({ text: translatedText, languageCode: languageCode ?? 'en' });
+  return await comprehend.send(new DetectSyntaxCommand({
+    Text: translatedText,
+    LanguageCode: languageCode ?? SyntaxLanguageCode.EN,
+  })).then(({ SyntaxTokens: tokens }) => tokens ?? []);
 };
 
 export const getWords = (syntaxTokens: SyntaxToken[]): string[] => {
-  return syntaxTokens.filter(({ PartOfSpeech: partOfSpeech }) => {
-    return !/^(?:ADP|DET|PUNCT)$/.test(partOfSpeech?.Tag ?? '');
-  }).flatMap(({ Text: word }) => word ? [word] : []);
+  const tokens = syntaxTokens.filter(({ PartOfSpeech: pos }) => {
+    return pos?.Tag && !/^(?:ADP|DET|PUNCT)$/.test(pos.Tag);
+  });
+
+  return tokens.map(({ Text: word }) => word?.replace?.(/“|”/g, '')).flatMap((word) => {
+    return word ? [word] : [];
+  });
 };
 
 export const normalize = (word: string): string => {
   return singular(word.toLowerCase());
+};
+
+const isSyntaxLanguageCode = (s: string): s is SyntaxLanguageCode => {
+  return Object.values<string>(SyntaxLanguageCode).includes(s);
 };

@@ -213,13 +213,13 @@ export default async (req: Request, res: Response): Promise<Response> => {
         ],
       }));
 
-      // Tokenize title and description.
+      // Get keywords by tokenizing title and description.
       const keywords = getWords(await tokenize([title, description].join())).map(normalize);
 
-      // Get number of occurrences by keyword.
-      const occurrences = [...keywords.reduce((keywords, keyword) => {
-        return keywords.set(keyword, keywords.get(keyword)! + 1 || 1);
-      }, new Map<string, number>)];
+      // Get number of occurrences by keywords.
+      const occurrences = Object.entries(keywords.reduce((occurrences, keyword) => {
+        return { ...occurrences, [keyword]: (occurrences[keyword] ?? 0) + 1 };
+      }, {} as Record<string, number>));
 
       // Add keywords.
       await Promise.all([...Array(Math.ceil(occurrences.length / 25)).keys()].map((i) => occurrences.slice(i * 25, (i + 1) * 25)).map((occurrences) => {
