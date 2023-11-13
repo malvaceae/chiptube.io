@@ -38,7 +38,7 @@
     "pluralize": "^8.0.0",
     "postcss": "^8.4.31",
     "quasar": "^2.14.0",
-    "sass": "~1.32",
+    "sass": "^1.69.5",
     "tone": "^14.7.77",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
