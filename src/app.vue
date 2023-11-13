@@ -34,6 +34,9 @@ const $router = useRouter();
 // the current route
 const currentRoute = computed(() => $router.resolve(location.pathname + location.search + location.hash));
 
+// the route key
+const routeKey = computed(() => [currentRoute.value.fullPath, history.state.position].join());
+
 // get the $q object
 const $q = useQuasar();
 
@@ -53,8 +56,8 @@ useMeta({
   },
 });
 
-// the custom state
-const customState = ref<string>();
+// the previous page
+const previousPage = ref<string>();
 
 // the drawer behavior
 const drawerBehavior = computed(() => {
@@ -96,7 +99,7 @@ Hub.listen('auth', ({ payload: { event, data } }) => {
       $router.replace({});
       break;
     case 'customOAuthState':
-      customState.value = data;
+      previousPage.value = data;
       break;
   }
 });
@@ -105,15 +108,21 @@ Hub.listen('auth', ({ payload: { event, data } }) => {
 const isLoading = ref(true);
 
 // get the current user
-Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (auth.user = attributes)).catch(() => (auth.user = null)).finally(async () => {
-  // redirect to previous page
-  if (customState.value) {
-    await $router.replace(customState.value);
-  }
+(async () => {
+  try {
+    auth.user = await Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => attributes);
+  } catch {
+    auth.user = null;
+  } finally {
+    // redirect to previous page if it exists
+    if (previousPage.value) {
+      await $router.replace(previousPage.value);
+    }
 
-  // stop loading
-  isLoading.value = false;
-});
+    // stop loading
+    isLoading.value = false;
+  }
+})();
 </script>
 
 <template>
@@ -444,7 +453,7 @@ Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => (a
     <q-page-container>
       <router-view v-if="!isLoading" #default="{ Component }">
         <keep-alive exclude="playground,settings,watch" max="1">
-          <component :is="Component" :key="$route.fullPath" />
+          <component :is="Component" :key="routeKey" />
         </keep-alive>
       </router-view>
     </q-page-container>
