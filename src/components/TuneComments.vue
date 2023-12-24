@@ -5,8 +5,8 @@ import { ref, toRefs } from 'vue';
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
 
-// Amplify
-import { API } from 'aws-amplify';
+// Amplify - API
+import { get, post } from 'aws-amplify/api';
 
 // Quasar
 import { date, useQuasar } from 'quasar';
@@ -43,11 +43,15 @@ const getComments = async (_: number, done: (stop?: boolean) => void) => {
   isLoading.value = true;
 
   // get comments
-  const data = await API.get('Api', `/tunes/${id.value}/comments`, {
-    queryStringParameters: {
-      after: after.value,
+  const data = await get({
+    apiName: 'Api',
+    path: `/tunes/${id.value}/comments`,
+    options: {
+      queryParams: {
+        after: after.value ?? '',
+      },
     },
-  });
+  }).response.then<Record<string, any>>(({ body }) => body.json());
 
   // add comments
   comments.value.push(...data.comments);
@@ -76,11 +80,15 @@ const registerComment = async () => {
 
   try {
     // register the comment
-    const comment = await API.post('Api', `/tunes/${id.value}/comments`, {
-      body: {
-        text: text.value,
+    const comment = await post({
+      apiName: 'Api',
+      path: `/tunes/${id.value}/comments`,
+      options: {
+        body: {
+          text: text.value,
+        },
       },
-    });
+    }).response.then<Record<string, any>>(({ body }) => body.json());
 
     // add the comment
     comments.value.unshift(comment);
@@ -91,12 +99,10 @@ const registerComment = async () => {
     // emit update
     emits('update');
   } catch (e: any) {
-    if (e.response.status === 422) {
+    if (e.message) {
       $q.notify({
         type: 'negative',
-        message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
-          return messages.map((message) => `The ${field} ${message}.`);
-        }).join('<br>'),
+        message: e.message.replaceAll('\n', '<br>'),
         html: true,
       });
     }

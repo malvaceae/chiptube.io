@@ -60,9 +60,9 @@ export default async (req: Request, res: Response): Promise<Response> => {
   // Validate request parameters.
   if (!validate(req.body)) {
     throw createError(422, {
-      errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
-        return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
-      }, {} as Record<string, string[]>),
+      message: validate.errors?.map?.(({ instancePath, message }) => {
+        return `The ${instancePath.slice(1)} ${message}.`;
+      })?.join?.('\n'),
     });
   }
 

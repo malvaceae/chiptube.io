@@ -102,9 +102,9 @@ export default async (req: Request, res: Response): Promise<Response> => {
   // Validate request parameters.
   if (!validate(req.body)) {
     throw createError(422, {
-      errors: validate.errors?.filter?.(({ message }) => message)?.reduce?.((errors, { instancePath, message }) => {
-        return { ...errors, [instancePath.slice(1)]: [...(errors[instancePath.slice(1)] ?? []), message ?? ''] };
-      }, {} as Record<string, string[]>),
+      message: validate.errors?.map?.(({ instancePath, message }) => {
+        return `The ${instancePath.slice(1)} ${message}.`;
+      })?.join?.('\n'),
     });
   }
 
@@ -129,11 +129,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
   // Validate a midi file.
   if (!midiFile || !(midiFile[0] === 0x4D && midiFile[1] === 0x54 && midiFile[2] === 0x68 && midiFile[3] === 0x64)) {
     throw createError(422, {
-      errors: {
-        midiKey: [
-          'does NOT indicate a valid MIDI file',
-        ],
-      },
+      message: 'The midiKey does NOT indicate a valid MIDI file.',
     });
   }
 
@@ -150,11 +146,7 @@ export default async (req: Request, res: Response): Promise<Response> => {
   // Validate a thumbnail file.
   if (thumbnailFileSize && thumbnailFileSize > 1024 * 1024 * 2) {
     throw createError(422, {
-      errors: {
-        thumbnailKey: [
-          'must NOT be greater than 2 megabytes',
-        ],
-      },
+      message: 'The thumbnailKey must NOT be greater than 2 megabytes.',
     });
   }
 

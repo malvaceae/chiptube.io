@@ -2,8 +2,11 @@
 // Vue.js
 import { onMounted, ref, toRefs } from 'vue';
 
-// Amplify
-import { API, Storage } from 'aws-amplify';
+// Amplify - API
+import { get } from 'aws-amplify/api';
+
+// Amplify - Storage
+import { getUrl } from 'aws-amplify/storage';
 
 // Quasar
 import { QInfiniteScroll, date } from 'quasar';
@@ -27,16 +30,20 @@ const tunes = ref<Record<string, any>[]>([]);
 const after = ref<string>();
 
 // get tunes
-const getTunes: QInfiniteScroll['onLoad'] = async (_: number, done: (stop?: boolean) => void) => {
+const getTunes = async (_: number, done: (stop?: boolean) => void) => {
   // start loading
   isLoading.value = true;
 
   // get tunes
-  const data = await API.get('Api', `/tunes/${id.value}/tunes`, {
-    queryStringParameters: {
-      after: after.value,
+  const data = await get({
+    apiName: 'Api',
+    path: `/tunes/${id.value}/tunes`,
+    options: {
+      queryParams: {
+        after: after.value ?? '',
+      },
     },
-  });
+  }).response.then<Record<string, any>>(({ body }) => body.json());
 
   // get the thumbnail
   for (const tune of data.tunes) {
@@ -57,12 +64,17 @@ const getTunes: QInfiniteScroll['onLoad'] = async (_: number, done: (stop?: bool
 };
 
 // get the thumbnail
-const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
-  if (thumbnailKey) {
-    return await Storage.get(thumbnailKey, {
-      level: 'protected',
-      identityId,
+const getThumbnail = async ({ thumbnailKey: key, identityId: targetIdentityId }: Record<string, any>) => {
+  if (key) {
+    const { url } = await getUrl({
+      key,
+      options: {
+        accessLevel: 'protected',
+        targetIdentityId,
+      },
     });
+
+    return url.toString();
   }
 };
 

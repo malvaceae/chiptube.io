@@ -569,16 +569,7 @@ components:
       content:
         application/json:
           schema:
-            allOf:
-              - $ref: "#/components/schemas/Error"
-              - type: object
-                properties:
-                  errors:
-                    type: object
-                    additionalProperties:
-                      type: array
-                      items:
-                        type: string
+            $ref: "#/components/schemas/Error"
     InternalServerError:
       description: Internal Server Error
       content:

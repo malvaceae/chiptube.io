@@ -395,8 +395,8 @@ export class ChipTubeStack extends Stack {
       }
     }));
 
-    // User Pool Web Client
-    const userPoolWebClient = userPool.addClient('WebClient', {
+    // User Pool Client
+    const userPoolClient = userPool.addClient('Client', {
       oAuth: {
         flows: {
           authorizationCodeGrant: true,
@@ -416,9 +416,9 @@ export class ChipTubeStack extends Stack {
       ],
     });
 
-    // User Pool Web Client Id
-    new CfnOutput(this, 'UserPoolWebClientId', {
-      value: userPoolWebClient.userPoolClientId,
+    // User Pool Client Id
+    new CfnOutput(this, 'UserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
     });
 
     // Create a user pool domain with the domain name if it exists.
@@ -494,7 +494,7 @@ export class ChipTubeStack extends Stack {
       allowUnauthenticatedIdentities: true,
       cognitoIdentityProviders: [
         {
-          clientId: userPoolWebClient.userPoolClientId,
+          clientId: userPoolClient.userPoolClientId,
           providerName: userPool.userPoolProviderName,
         },
       ],
@@ -731,8 +731,8 @@ export class ChipTubeStack extends Stack {
           VITE_USER_POOL_ID: {
             value: userPool.userPoolId,
           },
-          VITE_USER_POOL_WEB_CLIENT_ID: {
-            value: userPoolWebClient.userPoolClientId,
+          VITE_USER_POOL_CLIENT_ID: {
+            value: userPoolClient.userPoolClientId,
           },
           VITE_USER_POOL_DOMAIN_NAME: {
             value: userPoolDomain.baseUrl().slice(8),

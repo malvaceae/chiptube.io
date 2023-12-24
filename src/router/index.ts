@@ -4,8 +4,8 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
 
-// Amplify
-import { Auth, CognitoHostedUIIdentityProvider } from '@aws-amplify/auth';
+// Amplify - Auth
+import { signInWithRedirect } from 'aws-amplify/auth';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -68,8 +68,8 @@ router.beforeEach(async ({ name, fullPath }) => {
   }
 
   if (typeof name === 'string' && ['likes', 'settings'].includes(name)) {
-    await Auth.federatedSignIn({
-      provider: CognitoHostedUIIdentityProvider.Google,
+    await signInWithRedirect({
+      provider: 'Google',
       customState: fullPath,
     });
 

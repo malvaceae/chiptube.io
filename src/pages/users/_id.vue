@@ -8,8 +8,11 @@ import { useRouter } from 'vue-router';
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
 
-// Amplify
-import { API, Storage } from 'aws-amplify';
+// Amplify - API
+import { get } from 'aws-amplify/api';
+
+// Amplify - Storage
+import { getUrl } from 'aws-amplify/storage';
 
 // Quasar
 import { date, useMeta, useQuasar } from 'quasar';
@@ -47,11 +50,15 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
   isLoading.value = true;
 
   // get tunes
-  const data = await API.get('Api', `/users/${id.value}/tunes`, {
-    queryStringParameters: {
-      after: after.value,
+  const data = await get({
+    apiName: 'Api',
+    path: `/users/${id.value}/tunes`,
+    options: {
+      queryParams: {
+        after: after.value ?? '',
+      },
     },
-  });
+  }).response.then<Record<string, any>>(({ body }) => body.json());
 
   // get the thumbnail
   for (const tune of data.tunes) {
@@ -84,9 +91,12 @@ useMeta(() => ({
 (async () => {
   try {
     // get the user
-    user.value = await API.get('Api', `/users/${id.value}`, {});
+    user.value = await get({
+      apiName: 'Api',
+      path: `/users/${id.value}`,
+    }).response.then<Record<string, any>>(({ body }) => body.json());
   } catch (e: any) {
-    if (e.response.status === 404) {
+    if (e.message === 'Not Found') {
       $q.notify({
         type: 'negative',
         message: 'The user you are looking for is not found.',
@@ -100,12 +110,17 @@ useMeta(() => ({
 })();
 
 // get the thumbnail
-const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
-  if (thumbnailKey) {
-    return await Storage.get(thumbnailKey, {
-      level: 'protected',
-      identityId,
+const getThumbnail = async ({ thumbnailKey: key, identityId: targetIdentityId }: Record<string, any>) => {
+  if (key) {
+    const { url } = await getUrl({
+      key,
+      options: {
+        accessLevel: 'protected',
+        targetIdentityId,
+      },
     });
+
+    return url.toString();
   }
 };
 </script>

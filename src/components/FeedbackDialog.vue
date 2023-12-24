@@ -2,8 +2,8 @@
 // Vue.js
 import { ref } from 'vue';
 
-// Amplify
-import { API } from 'aws-amplify';
+// Amplify - API
+import { post } from 'aws-amplify/api';
 
 // Quasar
 import { useDialogPluginComponent, useQuasar } from 'quasar';
@@ -36,11 +36,15 @@ const sendFeedback = async () => {
 
   try {
     // send the feedback
-    await API.post('Api', '/feedback', {
-      body: {
-        text: text.value,
+    await post({
+      apiName: 'Api',
+      path: '/feedback',
+      options: {
+        body: {
+          text: text.value,
+        },
       },
-    });
+    }).response;
 
     // notify the feedback has been successfully sent
     $q.notify({ type: 'positive', message: 'Report sent, thank you!' });
@@ -48,12 +52,10 @@ const sendFeedback = async () => {
     // close dialog
     onDialogOK();
   } catch (e: any) {
-    if (e.response.status === 422) {
+    if (e.message) {
       $q.notify({
         type: 'negative',
-        message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
-          return messages.map((message) => `The ${field} ${message}.`);
-        }).join('<br>'),
+        message: e.message.replaceAll('\n', '<br>'),
         html: true,
       });
     }

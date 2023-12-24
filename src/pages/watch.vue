@@ -8,8 +8,11 @@ import { useRouter } from 'vue-router';
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
 
-// Amplify
-import { API, Storage } from 'aws-amplify';
+// Amplify - API
+import { get, put } from 'aws-amplify/api';
+
+// Amplify - Storage
+import { downloadData, getUrl } from 'aws-amplify/storage';
 
 // Quasar
 import { date, exportFile, useMeta, useQuasar } from 'quasar';
@@ -76,24 +79,30 @@ const editTune = () => {
 // toggle is liked
 const toggleIsLiked = async () => {
   if (tune.value && auth.user) {
-    Object.assign(tune.value, await API.put('Api', `/tunes/${id.value}`, {
-      body: {
-        isLiked: !tune.value.isLiked,
+    Object.assign(tune.value, await put({
+      apiName: 'Api',
+      path: `/tunes/${id.value}`,
+      options: {
+        body: {
+          isLiked: !tune.value.isLiked,
+        },
       },
-    }));
+    }).response.then<Record<string, any>>(({ body }) => body.json()));
   }
 };
 
 // download the tune
-const downloadTune = async ({ title, midiKey, identityId }: Record<string, any>) => {
-  const { Body: body } = await Storage.get(midiKey, {
-    level: 'protected',
-    download: true,
-    identityId,
-  });
+const downloadTune = async ({ title, midiKey: key, identityId: targetIdentityId }: Record<string, any>) => {
+  const { body } = await downloadData({
+    key,
+    options: {
+      accessLevel: 'protected',
+      targetIdentityId,
+    },
+  }).result;
 
   if (body) {
-    exportFile(`${title}.mid`, await new Response(body).blob(), {
+    exportFile(`${title}.mid`, await body.blob(), {
       mimeType: 'audio/midi',
     });
   }
@@ -106,15 +115,17 @@ const tune = ref<Record<string, any> | null>(null);
 const midiBuffer = computed(() => tune.value && getMidiBuffer(tune.value));
 
 // get midi buffer
-const getMidiBuffer = ({ midiKey, identityId }: Record<string, any>) => {
+const getMidiBuffer = ({ midiKey: key, identityId: targetIdentityId }: Record<string, any>) => {
   return async () => {
-    const { Body: body } = await Storage.get(midiKey, {
-      level: 'protected',
-      download: true,
-      identityId,
-    });
+    const { body } = await downloadData({
+      key,
+      options: {
+        accessLevel: 'protected',
+        targetIdentityId,
+      },
+    }).result;
 
-    return await new Response(body).arrayBuffer();
+    return await body.blob().then((blob) => blob.arrayBuffer());
   };
 };
 
@@ -128,18 +139,36 @@ useMeta(() => ({
   },
 }));
 
+// get the thumbnail
+const getThumbnail = async ({ thumbnailKey: key, identityId: targetIdentityId }: Record<string, any>) => {
+  if (key) {
+    const { url } = await getUrl({
+      key,
+      options: {
+        accessLevel: 'protected',
+        targetIdentityId,
+      },
+    });
+
+    return url.toString();
+  }
+};
+
 (async () => {
   try {
     // get the tune
-    await API.get('Api', `/tunes/${id.value}`, {}).then(async (data) => {
-      // get the thumbnail
-      data.thumbnail = await getThumbnail(data);
+    const data = await get({
+      apiName: 'Api',
+      path: `/tunes/${id.value}`,
+    }).response.then<Record<string, any>>(({ body }) => body.json());
 
-      // set the tune
-      tune.value = data;
-    });
+    // get the thumbnail
+    data.thumbnail = await getThumbnail(data);
+
+    // set the tune
+    tune.value = data;
   } catch (e: any) {
-    if (e.response.status === 404) {
+    if (e.message === 'Not Found') {
       $q.notify({
         type: 'negative',
         message: 'The tune you are looking for is not found.',
@@ -151,16 +180,6 @@ useMeta(() => ({
     }
   }
 })();
-
-// get the thumbnail
-const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
-  if (thumbnailKey) {
-    return await Storage.get(thumbnailKey, {
-      level: 'protected',
-      identityId,
-    });
-  }
-};
 </script>
 
 <template>

@@ -5,8 +5,11 @@ import { computed, reactive, ref, watchEffect } from 'vue';
 // Vue Router
 import { useRouter } from 'vue-router';
 
-// Amplify
-import { API, Storage } from 'aws-amplify';
+// Amplify - API
+import { del, post, put } from 'aws-amplify/api';
+
+// Amplify - Storage
+import { remove, uploadData } from 'aws-amplify/storage';
 
 // Midi
 import { useMidi } from '@/composables/midi';
@@ -100,28 +103,39 @@ const updateTune = async ({ id, title, description, thumbnailKey: oldThumbnailKe
     // upload the thumbnail
     const thumbnailKey = await (() => {
       if (thumbnailFile) {
-        return Storage.put(`thumbnails/${uid()}${getFileExtension(thumbnailFile.type)}`, thumbnailFile, {
-          level: 'protected',
-          contentType: thumbnailFile.type,
-        }).then(({ key }) => key);
+        return uploadData({
+          key: `thumbnails/${uid()}${getFileExtension(thumbnailFile.type)}`,
+          data: thumbnailFile,
+          options: {
+            accessLevel: 'protected',
+            contentType: thumbnailFile.type,
+          },
+        }).result.then(({ key }) => key);
       }
     })();
 
     try {
       // update the tune info
-      const tune = await API.put('Api', `/tunes/${id}`, {
-        body: {
-          title,
-          description,
-          thumbnailKey,
+      const tune = await put({
+        apiName: 'Api',
+        path: `/tunes/${id}`,
+        options: {
+          body: {
+            title,
+            description,
+            ...(thumbnailKey ? { thumbnailKey } : {}),
+          },
         },
-      });
+      }).response.then<Record<string, any>>(({ body }) => body.json());
 
       try {
         // remove the old thumbnail
         if (thumbnailKey && oldThumbnailKey) {
-          await Storage.remove(oldThumbnailKey, {
-            level: 'protected',
+          await remove({
+            key: oldThumbnailKey,
+            options: {
+              accessLevel: 'protected',
+            },
           });
         }
       } catch {
@@ -131,28 +145,29 @@ const updateTune = async ({ id, title, description, thumbnailKey: oldThumbnailKe
       // close dialog
       onDialogOK(tune);
     } catch (e: any) {
-      if (e.response.status === 422) {
+      if (e.message) {
         $q.notify({
           type: 'negative',
-          message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
-            return messages.map((message) => `The ${field} ${message}.`);
-          }).join('<br>'),
+          message: e.message.replaceAll('\n', '<br>'),
           html: true,
         });
+      }
 
-        // remove the thumbnail
-        if (thumbnailKey) {
-          await Storage.remove(thumbnailKey, {
-            level: 'protected',
-          });
-        }
+      // remove the thumbnail
+      if (thumbnailKey) {
+        await remove({
+          key: thumbnailKey,
+          options: {
+            accessLevel: 'protected',
+          },
+        });
       }
     }
   } catch (e: any) {
     if (e.message) {
       $q.notify({
         type: 'negative',
-        message: e.message,
+        message: e.message.replaceAll('\n', '<br>'),
         html: true,
       });
     }
@@ -173,32 +188,44 @@ const uploadTune = async ({ title, description, midiFile, thumbnailFile }: typeo
 
   try {
     // upload the tune
-    const { key: midiKey } = await Storage.put(`tunes/${uid()}.mid`, midiFile, {
-      level: 'protected',
-      contentType: 'audio/midi',
-    });
+    const { key: midiKey } = await uploadData({
+      key: `tunes/${uid()}.mid`,
+      data: midiFile,
+      options: {
+        accessLevel: 'protected',
+        contentType: 'audio/midi',
+      },
+    }).result;
 
     try {
       // upload the thumbnail
       const thumbnailKey = await (() => {
         if (thumbnailFile) {
-          return Storage.put(`thumbnails/${uid()}${getFileExtension(thumbnailFile.type)}`, thumbnailFile, {
-            level: 'protected',
-            contentType: thumbnailFile.type,
-          }).then(({ key }) => key);
+          return uploadData({
+            key: `thumbnails/${uid()}${getFileExtension(thumbnailFile.type)}`,
+            data: thumbnailFile,
+            options: {
+              accessLevel: 'protected',
+              contentType: thumbnailFile.type,
+            },
+          }).result.then(({ key }) => key);
         }
       })();
 
       try {
         // register the tune info
-        const { id } = await API.post('Api', '/tunes', {
-          body: {
-            title,
-            description,
-            midiKey,
-            thumbnailKey,
+        const { id } = await post({
+          apiName: 'Api',
+          path: '/tunes',
+          options: {
+            body: {
+              title,
+              description,
+              midiKey,
+              ...(thumbnailKey ? { thumbnailKey } : {}),
+            },
           },
-        });
+        }).response.then<Record<string, any>>(({ body }) => body.json());
 
         // move to watch route
         await $router.push({ name: 'watch', query: { v: id } });
@@ -206,25 +233,29 @@ const uploadTune = async ({ title, description, midiFile, thumbnailFile }: typeo
         // close dialog
         onDialogOK();
       } catch (e: any) {
-        if (e.response.status === 422) {
+        if (e.message) {
           $q.notify({
             type: 'negative',
-            message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
-              return messages.map((message) => `The ${field} ${message}.`);
-            }).join('<br>'),
+            message: e.message.replaceAll('\n', '<br>'),
             html: true,
           });
         }
 
         // remove the tune
-        await Storage.remove(midiKey, {
-          level: 'protected',
+        await remove({
+          key: midiKey,
+          options: {
+            accessLevel: 'protected',
+          },
         });
 
         // remove the thumbnail
         if (thumbnailKey) {
-          await Storage.remove(thumbnailKey, {
-            level: 'protected',
+          await remove({
+            key: thumbnailKey,
+            options: {
+              accessLevel: 'protected',
+            },
           });
         }
       }
@@ -232,14 +263,17 @@ const uploadTune = async ({ title, description, midiFile, thumbnailFile }: typeo
       if (e.message) {
         $q.notify({
           type: 'negative',
-          message: e.message,
+          message: e.message.replaceAll('\n', '<br>'),
           html: true,
         });
       }
 
       // remove the tune
-      await Storage.remove(midiKey, {
-        level: 'protected',
+      await remove({
+        key: midiKey,
+        options: {
+          accessLevel: 'protected',
+        },
       });
     }
   } catch {
@@ -278,14 +312,18 @@ const deleteTune = async ({ id, midiKey, thumbnailKey }: typeof tune) => {
 
     try {
       // delete the tune info
-      await API.del('Api', `/tunes/${id}`, {
-        //
-      });
+      await del({
+        apiName: 'Api',
+        path: `/tunes/${id}`,
+      }).response;
 
       try {
         // remove the tune
-        await Storage.remove(midiKey, {
-          level: 'protected',
+        await remove({
+          key: midiKey,
+          options: {
+            accessLevel: 'protected',
+          },
         });
       } catch {
         //
@@ -294,8 +332,11 @@ const deleteTune = async ({ id, midiKey, thumbnailKey }: typeof tune) => {
       try {
         // remove the thumbnail
         if (thumbnailKey) {
-          await Storage.remove(thumbnailKey, {
-            level: 'protected',
+          await remove({
+            key: thumbnailKey,
+            options: {
+              accessLevel: 'protected',
+            },
           });
         }
       } catch {
@@ -308,12 +349,10 @@ const deleteTune = async ({ id, midiKey, thumbnailKey }: typeof tune) => {
       // close dialog
       onDialogHide();
     } catch (e: any) {
-      if (e.response.status === 422) {
+      if (e.message) {
         $q.notify({
           type: 'negative',
-          message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
-            return messages.map((message) => `The ${field} ${message}.`);
-          }).join('<br>'),
+          message: e.message.replaceAll('\n', '<br>'),
           html: true,
         });
       }

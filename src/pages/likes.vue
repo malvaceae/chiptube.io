@@ -2,8 +2,11 @@
 // Vue.js
 import { ref } from 'vue';
 
-// Amplify
-import { API, Storage } from 'aws-amplify';
+// Amplify - API
+import { get } from 'aws-amplify/api';
+
+// Amplify - Storage
+import { getUrl } from 'aws-amplify/storage';
 
 // Quasar
 import { date, useMeta } from 'quasar';
@@ -33,11 +36,15 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
   isLoading.value = true;
 
   // get tunes
-  const data = await API.get('Api', '/users/me/likes', {
-    queryStringParameters: {
-      after: after.value,
+  const data = await get({
+    apiName: 'Api',
+    path: '/users/me/likes',
+    options: {
+      queryParams: {
+        after: after.value ?? '',
+      },
     },
-  });
+  }).response.then<Record<string, any>>(({ body }) => body.json());
 
   // get the thumbnail
   for (const tune of data.tunes) {
@@ -58,12 +65,17 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
 };
 
 // get the thumbnail
-const getThumbnail = async ({ thumbnailKey, identityId }: Record<string, any>) => {
-  if (thumbnailKey) {
-    return await Storage.get(thumbnailKey, {
-      level: 'protected',
-      identityId,
+const getThumbnail = async ({ thumbnailKey: key, identityId: targetIdentityId }: Record<string, any>) => {
+  if (key) {
+    const { url } = await getUrl({
+      key,
+      options: {
+        accessLevel: 'protected',
+        targetIdentityId,
+      },
     });
+
+    return url.toString();
   }
 };
 </script>

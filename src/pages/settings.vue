@@ -5,8 +5,11 @@ import { ref } from 'vue';
 // Auth Store
 import { useAuthStore } from '@/stores/auth';
 
-// Amplify
-import { API, Auth } from 'aws-amplify';
+// Amplify - API
+import { put } from 'aws-amplify/api';
+
+// Amplify - Auth
+import { fetchUserAttributes } from 'aws-amplify/auth';
 
 // Quasar
 import { useMeta, useQuasar } from 'quasar';
@@ -39,23 +42,23 @@ const updateUser = async () => {
 
     try {
       // update the user
-      await API.put('Api', '/users/me', {
-        body: {
-          nickname: nickname.value,
+      await put({
+        apiName: 'Api',
+        path: '/users/me',
+        options: {
+          body: {
+            nickname: nickname.value,
+          },
         },
-      });
+      }).response;
 
       // get the current user
-      await Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => {
-        auth.user = attributes;
-      });
+      auth.user = await fetchUserAttributes();
     } catch (e: any) {
-      if (e.response.status === 422) {
+      if (e.message) {
         $q.notify({
           type: 'negative',
-          message: Object.entries(e.response.data.errors as Record<string, string[]>).flatMap(([field, messages]) => {
-            return messages.map((message) => `The ${field} ${message}.`);
-          }).join('<br>'),
+          message: e.message.replaceAll('\n', '<br>'),
           html: true,
         });
       }

@@ -9,8 +9,11 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { usePageStore } from '@/stores/page';
 
-// Amplify
-import { Auth, Hub } from 'aws-amplify';
+// Amplify - Auth
+import { fetchUserAttributes, signOut } from 'aws-amplify/auth';
+
+// Amplify - Utilities
+import { Hub } from 'aws-amplify/utils';
 
 // Quasar
 import { useMeta, useQuasar } from 'quasar';
@@ -92,14 +95,14 @@ const search = async () => {
 };
 
 // subscribe auth events
-Hub.listen('auth', ({ payload: { event, data } }) => {
-  switch (event) {
-    case 'signIn':
-    case 'signIn_failure':
+Hub.listen('auth', ({ payload }) => {
+  switch (payload.event) {
+    case 'signInWithRedirect':
+    case 'signInWithRedirect_failure':
       $router.replace({});
       break;
     case 'customOAuthState':
-      previousPage.value = data;
+      previousPage.value = payload.data;
       break;
   }
 });
@@ -110,7 +113,7 @@ const isLoading = ref(true);
 // get the current user
 (async () => {
   try {
-    auth.user = await Auth.currentAuthenticatedUser({ bypassCache: true }).then(({ attributes }) => attributes);
+    auth.user = await fetchUserAttributes();
   } catch {
     auth.user = null;
   } finally {
@@ -196,7 +199,7 @@ const isLoading = ref(true);
                         </q-item-section>
                       </q-item>
                       <q-separator spaced />
-                      <q-item clickable v-close-popup @click="Auth.signOut()">
+                      <q-item clickable v-close-popup @click="signOut()">
                         <q-item-section side>
                           <q-icon name="mdi-logout" />
                         </q-item-section>
