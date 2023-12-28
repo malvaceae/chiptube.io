@@ -452,8 +452,7 @@ const getFileExtension = (mime: string) => {
                   Description
                 </template>
               </q-input>
-              <q-file v-model="thumbnailFile" accept=".gif,.jpeg,.jpg,.png" bottom-slots clearable label-slot
-                :max-file-size="1024 * 1024 * 2" outlined square @rejected="onRejectedThumbnail">
+              <q-file v-model="thumbnailFile" accept=".gif,.jpeg,.jpg,.png" bottom-slots clearable label-slot :max-file-size="1024 * 1024 * 2" outlined square @rejected="onRejectedThumbnail">
                 <template #prepend>
                   <q-icon name="mdi-file-image" />
                 </template>

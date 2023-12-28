@@ -341,8 +341,7 @@ const isLoading = ref(true);
             </q-item>
             <q-separator spaced />
             <template v-if="auth.user">
-              <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" style="height: 40px;"
-                :to="{ name: 'users-id', params: { id: auth.user.sub } }" v-ripple>
+              <q-item :active-class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" style="height: 40px;" :to="{ name: 'users-id', params: { id: auth.user.sub } }" v-ripple>
                 <q-item-section>
                   <div class="row q-gutter-sm">
                     <div>
