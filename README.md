@@ -4,4 +4,6 @@
 
 ChipTube is a web service for play and share MIDI files.
 
-[![chiptube](docs/chiptube.png)](https://chiptube.io)
+https://chiptube.io/
+
+![chiptube](docs/chiptube.png)
