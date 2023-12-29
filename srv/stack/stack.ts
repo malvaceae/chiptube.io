@@ -703,7 +703,7 @@ export class ChipTubeStack extends Stack {
         '!public',
         '!src',
         '!tsconfig.json',
-        '!vite.config.ts',
+        '!vite.config.mts',
         '!yarn.lock',
       ],
       ignoreMode: IgnoreMode.GIT,

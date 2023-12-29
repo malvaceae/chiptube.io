@@ -20,6 +20,7 @@ export default defineConfig({
           title: 'ChipTube',
         },
       },
+      viteNext: true,
     }),
     vue({
       template: {
@@ -31,16 +32,9 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    alias: [
-      {
-        find: '@',
-        replacement: '/src',
-      },
-      {
-        find: './runtimeConfig',
-        replacement: './runtimeConfig.browser',
-      },
-    ],
+    alias: {
+      '@': '/src',
+    },
   },
   build: {
     rollupOptions: {
@@ -73,12 +67,5 @@ export default defineConfig({
       },
     },
     chunkSizeWarningLimit: 1536,
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: 'globalThis',
-      },
-    },
   },
 });
