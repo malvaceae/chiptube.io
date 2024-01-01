@@ -62,6 +62,7 @@ export class ChipTubeApi extends apigateway.RestApi {
           ],
         }),
       ],
+      reservedConcurrentExecutions: 10,
       bundling: {
         minify: true,
       },
