@@ -67,9 +67,16 @@ export class ChipTubeApi extends apigateway.RestApi {
       },
     });
 
+    // Current Alias of Api Handler
+    const currentAlias = new lambda.Alias(this.handler, 'CurrentAlias', {
+      aliasName: 'current',
+      version: this.handler.currentVersion,
+      provisionedConcurrentExecutions: 3,
+    });
+
     // Add the proxy resource and any methods.
     [this.root, this.root.addProxy({ anyMethod: false })].forEach((resource) => {
-      resource.addMethod('ANY', new apigateway.LambdaIntegration(this.handler), {
+      resource.addMethod('ANY', new apigateway.LambdaIntegration(currentAlias), {
         authorizationType: apigateway.AuthorizationType.IAM,
       });
     });
