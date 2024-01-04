@@ -48,6 +48,11 @@ export interface ChipTubeStackProps extends StackProps {
   readonly googleClientSecret: string;
 
   /**
+   * Google Search Console Verification Code
+   */
+  readonly googleSearchConsoleVerificationCode?: string;
+
+  /**
    * Feedback Email
    */
   readonly feedbackEmail?: string;
@@ -56,11 +61,6 @@ export interface ChipTubeStackProps extends StackProps {
    * Domain Name
    */
   readonly domainName?: string;
-
-  /**
-   * Google Search Console Verification Code
-   */
-  readonly googleSearchConsoleVerificationCode?: string;
 
   /**
    * GitHub Repository Name
@@ -103,9 +103,9 @@ export class ChipTubeStack extends Stack {
     const {
       googleClientId,
       googleClientSecret,
+      googleSearchConsoleVerificationCode,
       feedbackEmail,
       domainName,
-      googleSearchConsoleVerificationCode,
       githubRepo,
       zone,
       certificate,
@@ -682,6 +682,17 @@ export class ChipTubeStack extends Stack {
       })),
     });
 
+    // If the Google Search Console verification code exists, create a TXT record.
+    if (zone && googleSearchConsoleVerificationCode) {
+      // Google Search Console Verification Record
+      new route53.TxtRecord(this, 'GoogleSearchConsoleVerificationRecord', {
+        zone,
+        values: [
+          googleSearchConsoleVerificationCode,
+        ],
+      });
+    }
+
     // If the feedback email exists, create the SNS topic.
     if (feedbackEmail) {
       // Feedback Topic
@@ -827,17 +838,6 @@ export class ChipTubeStack extends Stack {
 
     // Wait for the build to complete.
     appBucketDeployment.node.addDependency(appBuild);
-
-    // If the Google Search Console verification code exists, create a TXT record.
-    if (zone && googleSearchConsoleVerificationCode) {
-      // Google Search Console Verification Record
-      new route53.TxtRecord(this, 'GoogleSearchConsoleVerificationRecord', {
-        zone,
-        values: [
-          googleSearchConsoleVerificationCode,
-        ],
-      });
-    }
 
     // If the GitHub repository name exists, create a role to cdk deploy from GitHub.
     if (githubRepo) {
