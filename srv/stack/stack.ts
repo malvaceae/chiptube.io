@@ -312,19 +312,28 @@ export class ChipTubeStack extends Stack {
       },
     });
 
-    // Add a origin access control id.
-    (appDistribution.node.defaultChild as cloudfront.CfnDistribution).addPropertyOverride('DistributionConfig.Origins.0.OriginAccessControlId', originAccessControl.attrId);
+    // App Distribution L1 Construct
+    const cfnAppDistribution = appDistribution.node.defaultChild as cloudfront.CfnDistribution;
 
-    // Delete a origin access identity.
-    (appDistribution.node.defaultChild as cloudfront.CfnDistribution).addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
+    // Add a origin access control id.
+    cfnAppDistribution.addPropertyOverride('DistributionConfig.Origins.0.OriginAccessControlId', originAccessControl.attrId);
+
+    // Delete a origin access identity in s3 origin config.
+    cfnAppDistribution.addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
+
+    // Delete a cloud front origin access identity.
+    appDistribution.node.tryRemoveChild('Origin1');
+
+    // Delete a bucket policy.
+    appBucket.node.tryRemoveChild('Policy');
 
     // App Bucket Policy
-    const appBucketPolicy = new s3.BucketPolicy(this, 'AppBucketPolicy', {
+    appBucket.policy = new s3.BucketPolicy(appBucket, 'Policy', {
       bucket: appBucket,
     });
 
     // Add the permission to access CloudFront.
-    appBucketPolicy.document.addStatements(new iam.PolicyStatement({
+    appBucket.policy.document.addStatements(new iam.PolicyStatement({
       actions: [
         's3:GetObject',
       ],
