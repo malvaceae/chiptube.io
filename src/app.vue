@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth';
 import { usePageStore } from '@/stores/page';
 
 // Amplify - Auth
-import { fetchUserAttributes, signOut } from 'aws-amplify/auth';
+import { fetchAuthSession, fetchUserAttributes, signOut } from 'aws-amplify/auth';
 
 // Amplify - Utilities
 import { Hub } from 'aws-amplify/utils';
@@ -113,6 +113,10 @@ const isLoading = ref(true);
 // get the current user
 (async () => {
   try {
+    await fetchAuthSession({
+      forceRefresh: true,
+    });
+
     auth.user = await fetchUserAttributes();
   } catch {
     auth.user = null;
