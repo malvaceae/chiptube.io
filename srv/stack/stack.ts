@@ -275,29 +275,11 @@ export class ChipTubeStack extends Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
 
-    // Origin Access Identity
-    const originAccessIdentity = new cloudfront.OriginAccessIdentity(this, 'OriginAccessIdentity', {
-      comment: `access-identity-${appBucket.bucketRegionalDomainName}`,
-    });
-
-    // Add the permission to access CloudFront.
-    appBucket.addToResourcePolicy(new iam.PolicyStatement({
-      actions: [
-        's3:GetObject',
-      ],
-      principals: [
-        new iam.CanonicalUserPrincipal(originAccessIdentity.cloudFrontOriginAccessIdentityS3CanonicalUserId),
-      ],
-      resources: [
-        appBucket.arnForObjects('*'),
-      ],
-    }));
-
     // App Distribution
     const appDistribution = new cloudfront.Distribution(this, 'AppDistribution', {
       defaultBehavior: {
         origin: new origins.S3Origin(appBucket, {
-          originAccessIdentity,
+          originPath: '/',
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
@@ -319,6 +301,45 @@ export class ChipTubeStack extends Stack {
         },
       ],
     });
+
+    // Origin Access Control
+    const originAccessControl = new cloudfront.CfnOriginAccessControl(this, 'OriginAccessControl', {
+      originAccessControlConfig: {
+        name: 'OriginAccessControlForS3Bucket',
+        originAccessControlOriginType: 's3',
+        signingBehavior: 'always',
+        signingProtocol: 'sigv4',
+      },
+    });
+
+    // Add a origin access control id.
+    (appDistribution.node.defaultChild as cloudfront.CfnDistribution).addPropertyOverride('DistributionConfig.Origins.0.OriginAccessControlId', originAccessControl.attrId);
+
+    // Delete a origin access identity.
+    (appDistribution.node.defaultChild as cloudfront.CfnDistribution).addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
+
+    // App Bucket Policy
+    const appBucketPolicy = new s3.BucketPolicy(this, 'AppBucketPolicy', {
+      bucket: appBucket,
+    });
+
+    // Add the permission to access CloudFront.
+    appBucketPolicy.document.addStatements(new iam.PolicyStatement({
+      actions: [
+        's3:GetObject',
+      ],
+      principals: [
+        new iam.ServicePrincipal('cloudfront.amazonaws.com'),
+      ],
+      resources: [
+        appBucket.arnForObjects('*'),
+      ],
+      conditions: {
+        'StringEquals': {
+          'AWS:SourceArn': `arn:aws:cloudfront::${this.account}:distribution/${appDistribution.distributionId}`,
+        },
+      },
+    }));
 
     // If the domain name exists, create a alias record to App Distribution.
     const appDistributionAliasRecord = (() => {
