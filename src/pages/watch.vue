@@ -154,6 +154,7 @@ useMeta(() => {
               new URL(tune.value.thumbnail ? new URL(tune.value.thumbnail).pathname : thumbnail, location.origin),
             ],
             uploadDate: date.formatDate(tune.value.publishedAt),
+            contentUrl: new URL(`/protected/${tune.value.identityId}/${tune.value.midiKey}`, location.origin),
           }),
         },
       },
