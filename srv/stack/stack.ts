@@ -63,9 +63,14 @@ export interface ChipTubeStackProps extends StackProps {
   readonly domainName?: string;
 
   /**
-   * GitHub Repository Name
+   * GitHub Repository
    */
-  readonly githubRepo?: string;
+  readonly githubRepository?: string;
+
+  /**
+   * GitHub Ref
+   */
+  readonly githubRef?: string;
 
   /**
    * Hosted Zone
@@ -106,7 +111,8 @@ export class ChipTubeStack extends Stack {
       googleSearchConsoleVerificationCode,
       feedbackEmail,
       domainName,
-      githubRepo,
+      githubRepository,
+      githubRef,
       zone,
       certificate,
       domainNames,
@@ -839,8 +845,8 @@ export class ChipTubeStack extends Stack {
     // Wait for the build to complete.
     appBucketDeployment.node.addDependency(appBuild);
 
-    // If the GitHub repository name exists, create a role to cdk deploy from GitHub.
-    if (githubRepo) {
+    // If the GitHub repository name and ref of the branch exists, create a role to cdk deploy from GitHub.
+    if (githubRepository && githubRef) {
       // GitHub OpenID Connect Provider
       const githubOpenIdConnectProvider = iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(this, 'GitHubOpenIdConnectProvider', `arn:aws:iam::${this.account}:oidc-provider/token.actions.githubusercontent.com`);
 
@@ -851,11 +857,11 @@ export class ChipTubeStack extends Stack {
             [`${githubOpenIdConnectProvider.openIdConnectProviderIssuer}:aud`]: 'sts.amazonaws.com',
           },
           'StringLike': {
-            [`${githubOpenIdConnectProvider.openIdConnectProviderIssuer}:sub`]: `repo:${githubRepo}:*`,
+            [`${githubOpenIdConnectProvider.openIdConnectProviderIssuer}:sub`]: `repo:${githubRepository}:ref:${githubRef}`,
           },
         }),
         inlinePolicies: {
-          GitHubDeployRolePolicy: new iam.PolicyDocument({
+          GitHubDeployRoleDefaultPolicy: new iam.PolicyDocument({
             statements: [
               new iam.PolicyStatement({
                 actions: [

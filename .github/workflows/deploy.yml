@@ -5,6 +5,9 @@ on:
       - main
 concurrency:
   group: ${{ github.ref }}
+env:
+  AWS_REGION: ap-northeast-1
+  DOMAIN_NAME: chiptube.io
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -15,8 +18,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
       - uses: actions/setup-node@v4
         with:
           node-version: 18
@@ -29,7 +32,8 @@ jobs:
             -c googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }} \
             -c googleSearchConsoleVerificationCode=${{ secrets.GOOGLE_SEARCH_CONSOLE_VERIFICATION_CODE }} \
             -c feedbackEmail=${{ secrets.FEEDBACK_EMAIL }} \
-            -c domainName=${{ secrets.DOMAIN_NAME }} \
-            -c githubRepo=${{ github.repository }} \
+            -c domainName=${{ env.DOMAIN_NAME }} \
+            -c githubRepository=${{ github.repository }} \
+            -c githubRef=${{ github.ref }} \
             --require-approval never \
             --all
