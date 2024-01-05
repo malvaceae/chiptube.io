@@ -79,14 +79,20 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
 };
 
 // use meta
-useMeta(() => ({
-  title: user.value?.nickname,
-  meta: {
-    description: {
-      content: 'Enjoy the tunes you love, upload original MIDI file, and share it all with friends, family, and the world on ChipTube.',
-    },
-  },
-}));
+useMeta(() => {
+  if (user.value) {
+    return {
+      title: user.value.nickname,
+      meta: {
+        description: {
+          content: user.value.nickname,
+        },
+      },
+    };
+  } else {
+    return {};
+  }
+});
 
 (async () => {
   try {

@@ -32,6 +32,9 @@ import TuneDialog from '@/components/TuneDialog.vue';
 // Tune Player
 import TunePlayer from '@/components/TunePlayer.vue';
 
+// Thumbnail
+import thumbnail from '@/assets/thumbnail.png';
+
 // properties
 const props = defineProps<{ id: string }>();
 
@@ -130,14 +133,35 @@ const getMidiBuffer = ({ midiKey: key, identityId: targetIdentityId }: Record<st
 };
 
 // use meta
-useMeta(() => ({
-  title: tune.value?.title,
-  meta: {
-    description: {
-      content: tune.value?.description ?? 'Enjoy the tunes you love, upload original MIDI file, and share it all with friends, family, and the world on ChipTube.',
-    },
-  },
-}));
+useMeta(() => {
+  if (tune.value) {
+    return {
+      title: tune.value.title,
+      meta: {
+        description: {
+          content: tune.value.description,
+        },
+      },
+      script: {
+        ldJson: {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'VideoObject',
+            name: tune.value.title,
+            description: tune.value.description,
+            thumbnailUrl: [
+              tune.value.thumbnail ?? new URL(thumbnail, location.origin),
+            ],
+            uploadDate: date.formatDate(tune.value.publishedAt),
+          }),
+        },
+      },
+    };
+  } else {
+    return {};
+  }
+});
 
 // get the thumbnail
 const getThumbnail = async ({ thumbnailKey: key, identityId: targetIdentityId }: Record<string, any>) => {
