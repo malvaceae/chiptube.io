@@ -151,7 +151,7 @@ useMeta(() => {
             name: tune.value.title,
             description: tune.value.description,
             thumbnailUrl: [
-              tune.value.thumbnail ?? new URL(thumbnail, location.origin),
+              new URL(tune.value.thumbnail ? new URL(tune.value.thumbnail).pathname : thumbnail, location.origin),
             ],
             uploadDate: date.formatDate(tune.value.publishedAt),
           }),

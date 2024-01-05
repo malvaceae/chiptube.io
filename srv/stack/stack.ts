@@ -283,6 +283,12 @@ export class ChipTubeStack extends Stack {
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
+      additionalBehaviors: Object.fromEntries(['public/*', 'protected/*'].map((pathPattern) => [pathPattern, {
+        origin: new origins.S3Origin(appStorage, {
+          originPath: '/',
+        }),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      }])),
       certificate,
       defaultRootObject: 'index.html',
       domainNames,
@@ -317,14 +323,20 @@ export class ChipTubeStack extends Stack {
 
     // Add a origin access control id.
     cfnAppDistribution.addPropertyOverride('DistributionConfig.Origins.0.OriginAccessControlId', originAccessControl.attrId);
+    cfnAppDistribution.addPropertyOverride('DistributionConfig.Origins.1.OriginAccessControlId', originAccessControl.attrId);
+    cfnAppDistribution.addPropertyOverride('DistributionConfig.Origins.2.OriginAccessControlId', originAccessControl.attrId);
 
     // Delete a origin access identity in s3 origin config.
     cfnAppDistribution.addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
+    cfnAppDistribution.addPropertyOverride('DistributionConfig.Origins.1.S3OriginConfig.OriginAccessIdentity', '');
+    cfnAppDistribution.addPropertyOverride('DistributionConfig.Origins.2.S3OriginConfig.OriginAccessIdentity', '');
 
     // Delete a cloud front origin access identity.
     appDistribution.node.tryRemoveChild('Origin1');
+    appDistribution.node.tryRemoveChild('Origin2');
+    appDistribution.node.tryRemoveChild('Origin3');
 
-    // Delete a bucket policy.
+    // Delete the default app bucket policy.
     appBucket.node.tryRemoveChild('Policy');
 
     // App Bucket Policy
@@ -342,6 +354,33 @@ export class ChipTubeStack extends Stack {
       ],
       resources: [
         appBucket.arnForObjects('*'),
+      ],
+      conditions: {
+        'StringEquals': {
+          'AWS:SourceArn': `arn:aws:cloudfront::${this.account}:distribution/${appDistribution.distributionId}`,
+        },
+      },
+    }));
+
+    // Delete the default app storage policy.
+    appStorage.node.tryRemoveChild('Policy');
+
+    // App Storage Policy
+    appStorage.policy = new s3.BucketPolicy(appStorage, 'Policy', {
+      bucket: appStorage,
+    });
+
+    // Add the permission to access CloudFront.
+    appStorage.policy.document.addStatements(new iam.PolicyStatement({
+      actions: [
+        's3:GetObject',
+      ],
+      principals: [
+        new iam.ServicePrincipal('cloudfront.amazonaws.com'),
+      ],
+      resources: [
+        appStorage.arnForObjects('public/*'),
+        appStorage.arnForObjects('protected/*'),
       ],
       conditions: {
         'StringEquals': {
