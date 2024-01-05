@@ -47,14 +47,14 @@ watchEffect(async () => {
 });
 
 // use meta
-useMeta(() => ({
+useMeta({
   title: 'Playground',
   meta: {
     description: {
       content: 'Enjoy the tunes you love, upload original MIDI file, and share it all with friends, family, and the world on ChipTube.',
     },
   },
-}));
+});
 </script>
 
 <template>

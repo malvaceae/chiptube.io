@@ -12,14 +12,14 @@ import { getUrl } from 'aws-amplify/storage';
 import { date, useMeta } from 'quasar';
 
 // use meta
-useMeta(() => ({
+useMeta({
   title: 'Liked tunes',
   meta: {
     description: {
       content: 'Enjoy the tunes you love, upload original MIDI file, and share it all with friends, family, and the world on ChipTube.',
     },
   },
-}));
+});
 
 // is loading
 const isLoading = ref(true);
