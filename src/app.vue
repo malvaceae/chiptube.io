@@ -113,11 +113,7 @@ const isLoading = ref(true);
 // get the current user
 (async () => {
   try {
-    await fetchAuthSession({
-      forceRefresh: true,
-    });
-
-    auth.user = await fetchUserAttributes();
+    auth.user = await fetchAuthSession() && await fetchUserAttributes();
   } catch {
     auth.user = null;
   } finally {
