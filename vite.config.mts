@@ -39,7 +39,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        assetFileNames: ({ source }) => {
+        assetFileNames({ source }) {
           if (typeof source === 'string') {
             return '[ext]/[hash][extname]';
           }
@@ -64,11 +64,11 @@ export default defineConfig({
         chunkFileNames: 'js/[hash].js',
         entryFileNames: 'js/[hash].js',
         intro: 'window.TONE_SILENCE_LOGGING = true;',
-        manualChunks: (id) => {
+        manualChunks(id) {
           return [
             'node_modules/encoding-japanese',
             'node_modules/quasar/dist/quasar.esm.prod.js',
-          ].find((module) => id.includes(module));
+          ].find((chunkAlias) => id.includes(chunkAlias));
         },
       },
     },
