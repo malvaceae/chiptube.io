@@ -65,14 +65,16 @@ export abstract class q5 {
    * Loop.
    */
   private _loop(time = 0) {
-    const now = Date.now();
+    if (this._canvas?.isConnected) {
+      const now = performance.now();
 
-    if ((now - time) / (1000 / this._frameRate) >= 1) {
-      this.draw();
+      if ((now - time) / (1000 / this._frameRate) >= 1) {
+        this.draw();
 
-      requestAnimationFrame(() => this._loop(now - (now - time) % (1000 / this._frameRate)));
-    } else {
-      requestAnimationFrame(() => this._loop(time));
+        requestAnimationFrame(() => this._loop(now - (now - time) % (1000 / this._frameRate)));
+      } else {
+        requestAnimationFrame(() => this._loop(time));
+      }
     }
   }
 
@@ -110,14 +112,6 @@ export abstract class q5 {
     if (!noRedraw) {
       this.draw();
     }
-  }
-
-  /**
-   * Remove the canvas element.
-   */
-  remove() {
-    this._canvas?.remove?.();
-    this._canvas = undefined;
   }
 
   /**

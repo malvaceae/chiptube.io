@@ -615,9 +615,6 @@ watch(() => props.midiBuffer, () => {
 
 // finalize
 onUnmounted(() => {
-  // remove the canvas
-  canvas.value?.remove?.();
-
   // stop
   stop();
 
