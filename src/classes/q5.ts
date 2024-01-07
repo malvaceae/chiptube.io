@@ -112,7 +112,11 @@ export abstract class q5 {
   resizeCanvas(width: number, height: number, noRedraw = false) {
     Object.entries({ width, height }).forEach(([key, value]) => {
       if (this._canvas) {
+        // set canvas size as integer
         Object.assign(this._canvas, { [key]: Math.ceil(value) });
+
+        // set canvas style
+        this._canvas.style.setProperty(key, `${value}px`);
       }
     });
 
