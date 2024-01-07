@@ -65,10 +65,9 @@ export default defineConfig({
         entryFileNames: 'js/[hash].js',
         intro: 'window.TONE_SILENCE_LOGGING = true;',
         manualChunks(id) {
-          return [
-            'node_modules/encoding-japanese',
-            'node_modules/quasar/dist/quasar.esm.prod.js',
-          ].find((chunkAlias) => id.includes(chunkAlias));
+          if (id.includes('encoding-japanese')) {
+            return 'vendor-encoding-japanese';
+          }
         },
       },
     },

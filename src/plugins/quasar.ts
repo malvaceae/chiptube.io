@@ -1,5 +1,5 @@
 // Quasar
-export { Quasar } from 'quasar';
+import { Quasar } from 'quasar';
 
 // Quasar - Icon Set
 export { default as iconSet } from 'quasar/icon-set/mdi-v7';
@@ -15,6 +15,9 @@ import {
   Meta,
   Notify,
 } from 'quasar';
+
+// export quasar
+export { Quasar };
 
 // export quasar plugins
 export const plugins = {
