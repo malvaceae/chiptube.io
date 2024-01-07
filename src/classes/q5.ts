@@ -83,10 +83,10 @@ export abstract class q5 {
   private _loop(time = 0) {
     const now = Date.now();
 
-    if ((now - time) / (1000 / this._frameRate) >= .8) {
+    if ((now - time) / (1000 / this._frameRate) >= 1) {
       this.draw();
 
-      requestAnimationFrame(() => this._loop(now));
+      requestAnimationFrame(() => this._loop(now - (now - time) % (1000 / this._frameRate)));
     } else {
       requestAnimationFrame(() => this._loop(time));
     }
