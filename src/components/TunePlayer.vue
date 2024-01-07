@@ -8,6 +8,9 @@ import { storeToRefs } from 'pinia';
 // Tune Store
 import { useTuneStore } from '@/stores/tune';
 
+// q5.js
+import { q5 } from '@/classes/q5';
+
 // Sampler
 import { Sampler } from '@/classes/sampler';
 
@@ -22,9 +25,6 @@ import { dom, format } from 'quasar';
 
 // Tone.js
 import * as Tone from 'tone';
-
-// p5.js
-import p5 from 'p5';
 
 // properties
 const props = defineProps<{ midiBuffer: Promise<ArrayBuffer> | (() => Promise<ArrayBuffer>), thumbnail?: string }>();
@@ -465,27 +465,21 @@ const updateTime = () => {
 };
 
 // canvas
-const canvas = shallowRef<p5>();
+const canvas = shallowRef<q5>();
 
 // initialize
 onMounted(() => {
   // canvas
-  canvas.value = new class extends p5 {
-    constructor() {
-      super(() => {
-        //
-      }, el.value);
-    }
-
+  canvas.value = new class extends q5 {
     setup() {
       const canvas = this.createCanvas(...calcCanvasSize());
-      canvas.class('block');
+      canvas.classList.add('block');
       this.frameRate(30);
     }
 
     draw() {
       updateTime();
-      this.background(32);
+      this.background('#202020');
       this.drawMinorSecondLines();
       this.drawMeasureLines();
       this.drawNotes();
@@ -507,7 +501,7 @@ onMounted(() => {
 
     drawKey(pos: number, color: string, channel?: number) {
       this.fill(color);
-      this.stroke(128);
+      this.stroke('#808080');
 
       if (typeof channel === 'number' && channelColors[channel]) {
         this.fill(channelColors[channel]);
@@ -547,7 +541,7 @@ onMounted(() => {
 
     drawNote(pos: number, color: string, channel: number, y: number, height: number) {
       this.fill(channelColors[channel]);
-      this.stroke(32);
+      this.stroke('#202020');
 
       // draw the note of white key
       if (color === 'white') {
@@ -562,7 +556,7 @@ onMounted(() => {
 
     drawMinorSecondLines() {
       this.noFill();
-      this.stroke(64);
+      this.stroke('#404040');
 
       // draw minor second lines
       minorSecondLines.map(posToWhiteKeyX).forEach((x) => {
@@ -572,7 +566,7 @@ onMounted(() => {
 
     drawMeasureLines() {
       this.noFill();
-      this.stroke(64);
+      this.stroke('#404040');
 
       // draw measure lines
       measureSeconds.value.filter((seconds) => seconds >= currentTime.value && seconds < (currentTime.value + 4)).forEach((seconds) => {
@@ -598,10 +592,10 @@ onMounted(() => {
 
       // draw the info text
       if (currentTempo.value && currentTimeSignature.value) {
-        this.text(`BPM:${this.floor(60000000 / currentTempo.value.value)} BEAT:${currentTimeSignature.value.value.join('/')}`, 8, keyY.value - 8);
+        this.text(`BPM:${Math.floor(60000000 / currentTempo.value.value)} BEAT:${currentTimeSignature.value.value.join('/')}`, 8, keyY.value - 8);
       }
     }
-  };
+  }(el.value);
 });
 
 // watch midi buffer
