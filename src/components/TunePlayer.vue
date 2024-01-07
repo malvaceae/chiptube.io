@@ -9,7 +9,7 @@ import { storeToRefs } from 'pinia';
 import { useTuneStore } from '@/stores/tune';
 
 // q5.js
-import { q5 } from '@/classes/q5';
+import { Q5 } from '@/classes/q5';
 
 // Sampler
 import { Sampler } from '@/classes/sampler';
@@ -464,13 +464,13 @@ const updateTime = () => {
   }
 };
 
-// canvas
-const canvas = shallowRef<q5>();
+// q5
+const q5 = shallowRef<Q5>();
 
 // initialize
 onMounted(() => {
-  // canvas
-  canvas.value = new class extends q5 {
+  // q5
+  q5.value = new class extends Q5 {
     setup() {
       const canvas = this.createCanvas(...calcCanvasSize());
       canvas.classList.add('block');
@@ -674,7 +674,7 @@ onUnmounted(() => {
         </div>
       </div>
     </template>
-    <q-resize-observer debounce="0" @resize="canvas?.resizeCanvas?.(...calcCanvasSize())" />
+    <q-resize-observer debounce="0" @resize="q5?.resizeCanvas?.(...calcCanvasSize())" />
   </div>
 </template>
 

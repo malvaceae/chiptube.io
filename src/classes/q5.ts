@@ -1,7 +1,7 @@
 /**
  * q5.js
  */
-export abstract class q5 {
+export abstract class Q5 {
   /**
    * The parent element.
    */
