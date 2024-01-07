@@ -13,6 +13,11 @@ export abstract class q5 {
   private _canvas?: HTMLCanvasElement;
 
   /**
+   * The 2D context.
+   */
+  private _context?: CanvasRenderingContext2D | null;
+
+  /**
    * The frame rate.
    */
   private _frameRate = 60;
@@ -47,27 +52,6 @@ export abstract class q5 {
   }
 
   /**
-   * Get the parent element.
-   */
-  get el() {
-    return this._el;
-  }
-
-  /**
-   * Get the canvas element.
-   */
-  get canvas() {
-    return this._canvas;
-  }
-
-  /**
-   * Get the 2D context.
-   */
-  get context() {
-    return this._canvas?.getContext?.('2d');
-  }
-
-  /**
    * Setup.
    */
   abstract setup(): void;
@@ -98,6 +82,9 @@ export abstract class q5 {
   createCanvas(width: number, height: number) {
     // create canvas element
     this._canvas = document.createElement('canvas');
+
+    // get 2d context
+    this._context = this._canvas.getContext('2d');
 
     // resize canvas element
     this.resizeCanvas(width, height, true);
@@ -186,10 +173,10 @@ export abstract class q5 {
    * Set the background color.
    */
   background(color: string) {
-    if (this.context && this._canvas) {
+    if (this._context && this._canvas) {
       // fill
-      this.context.fillStyle = color;
-      this.context.fillRect(
+      this._context.fillStyle = color;
+      this._context.fillRect(
         0,
         0,
         this._canvas.width,
@@ -202,15 +189,15 @@ export abstract class q5 {
    * Draw the line.
    */
   line(x1: number, y1: number, x2: number, y2: number) {
-    if (this.context) {
+    if (this._context) {
       // set line path
-      this.context.beginPath();
-      this.context.moveTo(x1, y1);
-      this.context.lineTo(x2, y2);
+      this._context.beginPath();
+      this._context.moveTo(x1, y1);
+      this._context.lineTo(x2, y2);
 
       // stroke
-      this.context.strokeStyle = this._stroke;
-      this.context.stroke();
+      this._context.strokeStyle = this._stroke;
+      this._context.stroke();
     }
   }
 
@@ -218,18 +205,18 @@ export abstract class q5 {
    * Draw the rectangle.
    */
   rect(x: number, y: number, width: number, height: number, radius?: number) {
-    if (this.context) {
+    if (this._context) {
       // set rectangle path
-      this.context.beginPath();
-      this.context.roundRect(x, y, width, height, radius);
+      this._context.beginPath();
+      this._context.roundRect(x, y, width, height, radius);
 
       // fill
-      this.context.fillStyle = this._fill;
-      this.context.fill();
+      this._context.fillStyle = this._fill;
+      this._context.fill();
 
       // stroke
-      this.context.strokeStyle = this._stroke;
-      this.context.stroke();
+      this._context.strokeStyle = this._stroke;
+      this._context.stroke();
     }
   }
 
@@ -237,20 +224,20 @@ export abstract class q5 {
    * Draw the text.
    */
   text(text: string, x: number, y: number) {
-    if (this.context) {
+    if (this._context) {
       // set font
-      this.context.font = [
+      this._context.font = [
         this._textSize,
         this._textFont,
       ].join('px ');
 
       // fill
-      this.context.fillStyle = this._fill;
-      this.context.fillText(text, x, y);
+      this._context.fillStyle = this._fill;
+      this._context.fillText(text, x, y);
 
       // stroke
-      this.context.strokeStyle = this._stroke;
-      this.context.strokeText(text, x, y);
+      this._context.strokeStyle = this._stroke;
+      this._context.strokeText(text, x, y);
     }
   }
 }
