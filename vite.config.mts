@@ -64,8 +64,13 @@ export default defineConfig({
         chunkFileNames: 'js/[hash].js',
         entryFileNames: 'js/[hash].js',
         intro: 'window.TONE_SILENCE_LOGGING = true;',
+        manualChunks: (id) => {
+          return [
+            'node_modules/encoding-japanese',
+            'node_modules/quasar/dist/quasar.esm.prod.js',
+          ].find((module) => id.includes(module));
+        },
       },
     },
-    chunkSizeWarningLimit: 1536,
   },
 });
