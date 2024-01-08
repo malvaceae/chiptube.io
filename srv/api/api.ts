@@ -71,7 +71,7 @@ export class ChipTubeApi extends apigateway.RestApi {
     const currentAlias = new lambda.Alias(this.handler, 'CurrentAlias', {
       aliasName: 'current',
       version: this.handler.currentVersion,
-      provisionedConcurrentExecutions: 3,
+      provisionedConcurrentExecutions: 1,
     });
 
     // Add the proxy resource and any methods.
