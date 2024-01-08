@@ -9,7 +9,10 @@ import { get } from 'aws-amplify/api';
 import { getUrl } from 'aws-amplify/storage';
 
 // Quasar
-import { date, useMeta, useQuasar } from 'quasar';
+import { useMeta, useQuasar } from 'quasar';
+
+// Tune List Item
+import TuneListItem from '@/components/TuneListItem.vue';
 
 // properties
 const props = defineProps<{ query: string }>();
@@ -91,37 +94,7 @@ const getThumbnail = async ({ thumbnailKey: key, identityId: targetIdentityId }:
   <q-page padding>
     <q-infinite-scroll :offset="250" @load="getTunes">
       <q-list class="q-gutter-md">
-        <q-item v-for="tune in tunes" :to="{ name: 'watch', query: { v: tune.id } }">
-          <q-item-section side>
-            <template v-if="tune.thumbnail">
-              <q-img :ratio="16 / 9" :src="tune.thumbnail" />
-            </template>
-            <template v-else>
-              <q-img src="@/assets/thumbnail.png">
-                <div class="absolute-center full-width text-h6 text-center ellipsis">
-                  {{ tune.title }}
-                </div>
-              </q-img>
-            </template>
-          </q-item-section>
-          <q-item-section top>
-            <q-item-label class="text-h6" lines="2">
-              {{ tune.title }}
-            </q-item-label>
-            <q-item-label caption>
-              {{ tune.views.toLocaleString() }} views • {{ date.formatDate(tune.publishedAt, 'MMM D, YYYY') }}
-            </q-item-label>
-            <q-item-label class="q-py-sm" caption>
-              <q-avatar class="q-mr-xs" size="sm">
-                <img :src="tune.user.picture" referrerpolicy="no-referrer">
-              </q-avatar>
-              {{ tune.user.nickname }}
-            </q-item-label>
-            <q-item-label caption lines="2">
-              {{ tune.description }}
-            </q-item-label>
-          </q-item-section>
-        </q-item>
+        <tune-list-item v-for="tune in tunes" :tune="tune" />
       </q-list>
       <template #loading>
         <div class="row justify-center q-my-md">
@@ -136,9 +109,3 @@ const getThumbnail = async ({ thumbnailKey: key, identityId: targetIdentityId }:
     </template>
   </q-page>
 </template>
-
-<style lang="scss" scoped>
-.q-item__section--side {
-  width: 30%;
-}
-</style>
