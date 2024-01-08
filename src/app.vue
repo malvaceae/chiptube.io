@@ -113,7 +113,16 @@ const isLoading = ref(true);
 // get the current user
 (async () => {
   try {
-    auth.user = await fetchAuthSession() && await fetchUserAttributes();
+    // fetch the auth session
+    await fetchAuthSession();
+
+    // start fetching user attributes
+    const done = fetchUserAttributes().then((user) => (auth.user = user)).catch(() => (auth.user = null));
+
+    // wait for fetch user attributes if the auth user not exists
+    if (auth.user === null) {
+      await done;
+    }
   } catch {
     auth.user = null;
   } finally {
