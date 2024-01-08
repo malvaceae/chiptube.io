@@ -62,7 +62,7 @@ useMeta({
     <q-card flat square>
       <q-card-section>
         <div class="q-mb-sm text-subtitle1 text-weight-medium">
-          1. Select MIDI file
+          1. Select a MIDI file
         </div>
         <q-file v-model="midiFile" accept=".mid" label-slot outlined square>
           <template #prepend>
@@ -75,7 +75,7 @@ useMeta({
       </q-card-section>
       <q-card-section>
         <div class="q-mb-sm text-subtitle1 text-weight-medium">
-          2. Watch MIDI
+          2. Play
         </div>
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-8">
