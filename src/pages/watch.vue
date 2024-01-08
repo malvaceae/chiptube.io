@@ -20,11 +20,11 @@ import { date, exportFile, useMeta, useQuasar } from 'quasar';
 // Google Sign In
 import GoogleSignIn from '@/components/GoogleSignIn.vue';
 
-// Related Tunes
-import RelatedTunes from '@/components/RelatedTunes.vue';
+// Related Tune List
+import RelatedTuneList from '@/components/RelatedTuneList.vue';
 
-// Tune Comments
-import TuneComments from '@/components/TuneComments.vue';
+// Tune Comment List
+import TuneCommentList from '@/components/TuneCommentList.vue';
 
 // Tune Dialog
 import TuneDialog from '@/components/TuneDialog.vue';
@@ -373,10 +373,10 @@ const getThumbnail = async ({ thumbnailKey: key, identityId: targetIdentityId }:
             </q-item-section>
           </q-item>
         </q-list>
-        <tune-comments :id="id" @update="tune && tune.comments++" />
+        <tune-comment-list :id="id" @update="tune && tune.comments++" />
       </div>
       <div class="col-12 col-md-4">
-        <related-tunes :id="id" />
+        <related-tune-list :id="id" />
       </div>
     </div>
   </q-page>
