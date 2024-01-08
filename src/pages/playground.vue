@@ -33,8 +33,8 @@ const {
   duration,
   timeSignatures,
   tempos,
-  formatTime,
   convertSJISToUnicode,
+  formatTime,
   loadMidi,
 } = useMidi();
 

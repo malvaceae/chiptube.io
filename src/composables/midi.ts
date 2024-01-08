@@ -1,8 +1,5 @@
 // Vue.js
-import { MaybeRefOrGetter, computed, shallowRef, toValue } from 'vue';
-
-// encoding.js
-import Encoding from 'encoding-japanese';
+import { MaybeRefOrGetter, computed, ref, shallowRef, toValue } from 'vue';
 
 // Midi
 import { Midi } from '@/classes/midi';
@@ -15,13 +12,13 @@ export const useMidi = () => {
   const tracks = computed(() => midi.value?.tracks ?? []);
 
   // the midi title
-  const title = computed(() => convertSJISToUnicode(tracks.value[0]?.getEvents?.('trackName')?.[0]?.text ?? ''));
+  const title = computed(() => convertSJISToUnicode.value(tracks.value[0]?.getEvents?.('trackName')?.[0]?.text ?? ''));
 
   // the midi description
-  const description = computed(() => convertSJISToUnicode(tracks.value[0]?.getEvents?.('text')?.map?.(({ text }) => text)?.join?.('\n') ?? ''));
+  const description = computed(() => convertSJISToUnicode.value(tracks.value[0]?.getEvents?.('text')?.map?.(({ text }) => text)?.join?.('\n') ?? ''));
 
   // the midi copyright
-  const copyright = computed(() => convertSJISToUnicode(tracks.value[0]?.getEvents?.('copyrightNotice')?.[0]?.text ?? ''));
+  const copyright = computed(() => convertSJISToUnicode.value(tracks.value[0]?.getEvents?.('copyrightNotice')?.[0]?.text ?? ''));
 
   // the midi lyrics
   const lyrics = computed(() => midi.value?.getEvents?.('lyrics') ?? []);
@@ -104,6 +101,20 @@ export const useMidi = () => {
   // the midi notes
   const notes = computed(() => notesByTrack.value.flat());
 
+  // convert SJIS to unicode
+  const convertSJISToUnicode = ref((data: string) => data);
+
+  // encoding.js
+  import('encoding-japanese').then(({ convert, detect }) => {
+    convertSJISToUnicode.value = (data: string) => {
+      if (detect(data, 'SJIS')) {
+        return convert(data, 'UNICODE', 'SJIS');
+      } else {
+        return data;
+      }
+    };
+  });
+
   // format time
   const formatTime = (seconds: number) => {
     return [
@@ -112,9 +123,6 @@ export const useMidi = () => {
       Math.floor(Math.max(seconds, 0) % (60 ** 1) / (60 ** 0)).toString().padStart(2, '0'),
     ].slice(duration.value >= (60 ** 2) ? 0 : 1).join(':');
   };
-
-  // convert SJIS to unicode
-  const convertSJISToUnicode = (data: string) => Encoding.detect(data, 'SJIS') ? Encoding.convert(data, 'UNICODE', 'SJIS') : data;
 
   // load midi
   const loadMidi = async (midiBuffer: MaybeRefOrGetter<Promise<ArrayBuffer>>) => {
@@ -139,8 +147,8 @@ export const useMidi = () => {
     channelEvents,
     notesByTrack,
     notes,
-    formatTime,
     convertSJISToUnicode,
+    formatTime,
     loadMidi,
   };
 };

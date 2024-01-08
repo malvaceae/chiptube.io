@@ -64,11 +64,6 @@ export default defineConfig({
         chunkFileNames: 'js/[hash].js',
         entryFileNames: 'js/[hash].js',
         intro: 'window.TONE_SILENCE_LOGGING = true;',
-        manualChunks(id) {
-          if (id.includes('encoding-japanese')) {
-            return 'vendor-encoding-japanese';
-          }
-        },
       },
     },
   },
