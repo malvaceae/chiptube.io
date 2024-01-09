@@ -85,6 +85,9 @@ watchEffect(() => {
   if (name === 'search' && typeof q === 'string') {
     query.value = q;
   }
+
+  // show search input if current route is "search"
+  isSearching.value = name === 'search';
 });
 
 // search
