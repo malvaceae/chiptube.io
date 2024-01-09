@@ -1,4 +1,9 @@
 /**
+ * Color
+ */
+export type Color = string | CanvasGradient | CanvasPattern;
+
+/**
  * q5.js
  */
 export abstract class Q5 {
@@ -25,12 +30,12 @@ export abstract class Q5 {
   /**
    * The fill color.
    */
-  private _fill = '#000';
+  private _fill?: Color = '#000';
 
   /**
    * The stroke color.
    */
-  private _stroke = '#000';
+  private _stroke?: Color = '#000';
 
   /**
    * The text font.
@@ -124,29 +129,29 @@ export abstract class Q5 {
   /**
    * Set the fill color.
    */
-  fill(color: string) {
+  fill(color?: Color) {
     this._fill = color;
   }
 
   /**
-   * Set the fill color to transparent.
+   * Unset the fill color.
    */
   noFill() {
-    this.fill('transparent');
+    this.fill();
   }
 
   /**
    * Set the stroke color.
    */
-  stroke(color: string) {
+  stroke(color?: Color) {
     this._stroke = color;
   }
 
   /**
-   * Set the stroke color to transparent.
+   * Unset the stroke color.
    */
   noStroke() {
-    this.stroke('transparent');
+    this.stroke();
   }
 
   /**
@@ -166,7 +171,7 @@ export abstract class Q5 {
   /**
    * Set the background color.
    */
-  background(color: string) {
+  background(color: Color) {
     if (this._context && this._canvas) {
       // fill
       this._context.fillStyle = color;
@@ -190,8 +195,10 @@ export abstract class Q5 {
       this._context.lineTo(x2, y2);
 
       // stroke
-      this._context.strokeStyle = this._stroke;
-      this._context.stroke();
+      if (this._stroke) {
+        this._context.strokeStyle = this._stroke;
+        this._context.stroke();
+      }
     }
   }
 
@@ -205,12 +212,16 @@ export abstract class Q5 {
       this._context.roundRect(x, y, width, height, radius);
 
       // fill
-      this._context.fillStyle = this._fill;
-      this._context.fill();
+      if (this._fill) {
+        this._context.fillStyle = this._fill;
+        this._context.fill();
+      }
 
       // stroke
-      this._context.strokeStyle = this._stroke;
-      this._context.stroke();
+      if (this._stroke) {
+        this._context.strokeStyle = this._stroke;
+        this._context.stroke();
+      }
     }
   }
 
@@ -220,18 +231,19 @@ export abstract class Q5 {
   text(text: string, x: number, y: number) {
     if (this._context) {
       // set font
-      this._context.font = [
-        this._textSize,
-        this._textFont,
-      ].join('px ');
+      this._context.font = `${this._textSize}px ${this._textFont}`;
 
       // fill
-      this._context.fillStyle = this._fill;
-      this._context.fillText(text, x, y);
+      if (this._fill) {
+        this._context.fillStyle = this._fill;
+        this._context.fillText(text, x, y);
+      }
 
       // stroke
-      this._context.strokeStyle = this._stroke;
-      this._context.strokeText(text, x, y);
+      if (this._stroke) {
+        this._context.strokeStyle = this._stroke;
+        this._context.strokeText(text, x, y);
+      }
     }
   }
 }
