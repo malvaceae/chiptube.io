@@ -53,9 +53,9 @@ export interface ChipTubeStackProps extends StackProps {
   readonly googleSearchConsoleVerificationCode?: string;
 
   /**
-   * Feedback Email
+   * Admin Email
    */
-  readonly feedbackEmail?: string;
+  readonly adminEmail?: string;
 
   /**
    * Domain Name
@@ -109,7 +109,7 @@ export class ChipTubeStack extends Stack {
       googleClientId,
       googleClientSecret,
       googleSearchConsoleVerificationCode,
-      feedbackEmail,
+      adminEmail,
       domainName,
       githubRepository,
       githubRef,
@@ -768,13 +768,13 @@ export class ChipTubeStack extends Stack {
       });
     }
 
-    // If the feedback email exists, create the SNS topic.
-    if (feedbackEmail) {
+    // If the admin email exists, create the SNS topic.
+    if (adminEmail) {
       // Feedback Topic
       const feedbackTopic = new sns.Topic(this, 'FeedbackTopic');
 
       // Add the email subscription.
-      feedbackTopic.addSubscription(new subscriptions.EmailSubscription(feedbackEmail));
+      feedbackTopic.addSubscription(new subscriptions.EmailSubscription(adminEmail));
 
       // Add environment variable for access Feedback Topic.
       api.handler.addEnvironment('FEEDBACK_TOPIC_ARN', feedbackTopic.topicArn);

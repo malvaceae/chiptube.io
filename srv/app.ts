@@ -18,11 +18,11 @@ const env = Object.fromEntries(['account', 'region'].map((key) => {
 }));
 
 // Context Values
-const [googleClientId, googleClientSecret, googleSearchConsoleVerificationCode, feedbackEmail, domainName, githubRepository, githubRef] = [
+const [googleClientId, googleClientSecret, googleSearchConsoleVerificationCode, adminEmail, domainName, githubRepository, githubRef] = [
   app.node.getContext('googleClientId'),
   app.node.getContext('googleClientSecret'),
   app.node.tryGetContext('googleSearchConsoleVerificationCode'),
-  app.node.tryGetContext('feedbackEmail'),
+  app.node.tryGetContext('adminEmail'),
   app.node.tryGetContext('domainName'),
   app.node.tryGetContext('githubRepository'),
   app.node.tryGetContext('githubRef'),
@@ -67,7 +67,7 @@ new ChipTubeStack(app, 'ChipTube', {
   googleClientId,
   googleClientSecret,
   googleSearchConsoleVerificationCode,
-  feedbackEmail,
+  adminEmail,
   domainName,
   githubRepository,
   githubRef,

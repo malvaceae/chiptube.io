@@ -31,7 +31,7 @@ jobs:
             -c googleClientId=${{ secrets.GOOGLE_CLIENT_ID }} \
             -c googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }} \
             -c googleSearchConsoleVerificationCode=${{ secrets.GOOGLE_SEARCH_CONSOLE_VERIFICATION_CODE }} \
-            -c feedbackEmail=${{ secrets.FEEDBACK_EMAIL }} \
+            -c adminEmail=${{ secrets.ADMIN_EMAIL }} \
             -c domainName=${{ env.DOMAIN_NAME }} \
             -c githubRepository=${{ github.repository }} \
             -c githubRef=${{ github.ref }} \
