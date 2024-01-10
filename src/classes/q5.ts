@@ -87,6 +87,9 @@ export abstract class Q5 {
    * Create the canvas element.
    */
   createCanvas(width: number, height: number) {
+    // remove canvas element
+    this._canvas?.remove?.();
+
     // create canvas element
     this._canvas = document.createElement('canvas');
 
