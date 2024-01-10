@@ -29,8 +29,8 @@ import * as Tone from 'tone';
 // properties
 const props = defineProps<{ midiBuffer: Promise<ArrayBuffer> | (() => Promise<ArrayBuffer>), thumbnail?: string }>();
 
-// volume and mute
-const { volume, mute } = storeToRefs(useTuneStore());
+// volume, mute and frame rate
+const { volume, mute, frameRate } = storeToRefs(useTuneStore());
 
 // 88 keys in A0 (21) to C8 (108)
 const keys = [...Array(88).keys()].map((i) => i + 21).map((id) => {
@@ -474,7 +474,7 @@ onMounted(() => {
     setup() {
       const canvas = this.createCanvas(...calcCanvasSize());
       canvas.classList.add('block');
-      this.frameRate(30);
+      this.frameRate(frameRate.value);
     }
 
     draw() {
@@ -666,6 +666,54 @@ onUnmounted(() => {
             {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
           </div>
           <q-space />
+          <div>
+            <q-btn flat padding="sm" :ripple="false" size="md" square>
+              <q-icon name="mdi-cog" />
+              <q-menu class="no-shadow" anchor="top right" :offset="[0, 8]" self="bottom right" square>
+                <q-list bordered dense padding>
+                  <q-item clickable>
+                    <q-item-section side>
+                      <q-icon name="mdi-play-speed" />
+                    </q-item-section>
+                    <q-item-section>
+                      Frame rate: {{ frameRate }} fps
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-icon name="mdi-chevron-right" />
+                    </q-item-section>
+                    <q-menu class="no-shadow" anchor="bottom right" :offset="[1.33125, 9]" self="bottom right" square>
+                      <q-list bordered dense padding>
+                        <q-item clickable v-close-popup @click="q5?.frameRate?.(frameRate = 60)">
+                          <q-item-section side>
+                            <q-icon :class="{ invisible: !(frameRate === 60) }" name="mdi-check" />
+                          </q-item-section>
+                          <q-item-section>
+                            60 fps
+                          </q-item-section>
+                        </q-item>
+                        <q-item clickable v-close-popup @click="q5?.frameRate?.(frameRate = 30)">
+                          <q-item-section side>
+                            <q-icon :class="{ invisible: !(frameRate === 30) }" name="mdi-check" />
+                          </q-item-section>
+                          <q-item-section>
+                            30 fps
+                          </q-item-section>
+                        </q-item>
+                        <q-item clickable v-close-popup @click="q5?.frameRate?.(frameRate = 24)">
+                          <q-item-section side>
+                            <q-icon :class="{ invisible: !(frameRate === 24) }" name="mdi-check" />
+                          </q-item-section>
+                          <q-item-section>
+                            24 fps
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-menu>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
+          </div>
           <div>
             <q-btn flat padding="xs" :ripple="false" size="lg" square @click="$q.fullscreen.toggle(el)">
               <q-icon :name="$q.fullscreen.isActive ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" />
