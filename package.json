@@ -33,6 +33,7 @@
     "http-errors": "^2.0.0",
     "midi-file": "^1.2.4",
     "pinia": "^2.1.7",
+    "pinia-plugin-persistedstate": "^3.2.1",
     "pluralize": "^8.0.0",
     "postcss": "^8.4.33",
     "quasar": "^2.14.2",

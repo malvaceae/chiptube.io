@@ -1,20 +1,20 @@
-// Vue.js
-import { watch } from 'vue';
-
 // Pinia
 import { createPinia } from 'pinia';
+
+// Persistedstate
+import { createPersistedState } from 'pinia-plugin-persistedstate';
 
 // create pinia
 const pinia = createPinia();
 
-// set the initial state
-if (localStorage.state) {
-  pinia.state.value = JSON.parse(localStorage.state);
-}
+// use the persistedstate
+pinia.use(createPersistedState({
+  auto: true,
+}));
 
-// persist the state
-watch(pinia.state, (state) => {
-  localStorage.state = JSON.stringify(state);
-}, { deep: true });
+// remove the old state
+if (localStorage.getItem('state')) {
+  localStorage.removeItem('state');
+}
 
 export default pinia;
