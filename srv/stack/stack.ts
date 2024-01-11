@@ -311,7 +311,7 @@ export class ChipTubeStack extends Stack {
     // Origin Access Control
     const originAccessControl = new cloudfront.CfnOriginAccessControl(this, 'OriginAccessControl', {
       originAccessControlConfig: {
-        name: 'OriginAccessControlForS3Bucket',
+        name: 'OriginAccessControlForChipTube',
         originAccessControlOriginType: 's3',
         signingBehavior: 'always',
         signingProtocol: 'sigv4',
