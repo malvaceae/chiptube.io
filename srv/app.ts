@@ -18,14 +18,13 @@ const env = Object.fromEntries(['account', 'region'].map((key) => {
 }));
 
 // Context Values
-const [googleClientId, googleClientSecret, googleSearchConsoleVerificationCode, adminEmail, domainName, githubRepository, githubRef] = [
+const [googleClientId, googleClientSecret, googleSearchConsoleVerificationCode, adminEmail, domainName, githubRepo] = [
   app.node.getContext('googleClientId'),
   app.node.getContext('googleClientSecret'),
   app.node.tryGetContext('googleSearchConsoleVerificationCode'),
   app.node.tryGetContext('adminEmail'),
   app.node.tryGetContext('domainName'),
-  app.node.tryGetContext('githubRepository'),
-  app.node.tryGetContext('githubRef'),
+  app.node.tryGetContext('githubRepo'),
 ];
 
 // If the domain name exists, create ACM resource in us-east-1.
@@ -69,8 +68,7 @@ new ChipTubeStack(app, 'ChipTube', {
   googleSearchConsoleVerificationCode,
   adminEmail,
   domainName,
-  githubRepository,
-  githubRef,
+  githubRepo,
   zone,
   certificate,
   domainNames,

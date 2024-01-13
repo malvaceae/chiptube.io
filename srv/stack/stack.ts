@@ -1,9 +1,7 @@
 // AWS CDK
 import {
   CfnOutput,
-  CustomResource,
   Duration,
-  IgnoreMode,
   SecretValue,
   Stack,
   StackProps,
@@ -11,7 +9,6 @@ import {
   aws_certificatemanager as acm,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
-  aws_codebuild as codebuild,
   aws_cognito as cognito,
   aws_dynamodb as dynamodb,
   aws_iam as iam,
@@ -20,11 +17,8 @@ import {
   aws_route53 as route53,
   aws_route53_targets as targets,
   aws_s3 as s3,
-  aws_s3_assets as assets,
-  aws_s3_deployment as s3deploy,
   aws_sns as sns,
   aws_sns_subscriptions as subscriptions,
-  custom_resources as cr,
 } from 'aws-cdk-lib';
 
 // Constructs
@@ -65,12 +59,7 @@ export interface ChipTubeStackProps extends StackProps {
   /**
    * GitHub Repository
    */
-  readonly githubRepository?: string;
-
-  /**
-   * GitHub Ref
-   */
-  readonly githubRef?: string;
+  readonly githubRepo?: string;
 
   /**
    * Hosted Zone
@@ -111,8 +100,7 @@ export class ChipTubeStack extends Stack {
       googleSearchConsoleVerificationCode,
       adminEmail,
       domainName,
-      githubRepository,
-      githubRef,
+      githubRepo,
       zone,
       certificate,
       domainNames,
@@ -275,6 +263,11 @@ export class ChipTubeStack extends Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
 
+    // App Bucket Name
+    new CfnOutput(this, 'AppBucketName', {
+      value: appBucket.bucketName,
+    });
+
     // App Distribution
     const appDistribution = new cloudfront.Distribution(this, 'AppDistribution', {
       defaultBehavior: {
@@ -306,6 +299,11 @@ export class ChipTubeStack extends Stack {
           responsePagePath: '/',
         },
       ],
+    });
+
+    // App Distribution ID
+    new CfnOutput(this, 'AppDistributionId', {
+      value: appDistribution.distributionId,
     });
 
     // Origin Access Control
@@ -783,150 +781,19 @@ export class ChipTubeStack extends Stack {
       feedbackTopic.grantPublish(api.handler);
     }
 
-    // App Asset
-    const appAsset = new assets.Asset(this, 'AppAsset', {
-      path: '.',
-      exclude: [
-        '/*',
-        '!.browserslistrc',
-        '!index.html',
-        '!package.json',
-        '!postcss.config.js',
-        '!public',
-        '!src',
-        '!tsconfig.json',
-        '!vite.config.mts',
-        '!yarn.lock',
-      ],
-      ignoreMode: IgnoreMode.GIT,
-    });
-
-    // App Project
-    const appProject = new codebuild.Project(this, 'AppProject', {
-      source: codebuild.Source.s3({
-        bucket: appAsset.bucket,
-        path: appAsset.s3ObjectKey,
-      }),
-      environment: {
-        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
-        computeType: codebuild.ComputeType.SMALL,
-        environmentVariables: {
-          VITE_API_ENDPOINT: {
-            value: apiEndpoint,
-          },
-          VITE_APP_STORAGE_BUCKET_NAME: {
-            value: appStorage.bucketName,
-          },
-          VITE_IDENTITY_POOL_ID: {
-            value: identityPool.ref,
-          },
-          VITE_USER_POOL_ID: {
-            value: userPool.userPoolId,
-          },
-          VITE_USER_POOL_CLIENT_ID: {
-            value: userPoolClient.userPoolClientId,
-          },
-          VITE_USER_POOL_DOMAIN_NAME: {
-            value: userPoolDomain.baseUrl().slice(8),
-          },
-        },
-      },
-      buildSpec: codebuild.BuildSpec.fromObject({
-        version: 0.2,
-        phases: {
-          install: {
-            'runtime-versions': {
-              nodejs: 18,
-            },
-            commands: [
-              'corepack enable',
-            ],
-          },
-          pre_build: {
-            commands: [
-              'yarn --frozen-lockfile',
-            ],
-          },
-          build: {
-            commands: [
-              'yarn build',
-            ],
-          },
-        },
-        artifacts: {
-          files: [
-            '**/*',
-          ],
-          'base-directory': 'dist',
-        },
-      }),
-      artifacts: codebuild.Artifacts.s3({
-        bucket: appAsset.bucket,
-        path: appAsset.assetHash,
-        name: 'artifacts.zip',
-        includeBuildId: false,
-      }),
-    });
-
-    // App Build Handler
-    const appBuildHandler = new nodejs.NodejsFunction(this, 'AppBuildHandler', {
-      architecture: lambda.Architecture.ARM_64,
-      runtime: lambda.Runtime.NODEJS_18_X,
-      timeout: Duration.minutes(15),
-      environment: {
-        APP_PROJECT_NAME: appProject.projectName,
-      },
-      initialPolicy: [
-        new iam.PolicyStatement({
-          actions: [
-            'codebuild:BatchGetBuilds',
-            'codebuild:StartBuild',
-          ],
-          resources: [
-            appProject.projectArn,
-          ],
-        }),
-      ],
-      bundling: {
-        minify: true,
-      },
-    });
-
-    // App Build Provider
-    const appBuildProvider = new cr.Provider(this, 'AppBuildProvider', {
-      onEventHandler: appBuildHandler,
-    });
-
-    // App Build
-    const appBuild = new CustomResource(this, `AppBuild-${appAsset.assetHash}`, {
-      serviceToken: appBuildProvider.serviceToken,
-    });
-
-    // App Bucket Deployment
-    const appBucketDeployment = new s3deploy.BucketDeployment(this, 'AppBucketDeployment', {
-      sources: [
-        s3deploy.Source.bucket(appAsset.bucket, `${appAsset.assetHash}/artifacts.zip`),
-      ],
-      destinationBucket: appBucket,
-      distribution: appDistribution,
-    });
-
-    // Wait for the build to complete.
-    appBucketDeployment.node.addDependency(appBuild);
-
-    // If the GitHub repository name and ref of the branch exists, create a role to cdk deploy from GitHub.
-    if (githubRepository && githubRef) {
+    // If the GitHub repository name exists, create a role to cdk deploy from GitHub.
+    if (githubRepo) {
       // GitHub OpenID Connect Provider
       const githubOpenIdConnectProvider = iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(this, 'GitHubOpenIdConnectProvider', `arn:aws:iam::${this.account}:oidc-provider/token.actions.githubusercontent.com`);
 
       // GitHub Deploy Role
-      new iam.Role(this, 'GitHubDeployRole', {
+      const githubDeployRole = new iam.Role(this, 'GitHubDeployRole', {
         assumedBy: new iam.WebIdentityPrincipal(githubOpenIdConnectProvider.openIdConnectProviderArn, {
           'StringEquals': {
             [`${githubOpenIdConnectProvider.openIdConnectProviderIssuer}:aud`]: 'sts.amazonaws.com',
           },
           'StringLike': {
-            [`${githubOpenIdConnectProvider.openIdConnectProviderIssuer}:sub`]: `repo:${githubRepository}:ref:${githubRef}`,
+            [`${githubOpenIdConnectProvider.openIdConnectProviderIssuer}:sub`]: `repo:${githubRepo}:*`,
           },
         }),
         inlinePolicies: {
@@ -944,6 +811,15 @@ export class ChipTubeStack extends Stack {
           }),
         },
       });
+
+      // Add permissions to access App Bucket.
+      appBucket.grantReadWrite(githubDeployRole);
+
+      // Add permissions to access App Distribution.
+      appDistribution.grant(githubDeployRole, ...[
+        'cloudfront:CreateInvalidation',
+        'cloudfront:GetInvalidation',
+      ]);
     }
   }
 }

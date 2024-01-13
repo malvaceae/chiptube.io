@@ -33,7 +33,23 @@ jobs:
             -c googleSearchConsoleVerificationCode=${{ secrets.GOOGLE_SEARCH_CONSOLE_VERIFICATION_CODE }} \
             -c adminEmail=${{ secrets.ADMIN_EMAIL }} \
             -c domainName=${{ env.DOMAIN_NAME }} \
-            -c githubRepository=${{ github.repository }} \
-            -c githubRef=${{ github.ref }} \
+            -c githubRepo=${{ github.repository }} \
+            --outputs-file outputs.json \
             --require-approval never \
             --all
+      - run: |
+          cat outputs.json | jq -r '.ChipTube | to_entries[] | "VITE_" + (.key | [splits("(?=[A-Z])")] | map(select(length > 0) | ascii_upcase) | join("_")) + "=" + .value' > .env
+      - run: |
+          yarn build
+      - run: |
+          aws s3 sync dist s3://$(cat outputs.json | jq -r '.ChipTube.AppBucketName') \
+            --exact-timestamps \
+            --delete
+      - run: |
+          aws cloudfront create-invalidation \
+            --distribution-id $(cat outputs.json | jq -r '.ChipTube.AppDistributionId') \
+            --paths '/*' | jq -r '"INVALIDATION_ID=" + .Invalidation.Id' >> "$GITHUB_ENV"
+      - run: |
+          aws cloudfront wait invalidation-completed \
+            --distribution-id $(cat outputs.json | jq -r '.ChipTube.AppDistributionId') \
+            --id ${{ env.INVALIDATION_ID }}
