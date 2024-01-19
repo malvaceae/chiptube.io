@@ -422,7 +422,7 @@ export class ChipTubeStack extends Stack {
     // User Pool Signed In Trigger
     const userPoolSignedInTrigger = new nodejs.NodejsFunction(this, 'UserPoolSignedInTrigger', {
       architecture: lambda.Architecture.ARM_64,
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       timeout: Duration.seconds(30),
       memorySize: 1769, // 1 vCPU
       environment: {
