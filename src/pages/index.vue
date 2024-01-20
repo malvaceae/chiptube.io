@@ -25,6 +25,9 @@ useMeta({
   },
 });
 
+// is loading
+const isLoading = ref(true);
+
 // tunes
 const tunes = ref<Record<string, any>[]>([]);
 
@@ -33,6 +36,10 @@ const after = ref<string>();
 
 // get tunes
 const getTunes = async (_: number, done: (stop?: boolean) => void) => {
+  // start loading
+  isLoading.value = true;
+
+  // get tunes
   const data = await get({
     apiName: 'Api',
     path: '/tunes',
@@ -56,6 +63,9 @@ const getTunes = async (_: number, done: (stop?: boolean) => void) => {
 
   // complete updates
   done(!after.value);
+
+  // stop loading
+  isLoading.value = false;
 };
 
 // get the thumbnail
@@ -82,6 +92,11 @@ const getThumbnail = async ({ thumbnailKey: key, identityId: targetIdentityId }:
           <tune-card :tune="tune" />
         </div>
       </div>
+      <template v-if="!isLoading && tunes.length === 0">
+        <div class="q-my-md text-subtitle1 text-center">
+          No tunes found
+        </div>
+      </template>
       <template #loading>
         <div class="row justify-center q-my-md">
           <q-spinner-dots size="lg" />
